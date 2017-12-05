@@ -1,0 +1,400 @@
+8/9/17
+Implementing Wisdom & Hernandez (2015) Universal Kepler solver.
+
+So far it doesn't seem to converge as fast as a standard Kepler
+solver for the elliptic case.
+
+8/9/17
+Okay, elliptic case seems to work, and one iteration of quartic
+extrapolation gets me within ~machine precision!
+
+Now for hyperbolic case...  I need to rederive everything.
+WH's small-angle concern I don't think is a big issue in practice
+(of course, unless there is a large period ratio so that outer
+planets have to take small steps... maybe I should stick to
+half-angles).
+
+Also need to code up parabolic case (cubic equation):
+
+y(s) = s^3 + 3*r0*s^2*dr0dt/k + 6r0*s/k -6h/k
+     = s^3 + a s^2 + b s + c
+   with a = 3*r0*dr0dt/k, b=6*r0/k, c = -6h/k
+
+Q = r0^2*dr0dt^2/k^2 - 2r0/k
+R = r0^3*dr0dt^3/k^3 - 3*r0^2*dr0dt/k^2 - 3*h/k
+
+Q: If there are three real roots, which one do we choose?
+
+8/10/2017
+Okay, I got the hyperbolic case working!
+
+Now, for the parabolic (although this should almost never occur in practice...).
+
+Problem: quickly get NaNs since beta becomes slightly less than
+zero (presumably due to rounding error).
+
+Okay, got parabolic case working.  It is called if beta is within ~10^{-15}
+of zero.
+
+8/11/2017
+Not sure what is going on with allocations...  this seems to always
+trip me up.  Dan figured out how to rewrite celerite without as
+much memory allocation;  it might be worth looking at that code.
+
+10^6 steps in 4-5 seconds;  not great compared with what Hernandez finds.
+Wonder if this is related to the memory allocation problem?
+
+8/12/2017
+Why is test_elliptic getting zeros back for r & beta_final???!
+
+Julia is a mystery...
+
+8/12/2017
+test_elliptic.jl gives ~0.2 \mu sec for each call to kepler_solver_elliptic.
+For 800 days of trappist-1, this gives ~800/1.5*20*28*2e-7 ~ 0.06 sec; not
+great.... plus, this could be higher since FB algorithm takes steps
+back & forth, and there may be more than one iteration in some cases.
+
+8/14/2017
+Okay, so I have some problems with Julia:
+1).  If I pass out a tuple, then this is handled with type-unstable operations, slowing things down.
+2).  If there are variables which I pass through, then these are type-unstable.
+3).  But, otherwise I need to define new variables in the routine, which takes overhead.
+
+I tried using a Type to bundle these, but then I need to instantiate the type within the
+routine, which takes too much time.
+
+There has to be some way to pre-allocate variables for Julia so I don't have to waste time
+defining variables all of the time!
+
+Okay, so I settled on passing a state vector - this avoids the need to define a new type -
+and then I just save the final state at the end of the step to this vector.  Not as elegant
+or readable, but it's the fastest yet: 0.2 microseconds per Kepler step (one iteration).
+
+8/15/2017
+
+I corrected a mistake in comp_ds_opt, and made some other other changes
+to decrease the number of operations.  Reduced speed by ~10%.
+
+When I take larger timesteps, the total run time doesn't grow significantly
+with two iterations per step.
+
+I wonder if it would be quicker to solve cubic equation for the initial step guess? [ ]
+
+Okay, I've rewritten kepler_solver_hyperbolic.jl, and now combined
+kepler_solver_elliptic.jl and kepler_solver_hyperbolic.jl into kepler_solver.jl
+(they use the function in common calc_cs_opt).
+
+Both seem to preserve beta well, and take about 0.3 microseconds for each step
+when the eccentricity is modest!
+
+Onward to carrying out symplectic integrator:
+
+1). Figure out COM coordinates & drift operations.
+2). Figure out how to compute whether a transit has occured.
+3). Figure out cartesian coordinates.
+4). Write the basic operator code for a pair of planets.
+
+8/30/2017
+
+1). See whether I can reproduce Hernandez' code in Julia, and try out the
+eccentric binary planet problem. [x]
+2). Does cubic initial estimate speed things up, or slow it down? [ ]
+3). Then, figure out TTVs and benchmark. [x]
+
+Then, try it out for a planet-moon system orbiting a binary star! [ ]
+
+Okay, I've translated nbody.c to nbody.jl (with a bit more work needed for the
+main function).  Next, I need to try running to see if it gives same results with
+my Kepler solver!
+
+8/31/2017
+Okay, I got the Julia translation done.  Now for debugging next!
+
+Code seems to be debugged, and agrees (for the most part) with David's. [x]
+
+Next, I need to
+1). Add in extrapolation of s from prior steps; [x] (Doesn't speed it up at all!)
+2). Enable finding transit times; [x]
+3). Set up initial conditions. [x]
+    - This involves coming up with a means of specifying a hierarchical N-body system.
+Then, take derivatives, and optimize fits to T-1!
+
+9/5/2017
+
+Okay, now I need to set up the initial conditions.  I'm planning
+to use the parentheses notation from Milani & Nobili (1983),
+and to use the matrix notation of Hamers & Portegies Zwart (2016).
+
+Tasks:
+1).  Parse the hierarchy.  [x] (sort of - just for planetary configuration)
+2).  Compute the A matrix. [x]
+3).  Invert the matrix.    [x]
+4).  Compute the semi-major axis for each Kepler problem. [x]
+5).  Compute the cartesian elements & velocities for each Keplerian. [x]
+6).  Compute the initial positions & velocities. [x]
+7).  Couple to the integrator. [x]
+8).  Compute transit times. [x]
+
+9/7/2017
+Problem: consq! isn't modifying L0, p0 or xcm0.
+Solution: switched to fill! rather than zeros(NDIM) in consq!
+
+Now, it seems to be working!  Energy is conserved to ~4x10^-7 for a step size
+of 0.15 days.
+
+Idea:  Make a plot of the barycentric motion of the star with time. [x]
+
+This looks pretty cool!
+
+9/8/2017
+Okay, got a routine working which computes TTVs, and they look qualitatively
+similar to Simon Grimm's code(!).
+
+Next steps:
+1).  Optimize code, and figure out some way to check that it is working correctly. [x]
+2).  Compute transit time derivatives with respect to initial elements
+(either analytically, or with autodiff). [ ]
+3).  Optimize the fit to the latest transit times for the paper. [x]
+4).  Figure out how to run a Markov chain. [ ]
+
+Checking the convergence with time step, there appear to be (t0,P) offsets
+(possibly because there is no corrector applied for the integrator), but
+for TRAPPIST-1, the TTV appear to be converged to <3 sec precision for
+a time step of 0.05 days (about 1/30 of the period of the inner planet).
+This should be sufficient given the precision of the measurements.
+
+Right now the run time is prohibitively slow!  0.4 seconds... and there doesn't
+appear to be much to optimize - the profile looked fairly clean.  I could possibly
+get another factor of 2 in speed-up if I implement the extrapolation of s, and
+if I can converge in ~1 iteration rather than two. [ ]  Another possibility would
+be to only include adjacent planets' perturbations, which may give another
+factor of ~2.8 speed-up. [ ]  I should also figure out how long the transit-time
+computation is taking:  in practice I'll only need to compute the observed
+transit times, which may save a bit. [ ] Overall, though, rather disappointing:
+I was hoping to obtain ~msec speed.
+
+I need to see how long the other version(s) of TTVFast are taking, and I should also 
+ask Simon how long his integrator takes. [x]
+
+Otherwise the only way to get additional speed is to figure out how to improve
+TTVFaster (which seems impossible), or to figure out how to make TTVFast parallel
+(also daunting).  Analytic derivatives may help with optimization, which I should
+look into next, both with autodiff [ ] and with propagating derivative. [ ]
+
+The other possibility is to compute a grid of models, and
+to fit these with a quadratic function of the transit times.  This approach
+seems promising, so I'll look into it next week. [x] Nope, didn't work.
+
+I also need to look into the coordinate system to make sure I'm transforming
+correctly. [ ]
+
+Another to do: Figure out a corrector/inverse corrector for this map. [x] Too hard.
+But, David shared code for 4th order integrator.
+
+To do:
+1). Compute derivatives. [x] Numerically [ ] Analytically.
+2). Optimize model to TRAPPIST-1. [x]
+3). Perturb parameters; see if we can find a quadratic fit to transit times
+as a function of the starting parameters. [x]
+4). With quadratic fit, carry out an MCMC analysis. [x]
+
+9/11/2017
+
+Not much success with any of the next steps yet.
+
+The initial times of transit seem to change wildly when the initial t_0 values
+change by a small amount.  Perhaps I need to make sure that the t0 values are defined
+early on.
+
+Found a bug: omega was being converted to radians from degrees, while it was starting
+in radians.  This helps to fix the starting t0; now this matches better.  I also
+now define the t0 values close to the start of the integration.
+
+Problem:  How do we carry out a linearization with respect to the initial parameters
+while guaranteeing somehow that the transit times aren't too far off of the correct
+values?  Should we try to expand in harmonics of adjacent planets?
+
+9/12/2017
+
+Next, going to try autodiff on the various functions, and see what it comes up with.
+
+9/20/2017
+I'm making progress on differentiable function...
+
+9/21/2017
+
+Okay, I got the derivatives working for the Kepler stepper!
+
+The numerically computed jacobian agrees to ~10^-6 with analytically computed!
+
+Just run:
+
+include("test_elliptical_derivative.jl")
+
+So, remaining steps are to test the hyperbolic case,
+do center-of-mass conversion, differentiate drifts,
+implement higher order integrator, differentiate initial conditions,
+and differentiate transit time finding.  Then, write routines to put all of this together
+and write a Hamiltonian markov chain monte carlo code. [ ]
+
+9/27/2017
+I'm having trouble getting the derivatives to work out...
+Need to revisit with fresh mind.
+
+Seems to be working for the planet in x-z plane!
+But, still not working for the star, nor for the y-axis (although this may
+be due to the fact that system is edge-on).
+
+There seems to be a sign error in the mass derivative. [x]
+
+9/28/2017
+Okay, I debugged the two-body Kepler derivative!  There were a few problems: 1). my
+derivation used the opposite sign of David's; 2). I was adding in the x-vector to
+every component of the derivative matrix, while it should have been diagonal.
+
+I ended up tilting the system to give better estimates of derivatives, and it seems
+to be working great!
+
+10/4/2017
+I wrote a version which used Kat's interpolation scheme rather than mine;  this
+is somewhat better defined since the states are real.
+
+I also implemented Dehnen & Hernandez' 4th order integrator - this gives more
+precision for all of the planets, allowing smaller time steps, and thus better
+precision with less computing time!  However, it's going to be more difficult
+to differentiate.
+
+10/5/2017
+Okay, let's get the derivatives to work with the phi^2/DH17 mapping.
+
+10/6/2017
+In profiling, it looks like ~1/3 of the time is spent in allocating memory for temporary
+arrays.  It seems like this should be possible to fix.
+
+10/17/2017
+Okay, for transit time finding I'm now doing a full integration over a fraction of
+a step.  This has the advantage that it will work for any hierarchical configuration.
+It also has the advantage that it gives higher precision for the transit times, and
+makes the derivative computation slightly simpler.  It has the disadvantage that it
+takes longer to run, but only by ~30-50%.
+
+10/19/2017
+
+Need to test the hyperbolic kepler case. [x]
+
+There's a weird bug occurring:  test_dh17.jl fails for jac_step[1:3,:,7,:],
+but it doesn't fail for test_elliptic_derivative.jl.  I need to track down what
+is different about these. [x]
+
+Hmmm.... it works when there are only two bodies.  Somehow the third body
+is affecting the solution when we only advance the first two.... weird.
+
+10/20/2017
+
+Okay, I think I know what is going on:  the jacobian for the keplerij! routine
+is not computed properly when the center-of-mass is non-zero.  I tried putting
+in 3 bodies for test_elliptic_derivative.jl, and found that this gave errors as
+well!
+
+The problem was that xcm was the initial center-of-mass position;  I needed to
+include the final center-of-mass position.
+
+Once I added that, keplerij works with 3 bodies!  Then, I added back in the
+other steps of dh17, and now test_dh17.jl gives good results!
+
+Next steps:
+
+1).  Concatenate multiple steps, and test these. [x]
+2).  Write transit time derivative, and test. [x]
+3).  Write initial condition derivative, and test. [ ]
+4).  Profile code & see if there are ways to speed it up. [ ]
+
+Implemented transit-time derivatives;  now need to test if this works.
+
+11/6/2017
+Okay, got the TTV derivatives working!  I found a couple of bugs:
+1). Findtransit2 had the wrong jacobian element in the last line computing dtdq.
+2). Incrementing of time step should happen at *end* of step, not beginning.
+
+test_ttv_derivative.jl now loops over differnet dlnq values and takes double-sided
+derivatives for an accurate comparison of the numerical derivative with the
+analytic (since I expect the latter to be much more accurate).  It looks like
+the derivatives agree well, to better than 10% for the TRAPPIST-1 example case.
+
+So, I think the derivatives are being computed properly, and we can move on to
+the next steps.
+
+11/7/2017
+The code is spending a *lot* of time in jac_multiply! & jac_multiplyij!
+(70% in the n=8 TRAPPIST-1 example)!  I tried using the matrix multiply
+function, which seems to give the same answer for each step, but when
+I use it over multiple time steps, causes bad results due to a bug
+that I have yet to identify.  My attempt at this is stored in ttv_square.jl
+(since the jacobian is stored in a 2x2 square matrix rather than the
+4-index matrix).
+
+All to say: perhaps the code can be refactored to improve the speed
+by a factor of 2-3.  I also should look at conserving memory allocation
+as well.
+
+But, this seems to be working for now, so I'll move on to the next
+step which is taking derivatives of the initial conditions.
+
+I tried to speed up ttv.jl by doing matrix multiplication with built-in
+function.  However, what happens is bizarre:  the line that carries out
+the matrix multiplication is evaluated quickly, while the profile shows
+that the actual matrix multiplication isn't carried out until the
+result is assigned to another matrix!  This is why this wasn't working
+before, I think.
+
+For the TRAPPIST-1 test case, I get about a 40% speed-up using matrix
+multiplication (for n=8; less for n=3), which is pretty good, but not 
+as good as I had been expecting.  So, ttv_square.jl is indeed faster,
+but not by a whole lot.
+
+Array allocation in compute_jacobian seems to be taking a *lot* of
+time, about 5% in total.  Perhaps fill!(xxx,0.0) would be similarly
+slow...
+
+11/13/2017
+Things to do:
+1).  Generalize for inclined planets. [x] (I generalized kepler_init).
+ 1b). Check that initial t0 & P gives correct ephemeris in 2-body (Kepler) case. [ ]
+2).  Generalize for arbitrary mobile diagram.  [ ]
+3).  Compare with rebound. [ ]
+4).  Check coordinates. [ ]
+5).  Finish derivatives of initial conditions. [x]
+6).  Allow output of derivatives of positions/velocities at arbitrary time steps
+for RV, astrometry, etc. [ ]
+7).  Have TTV call with Cartesian coordinates, and write wrapper for elements. [x]
+8).  Figure out derivatives of kepler_init. [x]
+9).  Figure out derivatives of init_nbody. [x]
+10). Write a differentiable photodynamical model. [ ]
+
+11/14/2017
+Found that using BLAS.gemm! and careful copying of matrices reduces time
+for 8-body case by another ~60%.  Now the derivatives take only a factor of 
+~8 times longer to evaluate in the 8-body case (which is for 56 free parameters!).
+So, this is ~14x faster than evaluating 2-side numerical derivatives, and
+much more accurate as well (in the 8-body case;  appears to scale with nbody).
+
+I'm ready to swap ttv_square.jl for ttv.jl, and retire ttv.jl. [x]
+
+11/20/2017
+Got kepler_init working with computing the initial Jacobian.  Still need to
+modify it for the e=0 case. [ ]
+
+Moving on to obtaining full derivative of initial conditions.
+
+11/30/2017
+Okay, initial condition derivative is almost working.  Still have an
+error for the mass derivatives, which needs to be fixed. [x]
+Mixed up k & i in mass derivatives; fixed init_nbody.jl; now it works!!!
+
+Last step is to multiply derivatives of TTVs wrt initial Cartesian coordinates
+times the Jacobian of the initial Cartesian coordinates wrt orbital elements,
+at which point we'll have the full derivatives. [x]
+
+12/1/2017
+Got full derivatives working - test_ttv_elements.jl runs this.
