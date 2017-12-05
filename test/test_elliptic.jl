@@ -1,11 +1,11 @@
 using PyPlot
-include("kepler_solver.jl")
+include("../src/kepler_solver.jl")
 
 # Define a constant of 1/3:
 const third = 1.0/3.0
 
-function test_hyperbolic()
-# This routine runs a test of the kep_hyperbolic function in kepler_solver_hyperbolic.jl
+function test_elliptic()
+# This routine runs a test of the kep_elliptic function in kepler_solver_elliptic.jl
 # Define the central force constant in terms of AU and days:
 k = (2.0*pi/365.25)^2
 # Initial position at 1 AU:
@@ -15,7 +15,7 @@ r0 = sqrt(x0[1]*x0[1]+x0[2]*x0[2]+x0[3]*x0[3])
 # Circular velocity:
 vcirc = sqrt(k/r0)
 # Define initial velocity at apastron:
-v0 = [1.5*vcirc,0.0,0.0]  # The eccentricity is about ~2(1-v0/vcirc).
+v0 = [0.98*vcirc,0.0,0.0]  # The eccentricity is about ~2(1-v0/vcirc).
 dr0dt = (x0[1]*v0[1]+x0[2]*v0[2]+x0[3]*v0[3])/r0
 h = 18.0 # 18-day timesteps
 
@@ -44,7 +44,8 @@ beta0 = 2.0*k/r0-dot(v0,v0)
 xsave[10,1]=beta0
 #@inbounds for i=2:nsteps
 for i=2:nsteps
-  iter = kep_hyperbolic!(x0,v0,r0,dr0dt,k,h,beta0,s0,state)
+#  x,v,r,drdt,s,beta,iter=kep_elliptic(x0,v0,r0,dr0dt,k,h,beta0,s0)
+  iter = kep_elliptic!(x0,v0,r0,dr0dt,k,h,beta0,s0,state)
   s = state[11]
   ds = state[12]
   if iter > 2

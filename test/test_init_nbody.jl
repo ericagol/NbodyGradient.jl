@@ -3,7 +3,7 @@ const GNEWT = 39.4845/YEAR^2  # Units of MSUN*AU^3/YEAR^2
 const NDIM  = 3
 const third = 1./3.
 
-include("init_nbody.jl")
+include("../src/init_nbody.jl")
 
 elements = readdlm("elements.txt",',')
 

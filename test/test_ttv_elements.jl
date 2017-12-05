@@ -1,10 +1,8 @@
-include("ttv.jl")
+include("../src/ttv.jl")
 include("/Users/ericagol/Computer/Julia/regress.jl")
 
 # This routine takes derivative of transit times with respect
-# to the initial cartesian coordinates of bodies. [ ]
-# (I still need to write this routine since now dtdq0 is turning
-# into derivative wrt elements).
+# to the initial orbital elements.
 #n = 8
 n = 3
 t0 = 7257.93115525
@@ -23,7 +21,6 @@ ntt = zeros(Int64,n)
 for i=2:n
   ntt[i] = ceil(Int64,tmax/elements[i,2])+3
 end
-println("ntt: ",ntt)
 tt  = zeros(n,maximum(ntt))
 tt1 = zeros(n,maximum(ntt))
 tt2 = zeros(n,maximum(ntt))
@@ -48,63 +45,114 @@ ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
 #read(STDIN,Char)
 
 # Check that this is working properly:
-for i=1:n
-  for j=1:count2[i]
-    println(i," ",j," ",tt[i,j]," ",tt2[i,j]," ",tt[i,j]-tt2[i,j]," ",tt1[i,j]-tt2[i,j])
-  end
-end
+#for i=1:n
+#  for j=1:count2[i]
+#    println(i," ",j," ",tt[i,j]," ",tt2[i,j]," ",tt[i,j]-tt2[i,j]," ",tt1[i,j]-tt2[i,j])
+#  end
+#end
 #read(STDIN,Char)
 
 # Compute derivatives numerically:
-nq = 15
-dtdq0_num = zeros(n,maximum(ntt),7,n,nq)
+#nq = 15
+#dtdq0_num = zeros(n,maximum(ntt),7,n,nq)
 # This "summarizes" best numerical derivative:
 dtdq0_sum = zeros(n,maximum(ntt),7,n)
-itdq0 = zeros(Int64,n,maximum(ntt),7,n)
-dlnq = [1e-2,3.16e-3,1e-3,3.16e-4,1e-4,3.16e-5,1e-5,3.16e-6,1e-6,3.16e-7,1e-7,3.16e-8,1e-8,3.16e-9,1e-9]
-for jq=1:n
+#itdq0 = zeros(Int64,n,maximum(ntt),7,n)
+#dlnq = [1e-2,3.16e-3,1e-3,3.16e-4,1e-4,3.16e-5,1e-5,3.16e-6,1e-6,3.16e-7,1e-7,3.16e-8,1e-8,3.16e-9,1e-9]
+
+n_body = n
+#t0 = 7257.93115525
+#x,v = init_nbody(elements,t0,n_body,jac_init)
+elements0 = copy(elements)
+dq = [1e-5,1e-6,1e-6,1e-6,1e-5,1e-5,1e-10]
+# Now, compute derivatives numerically:
+for jq=1:n_body
   for iq=1:7
-    for inq = 1:nq
-      elements2  = copy(elements)
-      dq_plus = ttv_elements!(n,t0,h,tmax,elements2,tt2,count2,dlnq[inq],iq,jq)
-      elements3  = copy(elements)
-      dq_minus = ttv_elements!(n,t0,h,tmax,elements3,tt3,count3,-dlnq[inq],iq,jq)
-#      if iq == 2 || iq == 5
-#       println("timing difference: ",iq," ",maximum(abs.(tt2-tt3)))
-#      end
-      for i=1:n
-        for k=1:count2[i]
-#          dtdq0_num[i,k,iq,jq,inq] = (tt2[i,k]-tt1[i,k])/dq
-          # Compute double-sided derivative for more accuracy:
-          dtdq0_num[i,k,iq,jq,inq] = (tt2[i,k]-tt3[i,k])/(2.*dq_plus)
-        end
-      end
-    end
+    elements .= elements0
+    dq0 = dq[iq]; if jq==1 && iq==7 ; dq0 = 1e-5; end  # Vary mass of star by a larger factor
+    if iq == 7; ivary = 1; else; ivary = iq+1; end  # Shift mass variation to end
+    elements[jq,ivary] += dq0
+#    dum = ttv_elements!(n,t0,h,tmax,elements,tt2,count2,0.0,0,0)
+    dq_plus = ttv_elements!(n,t0,h,tmax,elements,tt2,count2,0.0,0,0)
+#    xp,vp = init_nbody(elements,t0,n_body)
+    elements[jq,ivary] -= 2dq0
+    dq_minus = ttv_elements!(n,t0,h,tmax,elements,tt3,count2,0.0,0,0)
+    #xm,vm = init_nbody(elements,t0,n_body)
     for i=1:n
       for k=1:count2[i]
-        # Compare with analytic derivative (minimize over the finite difference):
-        dmin = Inf
-        imin = 0
-        for inq=1:nq
-          if abs(dtdq0_num[i,k,iq,jq,inq]-dtdq0[i,k,iq,jq]) < dmin
-            imin = inq
-            dmin = abs(dtdq0_num[i,k,iq,jq,inq]-dtdq0[i,k,iq,jq])
-          end
-        end
-        dtdq0_sum[i,k,iq,jq] = dtdq0_num[i,k,iq,jq,imin]
-        itdq0[i,k,iq,jq] = imin
+        # Compute double-sided derivative for more accuracy:
+        dtdq0_sum[i,k,iq,jq] = (tt2[i,k]-tt3[i,k])/(2.*dq0)
 #        println(iq," ",jq," ",i," ",k," ",tt1[i,k]," ",dtdq0_sum[i,k,iq,jq]," ",dtdq0[i,k,iq,jq]," ",dtdq0_sum[i,k,iq,jq]/dtdq0[i,k,iq,jq]-1.)
       end
     end
+#    for l=1:n_body, p=1:3
+#      i1 = (l-1)*7+p
+#      if k == 1
+#        j1 = j*7
+#      else
+#        j1 = (j-1)*7+k-1
+#      end
+#      jac_init_num[i1,  j1] = (xp[p,l]-xm[p,l])/dq0*.5
+#      jac1 = jac_init[i1,j1]; jac2 = jac_init_num[i1,j1]
+#      if abs(jac1-jac2) > 1e-4*abs(jac1+jac2) && abs(jac1+jac2) > 1e-14
+#        println(l," ",p," ",j," ",k," ",jac_init_num[i1,j1]," ",jac_init[i1,j1]," ",jac_init_num[i1,j1]/jac_init[i1,j1])
+#      end
+#      jac_init_num[i1+3,j1] = (vp[p,l]-vm[p,l])/dq0*.5
+#      jac1 = jac_init[i1+3,j1]; jac2 = jac_init_num[i1+3,j1]
+#      if abs(jac1-jac2) > 1e-4*abs(jac1+jac2) && abs(jac1+jac2) > 1e-14
+#        println(l," ",p+3," ",j," ",k," ",jac_init_num[i1+3,j1]," ",jac_init[i1+3,j1]," ",jac_init_num[i1+3,j1]/jac_init[i1+3,j1])
+#      end
+#    end
   end
+#  jac_init_num[j*7,j*7]=1.0
 end
 
+#println(maximum(abs.(jac_init_num-jac_init)))
+println(maximum(abs.(dtdq0-dtdq0_sum)))
+
+#for jq=1:n
+#  for iq=1:7
+#    for inq = 1:nq
+#      elements2  = copy(elements)
+#      dq_plus = ttv_elements!(n,t0,h,tmax,elements2,tt2,count2,dlnq[inq],iq,jq)
+#      elements3  = copy(elements)
+#      dq_minus = ttv_elements!(n,t0,h,tmax,elements3,tt3,count3,-dlnq[inq],iq,jq)
+##      if iq == 2 || iq == 5
+##       println("timing difference: ",iq," ",maximum(abs.(tt2-tt3)))
+##      end
+#      for i=1:n
+#        for k=1:count2[i]
+##          dtdq0_num[i,k,iq,jq,inq] = (tt2[i,k]-tt1[i,k])/dq
+#          # Compute double-sided derivative for more accuracy:
+#          dtdq0_num[i,k,iq,jq,inq] = (tt2[i,k]-tt3[i,k])/(2.*dq_plus)
+#        end
+#      end
+#    end
+#    for i=1:n
+#      for k=1:count2[i]
+#        # Compare with analytic derivative (minimize over the finite difference):
+#        dmin = Inf
+#        imin = 0
+#        for inq=1:nq
+#          if abs(dtdq0_num[i,k,iq,jq,inq]-dtdq0[i,k,iq,jq]) < dmin
+#            imin = inq
+#            dmin = abs(dtdq0_num[i,k,iq,jq,inq]-dtdq0[i,k,iq,jq])
+#          end
+#        end
+#        dtdq0_sum[i,k,iq,jq] = dtdq0_num[i,k,iq,jq,imin]
+#        itdq0[i,k,iq,jq] = imin
+##        println(iq," ",jq," ",i," ",k," ",tt1[i,k]," ",dtdq0_sum[i,k,iq,jq]," ",dtdq0[i,k,iq,jq]," ",dtdq0_sum[i,k,iq,jq]/dtdq0[i,k,iq,jq]-1.)
+#      end
+#    end
+#  end
+#end
+#
 nbad = 0
 ntot = 0
 diff_dtdq0 = zeros(n,maximum(ntt),7,n)
 for i=2:n, j=1:count[i], k=1:7, l=1:n
   if abs(dtdq0[i,j,k,l]-dtdq0_sum[i,j,k,l]) > 0.1*abs(dtdq0[i,j,k,l]) && ~(abs(dtdq0[i,j,k,l]) == 0.0  && abs(dtdq0_sum[i,j,k,l]) < 1e-3)
-    println(i," ",j," ",k," ",l," ",dtdq0[i,j,k,l]," ",dtdq0_sum[i,j,k,l]," ",itdq0[i,j,k,l])
+#    println(i," ",j," ",k," ",l," ",dtdq0[i,j,k,l]," ",dtdq0_sum[i,j,k,l])
     nbad +=1
   end
   if dtdq0[i,j,k,l] != 0.0
@@ -124,10 +172,11 @@ nderiv = n^2*7*maximum(ntt)
 #mask[:,:,5,:] = false
 #loglog(abs.(reshape(dtdq0[mask],nderiv)),abs.(reshape(dtdq0_sum[mask],nderiv)),".")
 loglog(abs.(reshape(dtdq0,nderiv)),abs.(reshape(dtdq0_sum,nderiv)),".")
+axis([1e-6,1e2,1e-12,1e2])
 #loglog(abs.(reshape(dtdq0[mask],nderiv)),abs.(reshape(dtdq0[mask]-dtdq0_sum[mask],nderiv)),".")
 loglog(abs.(reshape(dtdq0,nderiv)),abs.(reshape(diff_dtdq0,nderiv)),".")
 #loglog(abs.(reshape(dtdq0[mask],nderiv)),abs.(reshape(dtdq0_sum[mask]./dtdq0[mask]-1.,nderiv)),".")
-
+println("Maximum error: ",maximum(diff_dtdq0))
 
 ## Make a plot of some TTVs:
 #

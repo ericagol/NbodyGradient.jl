@@ -1,6 +1,6 @@
 using PyPlot
 #include("kepler_solver_derivative.jl")
-include("ttv.jl")
+include("../src/ttv.jl")
 
 # Define a constant of 1/3:
 #const third = 1.0/3.0

@@ -1,6 +1,6 @@
 # Tests the routine phisalpha jacobian:
 
-include("ttv.jl")
+include("../src/ttv.jl")
 
 #function phisalpha!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},alpha::Float64,n::Int64,jac_step::Array{Float64,4})
 #function phisalpha!(x,v,h,m,alpha,n,jac_step)

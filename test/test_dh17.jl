@@ -1,6 +1,6 @@
 # Tests the routine dh17 jacobian:
 
-include("ttv.jl")
+include("../src/ttv.jl")
 
 #function dh17!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},n::Int64,jac_step::Array{Float64,2})
 

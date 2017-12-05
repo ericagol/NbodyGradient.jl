@@ -3,7 +3,7 @@
 const GNEWT = 39.4845/365.242^2
 const third = 1.0/3.0
 
-include("kepler_init.jl")
+include("../src/kepler_init.jl")
 
 t0 = 2.4
 mass = 1.0
