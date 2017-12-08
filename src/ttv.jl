@@ -415,15 +415,17 @@ end
 return
 end
 
-function phisalpha!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},alpha::Float64,n::Int64)
+function phisalpha!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},alpha::T,n::Int64) where {T <: Real}
+#function phisalpha!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},alpha::Float64,n::Integer)
 # Computes the 4th-order correction:
 #function [v] = phisalpha(x,v,h,m,alpha)
 #n = size(m,2);
-a = zeros(Float64,3,n)
-rij = zeros(Float64,3)
-aij = zeros(Float64,3)
+a = zeros(eltype(x),3,n)
+rij = zeros(eltype(x),3)
+aij = zeros(eltype(x),3)
 coeff = alpha*h^3/96*2*GNEWT
-fac = 0.0; fac1 = 0.0; fac2 = 0.0; r1 = 0.0; r2 = 0.0; r3 = 0.0
+zero = 0.0*alpha
+fac = zero; fac1 = zero; fac2 = zero; r1 = zero; r2 = zero; r3 = zero
 @inbounds for i=1:n
   for j = i+1:n
     for k=1:3
@@ -451,7 +453,7 @@ end
     r1 = sqrt(r2)
     ardot = aij[1]*rij[1]+aij[2]*rij[2]+aij[3]*rij[3]
     fac1 = coeff/r1^5
-    fac2 = (2*GNEWT*(m[i]+m[j])/r1 + 3*ardot) 
+    fac2 = (2*GNEWT*(m[i]+m[j])/r1 + 3*ardot)
     for k=1:3
 #      fac = coeff/r1^5*(rij[k]*(2*GNEWT*(m[i]+m[j])/r1 + 3*ardot) - r2*aij[k])
       fac = fac1*(rij[k]*fac2- r2*aij[k])

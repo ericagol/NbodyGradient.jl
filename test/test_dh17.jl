@@ -7,16 +7,17 @@ include("../src/ttv.jl")
 
 # Next, try computing three-body Keplerian Jacobian:
 
-n = 8
-#n = 3
+#n = 8
+n = 3
 #n = 2
 t0 = 7257.93115525
-#h  = 0.05
-h  = 0.075
+h  = 0.05
+#h  = 0.075
 tmax = 600.0
 dlnq = 3e-6
 
-nstep = 8000
+#nstep = 8000
+nstep = 100
 
 elements = readdlm("elements.txt",',')
 #elements[2,1] = 1.0

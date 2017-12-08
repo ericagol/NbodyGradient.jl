@@ -3,13 +3,13 @@ include("/Users/ericagol/Computer/Julia/regress.jl")
 
 # This routine takes derivative of transit times with respect
 # to the initial orbital elements.
-#n = 8
-n = 3
+n = 8
+#n = 3
 t0 = 7257.93115525
 #h  = 0.12
 h  = 0.05
 #tmax = 600.0
-tmax = 80.0
+tmax = 800.0
 #tmax = 10.0
 
 # Read in initial conditions:
@@ -25,6 +25,8 @@ tt  = zeros(n,maximum(ntt))
 tt1 = zeros(n,maximum(ntt))
 tt2 = zeros(n,maximum(ntt))
 tt3 = zeros(n,maximum(ntt))
+tt4 = zeros(n,maximum(ntt))
+tt8 = zeros(n,maximum(ntt))
 # Save a counter for the actual number of transit times of each planet:
 count = zeros(Int64,n)
 count1 = zeros(Int64,n)
@@ -42,7 +44,16 @@ dtdq0 = zeros(n,maximum(ntt),7,n)
 ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
 @time ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
 @time ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
-#read(STDIN,Char)
+dtdq2 = zeros(n,maximum(ntt),7,n)
+@time ttv_elements!(n,t0,h/2.,tmax,elements,tt2,count,dtdq2)
+dtdq4 = zeros(n,maximum(ntt),7,n)
+@time ttv_elements!(n,t0,h/4.,tmax,elements,tt4,count,dtdq4)
+dtdq8 = zeros(n,maximum(ntt),7,n)
+@time ttv_elements!(n,t0,h/8.,tmax,elements,tt8,count,dtdq8)
+println("Maximum error on derivative: ",maximum(abs.(dtdq0-dtdq2)))
+println("Maximum error on derivative: ",maximum(abs.(dtdq2-dtdq4)))
+println("Maximum error on derivative: ",maximum(abs.(dtdq4-dtdq8)))
+read(STDIN,Char)
 
 # Check that this is working properly:
 #for i=1:n
