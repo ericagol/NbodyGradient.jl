@@ -219,7 +219,8 @@ return
 end
 
 # Advances the center of mass of a binary (any pair of bodies)
-function centerm!(m::Array{Float64,1},mijinv::Float64,x::Array{Float64,2},v::Array{Float64,2},vcm::Array{Float64,1},delx::Array{Float64,1},delv::Array{Float64,1},i::Int64,j::Int64,h::Float64)
+#function centerm!(m::Array{Float64,1},mijinv::Float64,x::Array{Float64,2},v::Array{Float64,2},vcm::Array{Float64,1},delx::Array{Float64,1},delv::Array{Float64,1},i::Int64,j::Int64,h::Float64)
+function centerm!(m::Array{T,1},mijinv::T,x::Array{T,2},v::Array{T,2},vcm::Array{T,1},delx::Array{T,1},delv::Array{T,1},i::Int64,j::Int64,h::T) where {T <: Real}
 for k=1:NDIM
   x[k,i] +=  m[j]*mijinv*delx[k] + h*vcm[k]
   x[k,j] += -m[i]*mijinv*delx[k] + h*vcm[k]
@@ -255,15 +256,16 @@ return
 end
 
 # Carries out a Kepler step for bodies i & j
-function keplerij!(m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},i::Int64,j::Int64,h::Float64)
+#function keplerij!(m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},i::Int64,j::Int64,h::Float64)
+function keplerij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T) where {T <: Real}
 # The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
 # Initial state:
-state0 = zeros(Float64,12)
+state0 = zeros(eltype(x),12)
 state0[11] = 0.0
 # Final state (after a step):
-state = zeros(Float64,12)
-delx = zeros(Float64,NDIM)
-delv = zeros(Float64,NDIM)
+state = zeros(eltype(x),12)
+delx = zeros(eltype(x),NDIM)
+delv = zeros(eltype(x),NDIM)
 #println("Masses: ",i," ",j)
 for k=1:NDIM
   state0[1+k     ] = x[k,i] - x[k,j]
@@ -286,7 +288,7 @@ else
 # Advance center of mass:
 # Compute COM coords:
   mijinv =1.0/(m[i] + m[j])
-  vcm = zeros(Float64,NDIM)
+  vcm = zeros(eltype(x),NDIM)
   for k=1:NDIM
     vcm[k] = (m[i]*v[k,i] + m[j]*v[k,j])*mijinv
   end

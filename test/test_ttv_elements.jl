@@ -3,8 +3,8 @@ include("/Users/ericagol/Computer/Julia/regress.jl")
 
 # This routine takes derivative of transit times with respect
 # to the initial orbital elements.
-n = 8
-#n = 3
+#n = 8
+n = 3
 t0 = 7257.93115525
 #h  = 0.12
 h  = 0.05
@@ -53,7 +53,7 @@ dtdq8 = zeros(n,maximum(ntt),7,n)
 println("Maximum error on derivative: ",maximum(abs.(dtdq0-dtdq2)))
 println("Maximum error on derivative: ",maximum(abs.(dtdq2-dtdq4)))
 println("Maximum error on derivative: ",maximum(abs.(dtdq4-dtdq8)))
-read(STDIN,Char)
+#read(STDIN,Char)
 
 # Check that this is working properly:
 #for i=1:n

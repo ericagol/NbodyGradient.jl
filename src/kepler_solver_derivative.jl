@@ -1,7 +1,7 @@
 # Wisdom & Hernandez version of Kepler solver, but with quartic
 # convergence.
 
-function calc_ds_opt(y,yp,ypp,yppp)
+function calc_ds_opt(y::T,yp::T,ypp::T,yppp::T) where {T <: Real}
 # Computes quartic Newton's update to equation y=0 using first through 3rd derivatives.
 # Uses techniques outlined in Murray & Dermott for Kepler solver.
 # Rearrange to reduce number of divisions:
@@ -12,7 +12,8 @@ den2 = yp*den12-num*.5*(ypp*den1-third*num*yppp)
 return -y*den12/den2
 end
 
-function kep_elliptic!(x0::Array{Float64,1},v0::Array{Float64,1},r0::Float64,dr0dt::Float64,k::Float64,h::Float64,beta0::Float64,s0::Float64,state::Array{Float64,1})
+#function kep_elliptic!(x0::Array{Float64,1},v0::Array{Float64,1},r0::Float64,dr0dt::Float64,k::Float64,h::Float64,beta0::Float64,s0::Float64,state::Array{Float64,1})
+function kep_elliptic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,beta0::T,s0::T,state::Array{T,1}) where {T <: Real}
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
 
 r0inv = inv(r0)
@@ -87,6 +88,7 @@ return iter
 end
 
 function kep_elliptic!(x0::Array{Float64,1},v0::Array{Float64,1},r0::Float64,dr0dt::Float64,k::Float64,h::Float64,beta0::Float64,s0::Float64,state::Array{Float64,1},jacobian::Array{Float64,2})
+#function kep_elliptic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2}) where {T <: Real}
 # Computes the Jacobian as well
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
 
@@ -167,7 +169,8 @@ state[12] = ds
 return iter
 end
 
-function kep_hyperbolic!(x0::Array{Float64,1},v0::Array{Float64,1},r0::Float64,dr0dt::Float64,k::Float64,h::Float64,beta0::Float64,s0::Float64,state::Array{Float64,1})
+#function kep_hyperbolic!(x0::Array{Float64,1},v0::Array{Float64,1},r0::Float64,dr0dt::Float64,k::Float64,h::Float64,beta0::Float64,s0::Float64,state::Array{Float64,1})
+function kep_hyperbolic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,beta0::T,s0::T,state::Array{T,1}) where {T <: Real}
 # Solves equation (35) from Wisdom & Hernandez for the hyperbolic case.
 
 r0inv = inv(r0)
@@ -240,6 +243,7 @@ return iter
 end
 
 function kep_hyperbolic!(x0::Array{Float64,1},v0::Array{Float64,1},r0::Float64,dr0dt::Float64,k::Float64,h::Float64,beta0::Float64,s0::Float64,state::Array{Float64,1},jacobian::Array{Float64,2})
+#function kep_hyperbolic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2}) where {T <: Real}
 # Solves equation (35) from Wisdom & Hernandez for the hyperbolic case.
 
 r0inv = inv(r0)
@@ -315,6 +319,7 @@ return iter
 end
 
 function compute_jacobian!(h::Float64,k::Float64,x0::Array{Float64,1},v0::Array{Float64,1},beta0::Float64,s::Float64,f::Float64,g::Float64,dfdt::Float64,dgdt::Float64,cx::Float64,sx::Float64,g1::Float64,g2::Float64,r0::Float64,dr0dt::Float64,r::Float64,jacobian::Array{Float64,2})
+#function compute_jacobian!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},beta0::T,s::T,f::T,g::T,dfdt::T,dgdt::T,cx::T,sx::T,g1::T,g2::T,r0::T,dr0dt::T,r::T,jacobian::Array{T,2}) where {T <: Real}
 # Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
 # with respect to initial state variable q0[j], where q = {x,v,k} & q0 = {x0,v0,k}.
 # Now, compute the Jacobian: (9/18/2017 notes)

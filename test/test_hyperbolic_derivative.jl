@@ -156,6 +156,8 @@ println("Jac dlnq=1e-6 ")
 #jacobian
 #jac_num1-jac_num2
 println(jac_num1./jacobian-1.)
+println(jac_num1)
+println(jacobian)
 
 # Next, try computing two-body Keplerian Jacobian:
 

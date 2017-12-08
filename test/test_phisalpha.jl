@@ -1,4 +1,5 @@
-# Tests the routine phisalpha jacobian:
+# Tests the routine phisalpha jacobian.  This routine
+# computes the force gradient correction after Dehnen & Hernandez (2017).
 
 #include("../src/ttv.jl")
 

@@ -9,7 +9,7 @@ tmax = 600.0
 #tmax = 80.0
 
 # Read in initial conditions:
-elements = readdlm("elements.txt",',')
+elements = readdlm("../test/elements.txt",',')
 
 # Make an array, tt,  to hold transit times:
 # First, though, make sure it is large enough:
