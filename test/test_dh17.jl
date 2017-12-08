@@ -1,27 +1,30 @@
 # Tests the routine dh17 jacobian:
 
-include("../src/ttv.jl")
+#include("../src/ttv.jl")
 
 #function dh17!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},n::Int64,jac_step::Array{Float64,2})
 
 # Next, try computing three-body Keplerian Jacobian:
 
+@testset "dh17" begin
+
 #n = 8
 n = 3
 #n = 2
 t0 = 7257.93115525
-h  = 0.025
+h  = 0.05
 hbig = big(h)
 #h  = 0.075
 tmax = 600.0
 dlnq = big(1e-12)
 
 #nstep = 8000
-nstep = 100
+nstep = 500
 
 elements = readdlm("elements.txt",',')
-#elements[2,1] = 1.0
-#elements[3,1] = 1.0
+# Increase mass of inner planets:
+elements[2,1] *= 100.
+elements[3,1] *= 100.
 
 m =zeros(n)
 x0=zeros(3,n)
@@ -194,3 +197,6 @@ end
 
 println("Maximum fractional error: ",jacmax," ",imax," ",jmax," ",kmax," ",lmax)
 println("Maximum error jac_step:   ",maximum(abs.(jac_step-jac_step_num)))
+
+@test isapprox(jac_step,jac_step_num)
+end
