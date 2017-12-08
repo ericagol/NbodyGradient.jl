@@ -4,17 +4,17 @@ include("../src/ttv.jl")
 
 #function dh17!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},n::Int64,jac_step::Array{Float64,2})
 
-
 # Next, try computing three-body Keplerian Jacobian:
 
 #n = 8
 n = 3
 #n = 2
 t0 = 7257.93115525
-h  = 0.05
+h  = 0.025
+hbig = big(h)
 #h  = 0.075
 tmax = 600.0
-dlnq = 3e-6
+dlnq = big(1e-12)
 
 #nstep = 8000
 nstep = 100
@@ -59,27 +59,25 @@ m = copy(m0)
 for istep=1:nstep
   dh17!(x,v,h,m,n,jac_step)
 end
-# Save these so that I can compute derivatives numerically:
-xsave = copy(x)
-vsave = copy(v)
-msave = copy(m)
-## Check that we have agreement:
-#xtest = copy(x0)
-#vtest = copy(v0)
-#m = copy(m0)
-#dh17!(xtest,vtest,h,m,n)
-#println("x/v difference: ",x-xtest,v-vtest)
+# Test that both versions of dh17 give the same answer:
+xtest = copy(x0)
+vtest = copy(v0)
+m = copy(m0)
+for istep=1:nstep
+  dh17!(xtest,vtest,h,m,n)
+end
+println("x/v difference: ",x-xtest,v-vtest)
 
 # Now compute numerical derivatives:
-jac_step_num = zeros(7*n,7*n)
+jac_step_num = zeros(BigFloat,7*n,7*n)
 # Vary the initial parameters of planet j:
 for j=1:n
   # Vary the initial phase-space elements:
   for jj=1:3
   # Initial positions, velocities & masses:
-    xm = copy(x0)
-    vm = copy(v0)
-    mm = copy(m0)
+    xm = big.(x0)
+    vm = big.(v0)
+    mm = big.(m0)
     dq = dlnq * xm[jj,j]
     if xm[jj,j] != 0.0
       xm[jj,j] -=  dq
@@ -88,11 +86,11 @@ for j=1:n
       xm[jj,j] = -dq
     end
     for istep=1:nstep
-      dh17!(xm,vm,h,mm,n)
+      dh17!(xm,vm,hbig,mm,n)
     end
-    xp = copy(x0)
-    vp = copy(v0)
-    mp = copy(m0)
+    xp = big.(x0)
+    vp = big.(v0)
+    mp = big.(m0)
     dq = dlnq * xp[jj,j]
     if xp[jj,j] != 0.0
       xp[jj,j] +=  dq
@@ -101,7 +99,7 @@ for j=1:n
       xp[jj,j] = dq
     end
     for istep=1:nstep
-      dh17!(xp,vp,h,mp,n)
+      dh17!(xp,vp,hbig,mp,n)
     end
   # Now x & v are final positions & velocities after time step
     for i=1:n
@@ -111,9 +109,9 @@ for j=1:n
       end
     end
   # Next velocity derivatives:
-    xm=copy(x0)
-    vm=copy(v0)
-    mm=copy(m0)
+    xm= big.(x0)
+    vm= big.(v0)
+    mm= big.(m0)
     dq = dlnq * vm[jj,j]
     if vm[jj,j] != 0.0
       vm[jj,j] -=  dq
@@ -122,11 +120,11 @@ for j=1:n
       vm[jj,j] = -dq
     end
     for istep=1:nstep
-      dh17!(xm,vm,h,mm,n)
+      dh17!(xm,vm,hbig,mm,n)
     end
-    xp=copy(x0)
-    vp=copy(v0)
-    mp=copy(m0)
+    xp= big.(x0)
+    vp= big.(v0)
+    mp= big.(m0)
     dq = dlnq * vp[jj,j]
     if vp[jj,j] != 0.0
       vp[jj,j] +=  dq
@@ -135,7 +133,7 @@ for j=1:n
       vp[jj,j] = dq
     end
     for istep=1:nstep
-      dh17!(xp,vp,h,mp,n)
+      dh17!(xp,vp,hbig,mp,n)
     end
     for i=1:n
       for k=1:3
@@ -145,21 +143,21 @@ for j=1:n
     end
   end
 # Now vary mass of planet:
-  xm=copy(x0)
-  vm=copy(v0)
-  mm=copy(m0)
+  xm= big.(x0)
+  vm= big.(v0)
+  mm= big.(m0)
   dq = mm[j]*dlnq
   mm[j] -= dq
   for istep=1:nstep
-    dh17!(xm,vm,h,mm,n)
+    dh17!(xm,vm,hbig,mm,n)
   end
-  xp=copy(x0)
-  vp=copy(v0)
-  mp=copy(m0)
+  xp= big.(x0)
+  vp= big.(v0)
+  mp= big.(m0)
   dq = mp[j]*dlnq
   mp[j] += dq
   for istep=1:nstep
-    dh17!(xp,vp,h,mp,n)
+    dh17!(xp,vp,hbig,mp,n)
   end
   for i=1:n
     for k=1:3
@@ -175,24 +173,24 @@ end
 #println(jac_step)
 #println(jac_step_num)
 
-for j=1:n
-  for i=1:7
-    for k=1:n
-      println(i," ",j," ",k," ",jac_step[(j-1)*7+i,(k-1)*7+1:k*7]," ",jac_step_num[(j-1)*7+i,(k-1)*7+1:k*7]," ",jac_step[(j-1)*7+i,(k-1)*7+1:7*k]./jac_step_num[(j-1)*7+i,(k-1)*7+1:7*k]-1.)
-    end
-  end
-end
+#for j=1:n
+#  for i=1:7
+#    for k=1:n
+#      println(i," ",j," ",k," ",jac_step[(j-1)*7+i,(k-1)*7+1:k*7]," ",jac_step_num[(j-1)*7+i,(k-1)*7+1:k*7]," ",jac_step[(j-1)*7+i,(k-1)*7+1:7*k]./jac_step_num[(j-1)*7+i,(k-1)*7+1:7*k]-1.)
+#    end
+#  end
+#end
 
 jacmax = 0.0
-
+imax = 0; jmax = 0; kmax = 0; lmax = 0
 for i=1:7, j=1:3, k=1:7, l=1:3
   if jac_step[(j-1)*7+i,(l-1)*7+k] != 0
     diff = abs(jac_step_num[(j-1)*7+i,(l-1)*7+k]/jac_step[(j-1)*7+i,(l-1)*7+k]-1.0)
     if diff > jacmax
-      jacmax = diff
+      jacmax = diff; imax = i; jmax = j; kmax = k; lmax = l
     end
   end
 end
 
-println("Maximum fractional error: ",jacmax)
-
+println("Maximum fractional error: ",jacmax," ",imax," ",jmax," ",kmax," ",lmax)
+println("Maximum error jac_step:   ",maximum(abs.(jac_step-jac_step_num)))

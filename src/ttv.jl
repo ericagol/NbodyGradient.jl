@@ -231,7 +231,8 @@ return
 end
 
 # Drifts bodies i & j
-function driftij!(x::Array{Float64,2},v::Array{Float64,2},i::Int64,j::Int64,h::Float64)
+#function driftij!(x::Array{Float64,2},v::Array{Float64,2},i::Int64,j::Int64,h::Float64)
+function driftij!(x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T) where {T <: Real}
 for k=1:NDIM
   x[k,i] += h*v[k,i]
   x[k,j] += h*v[k,j]
@@ -394,7 +395,8 @@ return
 end
 
 # Drifts all particles:
-function drift!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,n::Int64)
+#function drift!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,n::Int64)
+function drift!(x::Array{T,2},v::Array{T,2},h::T,n::Int64) where {T <: Real}
 @inbounds for i=1:n, j=1:NDIM
   x[j,i] += h*v[j,i]
 end
@@ -617,8 +619,9 @@ return
 end
 
 # Carries out the DH17 mapping:
-function dh17!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},n::Int64)
-alpha = alpha0
+#function dh17!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},n::Int64)
+function dh17!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64) where {T <: Real}
+alpha = convert(typeof(h),alpha0)
 h2 = 0.5*h
 # alpha = 0. is similar in precision to alpha=0.25
 if alpha != 0.0
