@@ -35,7 +35,7 @@ count1 = zeros(Int64,n)
 dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
 @time dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
 @time dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
-# Now call with half the timestep:
+# Now call with one tenth the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
 dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0)

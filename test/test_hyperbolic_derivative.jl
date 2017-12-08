@@ -5,9 +5,9 @@ include("../src/ttv.jl")
 # Define a constant of 1/3:
 #const third = 1.0/3.0
 
-function test_elliptic_derivative(dlnq)
-# Call as: save,jac_num,jacobian=test_elliptic_derivative(1e-4)
-# This routine runs a test of the kep_elliptic_jacobian function in kepler_solver.jl
+function test_hyperbolic_derivative(dlnq)
+# Call as: save,jac_num,jacobian=test_hyperbolic_derivative(1e-4)
+# This routine runs a test of the kep_hyperbolic_jacobian function in kepler_solver.jl
 # Define the central force constant in terms of AU and days:
 k = (2.0*pi/365.25)^2
 # Initial position at 1 AU:
@@ -144,9 +144,9 @@ return xsave,jac_num,jacobian
 end
 
 # First try:
-xsave,jac_num1,jacobian=test_elliptic_derivative(1e-7)
+xsave,jac_num1,jacobian=test_hyperbolic_derivative(1e-7)
 # Second try:
-xsave,jac_num2,jacobian=test_elliptic_derivative(1e-6)
+xsave,jac_num2,jacobian=test_hyperbolic_derivative(1e-6)
 
 
 println("Jac dlnq=1e-7 ")

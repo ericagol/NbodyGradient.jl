@@ -28,7 +28,15 @@ for k=1:n
   m[k] = elements[k,1]
 end
 
+for iter = 1:2
+
 x0,v0 = init_nbody(elements,t0,n)
+ if iter == 2
+   # Reduce masses to trigger hyperbolic routine:
+    m[1:n] *= 1e-1
+    h = 0.05
+    hbig = big(h)
+ end
 # Tilt the orbits a bit:
 x0[2,1] = 5e-1*sqrt(x0[1,1]^2+x0[3,1]^2)
 x0[2,2] = -5e-1*sqrt(x0[1,2]^2+x0[3,2]^2)
@@ -39,7 +47,9 @@ jac_ij = zeros(Float64,14,14)
 i=1 ; j=2
 x = copy(x0) ; v=copy(v0)
 # Predict values of s:
-keplerij!(m,x,v,i,j,20.*h,jac_ij)
+#println("Before first step: ",x," ",v)
+keplerij!(m,x,v,i,j,h,jac_ij)
+#println("After first step: ",x," ",v)
 x0 = copy(x) ; v0 = copy(v)
 keplerij!(m,x,v,i,j,h,jac_ij)
 
@@ -57,7 +67,7 @@ for jj=1:3
   # Initial positions, velocities & masses:
   xm = big.(x0)
   vm = big.(v0)
-  m = big.(msave)
+  mm = big.(msave)
   dq = dlnq * xm[jj,i]
   if xm[jj,i] != 0.0
     xm[jj,i] -=  dq
@@ -65,7 +75,7 @@ for jj=1:3
     dq = dlnq
     xm[jj,i] = -dq
   end
-  keplerij!(m,xm,vm,i,j,hbig)
+  keplerij!(mm,xm,vm,i,j,hbig)
   xp = big.(x0)
   vp = big.(v0)
   if xm[jj,i] != 0.0
@@ -74,7 +84,7 @@ for jj=1:3
     dq = dlnq
     xp[jj,i] = dq
   end
-  keplerij!(m,xp,vp,i,j,hbig)
+  keplerij!(mm,xp,vp,i,j,hbig)
   # Now x & v are final positions & velocities after time step
   for k=1:3
     jac_ij_num[   k,  jj] = .5*(xp[k,i]-xm[k,i])/dq
@@ -84,7 +94,7 @@ for jj=1:3
   end
   xm = big.(x0)
   vm = big.(v0)
-  m  = big.(msave)
+  mm  = big.(msave)
   dq = dlnq * vm[jj,i]
   if vm[jj,i] != 0.0
     vm[jj,i] -=  dq
@@ -92,17 +102,17 @@ for jj=1:3
     dq = dlnq
     vm[jj,i] = -dq
   end
-  keplerij!(m,xm,vm,i,j,hbig)
+  keplerij!(mm,xm,vm,i,j,hbig)
   xp = big.(x0)
   vp = big.(v0)
-  m  = big.(msave)
+  mm  = big.(msave)
   if vp[jj,i] != 0.0
     vp[jj,i] +=  dq
   else
     dq = dlnq
     vp[jj,i] = dq
   end
-  keplerij!(m,xp,vp,i,j,hbig)
+  keplerij!(mm,xp,vp,i,j,hbig)
   for k=1:3
     jac_ij_num[   k,3+jj] = .5*(xp[k,i]-xm[k,i])/dq
     jac_ij_num[ 3+k,3+jj] = .5*(vp[k,i]-vm[k,i])/dq
@@ -137,7 +147,7 @@ for jj=1:3
   # Now vary parameters of outer planet:
   xm = big.(x0)
   vm = big.(v0)
-  m = big.(msave)
+  mm = big.(msave)
   dq = dlnq * xm[jj,j]
   if xm[jj,j] != 0.0
     xm[jj,j] -=  dq
@@ -145,7 +155,7 @@ for jj=1:3
     dq = dlnq
     xm[jj,j] = -dq
   end
-  keplerij!(m,xm,vm,i,j,hbig)
+  keplerij!(mm,xm,vm,i,j,hbig)
   xp = big.(x0)
   vp = big.(v0)
   if xp[jj,j] != 0.0
@@ -154,7 +164,7 @@ for jj=1:3
     dq = dlnq
     xp[jj,j] = dq
   end
-  keplerij!(m,xp,vp,i,j,hbig)
+  keplerij!(mm,xp,vp,i,j,hbig)
   for k=1:3
     jac_ij_num[   k,7+jj] = .5*(xp[k,i]-xm[k,i])/dq
     jac_ij_num[ 3+k,7+jj] = .5*(vp[k,i]-vm[k,i])/dq
@@ -163,7 +173,7 @@ for jj=1:3
   end
   xm= big.(x0)
   vm= big.(v0)
-  m = big.(msave)
+  mm = big.(msave)
   dq = dlnq * vm[jj,j]
   if vm[jj,j] != 0.0
     vm[jj,j] -=  dq
@@ -171,7 +181,7 @@ for jj=1:3
     dq = dlnq
     vm[jj,j] = -dq
   end
-  keplerij!(m,xm,vm,i,j,hbig)
+  keplerij!(mm,xm,vm,i,j,hbig)
   xp= big.(x0)
   vp= big.(v0)
   if vp[jj,j] != 0.0
@@ -180,7 +190,7 @@ for jj=1:3
     dq = dlnq
     vp[jj,j] = dq
   end
-  keplerij!(m,xp,vp,i,j,hbig)
+  keplerij!(mm,xp,vp,i,j,hbig)
   for k=1:3
     jac_ij_num[   k,10+jj] = .5*(xp[k,i]-xm[k,i])/dq
     jac_ij_num[ 3+k,10+jj] = .5*(vp[k,i]-vm[k,i])/dq
@@ -224,7 +234,10 @@ for i=1:14, j=1:14
   end
 end
 println("Maximum fractional error: ",emax," ",imax," ",jmax)
+#println(jac_ij)
+#println(convert(Array{Float64,2},jac_ij_num))
 println("Maximum absolute error:   ",maximum(abs.(jac_ij_num-jac_ij)))
 
 @test isapprox(jac_ij_num,jac_ij)
+end
 end

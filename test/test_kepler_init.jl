@@ -123,3 +123,5 @@ plot(time,vvec[3,:])
 plot(time,vfvec[3,:],".")
 plot(time,vvec[3,:]-vfvec[3,:],".")
 # Check that velocities match finite difference values
+
+@test jac_init-jac_init_num)))

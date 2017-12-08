@@ -69,7 +69,7 @@ m = copy(m0)
 for istep=1:nstep
   dh17!(xtest,vtest,h,m,n)
 end
-println("x/v difference: ",x-xtest,v-vtest)
+#println("x/v difference: ",x-xtest,v-vtest)
 
 # Now compute numerical derivatives:
 jac_step_num = zeros(BigFloat,7*n,7*n)
