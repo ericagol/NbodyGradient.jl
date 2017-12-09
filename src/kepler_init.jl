@@ -1,6 +1,7 @@
 include("kepler.jl")
 
-function kepler_init(time::Float64,mass::Float64,elements::Array{Float64,1})
+#function kepler_init(time::Float64,mass::Float64,elements::Array{Float64,1})
+function kepler_init(time::T,mass::T,elements::Array{T,1}) where {T <: Real}
 # Takes orbital elements of a single Keplerian; returns positions & velocities.
 # This is 3D), so 6 orbital elements specified, the code returns 3D.  For
 # Inclination = pi/2, motion is in X-Z plane; sky plane is X-Y.
@@ -33,8 +34,8 @@ rdot = semi*n/sqrt1mecc2*ecc*sin(f)
 inc = elements[5]
 capomega = elements[6]
 # Now, compute the positions
-x = zeros(Float64,3)
-v = zeros(Float64,3)
+x = zeros(eltype(elements),3)
+v = zeros(eltype(elements),3)
 if abs(capomega-pi) > 1e-15
   coscapomega = cos(capomega) ; sincapomega = sin(capomega)
 else

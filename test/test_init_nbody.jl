@@ -5,24 +5,30 @@ const third = 1./3.
 
 include("../src/init_nbody.jl")
 
+@testset "init_nbody" begin
+
 elements = readdlm("elements.txt",',')
 
 n_body = 4
 t0 = 7257.93115525
 jac_init     = zeros(Float64,7*n_body,7*n_body)
-jac_init_num = zeros(Float64,7*n_body,7*n_body)
+jac_init_num = zeros(BigFloat,7*n_body,7*n_body)
 x,v = init_nbody(elements,t0,n_body,jac_init)
 elements0 = copy(elements)
-dq = [1e-10,1e-5,1e-6,1e-6,1e-6,1e-5,1e-5]
+#dq = big.([1e-10,1e-5,1e-6,1e-6,1e-6,1e-5,1e-5])
+dq = big.([1e-10,1e-8,1e-8,1e-8,1e-8,1e-8,1e-8])
+
+#dq = big.([1e-15,1e-15,1e-15,1e-15,1e-15,1e-15,1e-15])
+t0big = big(t0)
 # Now, compute derivatives numerically:
 for j=1:n_body
   for k=1:7
-    elements .= elements0
-    dq0 = dq[k]; if j==1 && k==1 ; dq0 = 1e-5; end
-    elements[j,k] += dq0
-    xp,vp = init_nbody(elements,t0,n_body)
-    elements[j,k] -= 2dq0
-    xm,vm = init_nbody(elements,t0,n_body)
+    elementsbig = big.(elements0)
+    dq0 = dq[k]; if j==1 && k==1 ; dq0 = big(1e-15); end
+    elementsbig[j,k] += dq0
+    xp,vp = init_nbody(elementsbig,t0big,n_body)
+    elementsbig[j,k] -= 2dq0
+    xm,vm = init_nbody(elementsbig,t0big,n_body)
     for l=1:n_body, p=1:3
       i1 = (l-1)*7+p
       if k == 1
@@ -45,4 +51,6 @@ for j=1:n_body
   jac_init_num[j*7,j*7]=1.0
 end
 
-println(maximum(abs.(jac_init_num-jac_init)))
+println("Maximum jac_init-jac_init_num: ",maximum(abs.(jac_init-jac_init_num)))
+@test isapprox(jac_init_num,jac_init)
+end

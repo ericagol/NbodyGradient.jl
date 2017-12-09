@@ -5,6 +5,9 @@ const third = 1.0/3.0
 
 include("../src/kepler_init.jl")
 
+@testset "kepler_init" begin
+
+
 t0 = 2.4
 mass = 1.0
 period = 1.5
@@ -14,55 +17,46 @@ while elements[3]^2+elements[4]^2 >= 1.0
 end
 elements_diff = zeros(Float64,6)
 ecc = sqrt(elements[3]^2+elements[4]^2)
-ntime = 100000
+ntime = 10000
 time = linspace(t0,t0+period,ntime)
-xvec = zeros(Float64,3,ntime)
-vvec = zeros(Float64,3,ntime)
-vfvec = zeros(Float64,3,ntime)
+xvec = zeros(BigFloat,3,ntime)
+vvec = zeros(BigFloat,3,ntime)
+vfvec = zeros(BigFloat,3,ntime)
+timebig = big.(time)
 #dt = 1e-8
 dt = period/ntime
+dtbig = big(dt)
 jac_init = zeros(Float64,7,7)
-jac_tmp  = zeros(Float64,7,7)
-delements = [1e-5,1e-5,1e-5,1e-5,1e-5,1e-5,1e-5]
+jac_init_num = zeros(BigFloat,7,7)
+delements = big.([1e-15,1e-15,1e-15,1e-15,1e-15,1e-15,1e-15])
 elements_name = ["P","t0","ecosom","esinom","inc","Omega","Mass"]
 cartesian_name = ["x","y","z","vx","vy","vz","mass"]
+massbig=big(mass)
 for i=1:ntime
-  x,v = kepler_init(time[i],mass,elements)
+  x,v = kepler_init(timebig[i],massbig,big.(elements))
   if i==1 
-#    x_ekep,v_ekep,tp,dtpdecos,dtpdesin = kepler_init(time[i],mass,elements,jac_init)
     x_ekep,v_ekep = kepler_init(time[i],mass,elements,jac_init)
   # Check that these agree:
-    println("x-x_ekep: ",maximum(abs.(x-x_ekep))," v-v_ekep: ",maximum(abs.(v-v_ekep)))
+#    println("x-x_ekep: ",maximum(abs.(x-x_ekep))," v-v_ekep: ",maximum(abs.(v-v_ekep)))
   # Now take some derivatives:
-    jac_init_num = zeros(Float64,7,7)
     for j=1:7
-      elements_diff .= elements
+      elements_diff = big.(elements)
       if j <= 6
         elements_diff[j] -= delements[j]
       else
-        mass -= delements[7]
+        massbig -= delements[7]
       end
-#      x_minus,v_minus,tp_minus,dtpdecos_minus,dtpdesin_minus= kepler_init(time[i],mass,elements_diff,jac_tmp)
-      x_minus,v_minus= kepler_init(time[i],mass,elements_diff,jac_tmp)
+      x_minus,v_minus= kepler_init(timebig[i],massbig,elements_diff)
       elements_diff .= elements
       if j <= 6
         elements_diff[j] += delements[j]
       else
-        mass += 2.0*delements[7]
+        massbig += 2.0*delements[7]
       end
-#      x_plus,v_plus,tp_plus,dtpdecos_plus,dtpdesin_plus= kepler_init(time[i],mass,elements_diff,jac_tmp)
-      x_plus,v_plus= kepler_init(time[i],mass,elements_diff,jac_tmp)
+      x_plus,v_plus= kepler_init(timebig[i],massbig,elements_diff)
       if j == 7
-        mass -= delements[7]
+        massbig -= delements[7]
       end
-#      if j==3
-#        dtpdecos_num = .5*(tp_plus-tp_minus)/delements[j]
-#        println("dtpdecos: ",dtpdecos," dtpdecos_num: ",dtpdecos_num," ",dtpdecos-dtpdecos_num)
-#      end
-#      if j==4
-#        dtpdesin_num = .5*(tp_plus-tp_minus)/delements[j]
-#        println("dtpdesin: ",dtpdesin," dtpdesin_num: ",dtpdesin_num," ",dtpdesin-dtpdesin_num)
-#      end
       for k=1:3
         jac_init_num[  k,j] = .5*(x_plus[k]-x_minus[k])/delements[j]
         jac_init_num[3+k,j] = .5*(v_plus[k]-v_minus[k])/delements[j]
@@ -79,7 +73,7 @@ for i=1:ntime
   xvec[:,i]=x
   vvec[:,i]=v
   # Compute finite difference velocity:
-  xf,vf = kepler_init(time[i]+dt,mass,elements)
+  xf,vf = kepler_init(timebig[i]+dtbig,massbig,big.(elements))
   vfvec[:,i]=(xf-x)/dt
 end
 period = elements[1]
@@ -91,7 +85,7 @@ xfocus = semi*ecc*(-cos(omega)-sin(omega))
 zfocus = semi*ecc*sin(omega)
 # Check that we have an ellipse (we're assuming that the motion is in the x-z plane; no longer true):
 Atot = 0.0
-dAdt = zeros(Float64,ntime)
+dAdt = zeros(BigFloat,ntime)
 dx = xvec[1,1]-xvec[1,ntime-1]
 dy = xvec[2,1]-xvec[2,ntime-1]
 dz = xvec[3,1]-xvec[3,ntime-1]
@@ -111,17 +105,18 @@ for i=2:ntime
   Atot += norm(dAvec)
 end  
 println("Total area: ",Atot," ",pi*sqrt(1.-ecc^2)*semi^2," ratio: ",Atot/pi/semi^2/sqrt(1.-ecc^2))
-using PyPlot
+#using PyPlot
 #plot(time,dAdt)
 #axis([minimum(time),maximum(time),0.,1.5*maximum(dAdt)])
 println("Scatter in dAdt: ",std(dAdt))
 
-plot(time,vvec[1,:])
-plot(time,vfvec[1,:],".")
-plot(time,vvec[1,:]-vfvec[1,:],".")
-plot(time,vvec[3,:])
-plot(time,vfvec[3,:],".")
-plot(time,vvec[3,:]-vfvec[3,:],".")
+#plot(time,vvec[1,:])
+#plot(time,vfvec[1,:],".")
+#plot(time,vvec[1,:]-vfvec[1,:],".")
+#plot(time,vvec[3,:])
+#plot(time,vfvec[3,:],".")
+#plot(time,vvec[3,:]-vfvec[3,:],".")
 # Check that velocities match finite difference values
 
-@test jac_init-jac_init_num)))
+@test isapprox(jac_init,jac_init_num)
+end
