@@ -198,5 +198,6 @@ end
 println("Maximum fractional error: ",jacmax," ",imax," ",jmax," ",kmax," ",lmax)
 println("Maximum error jac_step:   ",maximum(abs.(jac_step-jac_step_num)))
 
-@test isapprox(jac_step,jac_step_num)
+#@test isapprox(jac_step,jac_step_num)
+@test isapprox(jac_step,jac_step_num;norm=maxabs)
 end

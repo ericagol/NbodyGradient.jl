@@ -148,5 +148,6 @@ end
 println("Maximum fractional error: ",emax," ",imax," ",jmax)
 println("Maximum error jacobian: ",maximum(abs.(jacobian-jac_num1)))
 
-@test isapprox(jacobian,jac_num1)
+#@test isapprox(jacobian,jac_num1)
+@test isapprox(jacobian,jac_num1;norm=maxabs)
 end

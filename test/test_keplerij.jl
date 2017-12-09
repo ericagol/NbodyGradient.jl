@@ -238,6 +238,6 @@ println("Maximum fractional error: ",emax," ",imax," ",jmax)
 #println(convert(Array{Float64,2},jac_ij_num))
 println("Maximum absolute error:   ",maximum(abs.(jac_ij_num-jac_ij)))
 
-@test isapprox(jac_ij_num,jac_ij)
+@test isapprox(jac_ij_num,jac_ij;norm=maxabs)
 end
 end

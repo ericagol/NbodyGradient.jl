@@ -153,5 +153,5 @@ end
 
 println("Maximum jac_step phisalpha error: ",jacmax)
 
-@test isapprox(jac_step,jac_step_num)
+@test isapprox(jac_step,jac_step_num;norm=maxabs)
 end

@@ -1,5 +1,7 @@
-include("../src/ttv.jl")
-include("/Users/ericagol/Computer/Julia/regress.jl")
+#include("../src/ttv.jl")
+#include("/Users/ericagol/Computer/Julia/regress.jl")
+
+@testset "ttv_elements" begin
 
 # This routine takes derivative of transit times with respect
 # to the initial orbital elements.
@@ -10,10 +12,13 @@ t0 = 7257.93115525
 h  = 0.05
 #tmax = 600.0
 #tmax = 800.0
-tmax = 10.0
+tmax = 100.0
 
 # Read in initial conditions:
 elements = readdlm("elements.txt",',')
+# Make masses of planets bigger
+#elements[2,1] *= 10.0
+#elements[3,1] *= 10.0
 
 # Make an array, tt,  to hold transit times:
 # First, though, make sure it is large enough:
@@ -32,8 +37,8 @@ count = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
 dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
-@time dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
-@time dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
+dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
+dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
 # Now call with half the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
@@ -43,17 +48,17 @@ dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0)
 dtdq0 = zeros(n,maximum(ntt),7,n)
 dtdelements0 = zeros(n,maximum(ntt),7,n)
 dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
-@time dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
-@time dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
+dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
+dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
 dtdq2 = zeros(n,maximum(ntt),7,n)
 dtdelements2 = zeros(n,maximum(ntt),7,n)
-@time dtdelements2 = ttv_elements!(n,t0,h/2.,tmax,elements,tt2,count,dtdq2)
+dtdelements2 = ttv_elements!(n,t0,h/2.,tmax,elements,tt2,count,dtdq2)
 dtdq4 = zeros(n,maximum(ntt),7,n)
 dtdelements4 = zeros(n,maximum(ntt),7,n)
-@time dtdelements4 = ttv_elements!(n,t0,h/4.,tmax,elements,tt4,count,dtdq4)
+dtdelements4 = ttv_elements!(n,t0,h/4.,tmax,elements,tt4,count,dtdq4)
 dtdq8 = zeros(n,maximum(ntt),7,n)
 dtdelements8 = zeros(n,maximum(ntt),7,n)
-@time dtdelements8 = ttv_elements!(n,t0,h/8.,tmax,elements,tt8,count,dtdq8)
+dtdelements8 = ttv_elements!(n,t0,h/8.,tmax,elements,tt8,count,dtdq8)
 println("Maximum error on derivative: ",maximum(abs.(dtdelements0-dtdelements2)))
 println("Maximum error on derivative: ",maximum(abs.(dtdelements2-dtdelements4)))
 println("Maximum error on derivative: ",maximum(abs.(dtdelements4-dtdelements8)))
@@ -75,21 +80,22 @@ dtdelements0_sum = zeros(BigFloat,n,maximum(ntt),7,n)
 n_body = n
 # Compute derivatives with BigFloat for additional precision:
 elements0 = copy(elements)
-delement = big.([1e-15,1e-15,1e-15,1e-15,1e-15,1e-15,1e-15])
+#delement = big.([1e-15,1e-15,1e-15,1e-15,1e-15,1e-15,1e-15])
+dq0 = big(1e-20)
 tt2 = big.(tt2)
 tt3 = big.(tt3)
 t0big = big(t0); tmaxbig = big(tmax); hbig = big(h)
 zero = big(0.0)
 # Now, compute derivatives numerically:
-for jq=2:n_body
+for jq=1:n_body
   for iq=1:7
     elementsbig = big.(elements0)
-    dq0 = delement[iq]; if jq==1 && iq==7 ; dq0 = big(1e-10); end  # Vary mass of star by a larger factor
+#    dq0 = delement[iq]; if jq==1 && iq==7 ; dq0 = big(1e-10); end  # Vary mass of star by a larger factor
     if iq == 7; ivary = 1; else; ivary = iq+1; end  # Shift mass variation to end
     elementsbig[jq,ivary] += dq0
-    @time dq_plus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt2,count2,zero,0,0)
+    dq_plus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt2,count2,zero,0,0)
     elementsbig[jq,ivary] -= 2dq0
-    @time dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt3,count2,zero,0,0)
+    dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt3,count2,zero,0,0)
     #xm,vm = init_nbody(elements,t0,n_body)
     for i=1:n
       for k=1:count2[i]
@@ -100,31 +106,28 @@ for jq=2:n_body
   end
 end
 
-println(maximum(abs.(dtdelements0-dtdelements0_sum)))
+println("Max diff dtdelements: ",maximum(abs.(dtdelements0-dtdelements0_sum)))
 
-nbad = 0
-ntot = 0
-diff_dtdelements0 = zeros(n,maximum(ntt),7,n)
-for i=1:n, j=1:count[i], k=1:7, l=2:n
-  if abs(dtdelements0[i,j,k,l]-dtdelements0_sum[i,j,k,l]) > 0.1*abs(dtdelements0[i,j,k,l]) && ~(abs(dtdelements0[i,j,k,l]) == 0.0  && abs(dtdelements0_sum[i,j,k,l]) < 1e-3)
-    nbad +=1
-  end
-  if dtdelements0[i,j,k,l] != 0.0
-    diff_dtdelements0[i,j,k,l] = minimum([abs(dtdelements0[i,j,k,l]-dtdelements0_sum[i,j,k,l]);abs(dtdelements0_sum[i,j,k,l]/dtdelements0[i,j,k,l]-1.0)])
-  else
-    diff_dtdelements0[i,j,k,l] = abs(dtdelements0[i,j,k,l]-dtdelements0_sum[i,j,k,l])
-  end
-  ntot +=1
+#ntot = 0
+#diff_dtdelements0 = zeros(n,maximum(ntt),7,n)
+#for i=1:n, j=1:count[i], k=1:7, l=2:n
+#  diff_dtdelements0[i,j,k,l] = abs(dtdelements0[i,j,k,l]-convert(Float64,dtdelements0_sum[i,j,k,l]))
+#  ntot +=1
+#end
+
+#using PyPlot
+#
+#nderiv = n^2*7*maximum(ntt)
+##mask[:,:,2,:] = false
+#loglog(abs.(reshape(dtdelements0,nderiv)),abs.(reshape(convert(Array{Float64,4},dtdelements0_sum),nderiv)),".")
+#axis([1e-6,1e2,1e-12,1e2])
+#loglog(abs.(reshape(dtdelements0,nderiv)),abs.(reshape(diff_dtdelements0,nderiv)),".")
+#println("Maximum error: ",maximum(diff_dtdelements0))
+
+
+
+@test isapprox(dtdelements0,dtdelements0_sum;norm=maxabs)
 end
-
-using PyPlot
-
-nderiv = n^2*7*maximum(ntt)
-#mask[:,:,2,:] = false
-loglog(abs.(reshape(dtdelements0,nderiv)),abs.(reshape(convert(Array{Float64,4},dtdelements0_sum),nderiv)),".")
-axis([1e-6,1e2,1e-12,1e2])
-loglog(abs.(reshape(dtdelements0,nderiv)),abs.(reshape(diff_dtdelements0,nderiv)),".")
-println("Maximum error: ",maximum(diff_dtdelements0))
 
 ## Make a plot of some TTVs:
 #

@@ -182,11 +182,11 @@ while t < t0+tmax
       count[i] += 1
 #      tt[i,count[i]]=t+findtransit!(i,h,gi,gsave[i],m,xprior,vprior,x,v)
       dt = -gsave[i]*h/(gi-gsave[i])
-#      dt = findtransit2!(1,i,h,dt,m,xprior,vprior)
+#      dt = findtransit2!(1,i,n,h,dt,m,xprior,vprior)
       xtransit .= xprior
       vtransit .= vprior
       jac_transit .= jac_prior
-      dt = findtransit2!(1,i,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
+      dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
       tt[i,count[i]]=t+dt
       # Save for posterity:
       for k=1:7, p=1:n
@@ -245,9 +245,9 @@ while t < t0+tmax
       dt = -gsave[i]*h/(gi-gsave[i])
       xtransit .= xprior
       vtransit .= vprior
-      dt = findtransit2!(1,i,h,dt,m,xtransit,vtransit)
+      dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit)
       tt[i,count[i]]=t+dt
-#      tt[i,count[i]]=t+findtransit2!(1,i,h,gi,gsave[i],m,xprior,vprior)
+#      tt[i,count[i]]=t+findtransit2!(1,i,n,h,gi,gsave[i],m,xprior,vprior)
     end
     gsave[i] = gi
   end
@@ -797,8 +797,8 @@ return
 end
 
 # Finds the transit by taking a partial dh17 step from prior times step:
-#function findtransit2!(i::Int64,j::Int64,h::Float64,tt::Float64,m::Array{Float64,1},x1::Array{Float64,2},v1::Array{Float64,2})
-function findtransit2!(i::Int64,j::Int64,h::T,tt::T,m::Array{T,1},x1::Array{T,2},v1::Array{T,2}) where {T <: Real}
+#function findtransit2!(i::Int64,j::Int64,n::Int64,h::Float64,tt::Float64,m::Array{Float64,1},x1::Array{Float64,2},v1::Array{Float64,2})
+function findtransit2!(i::Int64,j::Int64,n::Int64,h::T,tt::T,m::Array{T,1},x1::Array{T,2},v1::Array{T,2}) where {T <: Real}
 # Computes the transit time, approximating the motion as a fraction of a DH17 step forward in time.
 # Initial guess using linear interpolation:
 dt = 1.0
@@ -839,7 +839,7 @@ return tt::eltype(h)
 end
 
 # Finds the transit by taking a partial dh17 step from prior times step, computes timing Jacobian, dtdq, wrt initial cartesian coordinates, masses:
-function findtransit2!(i::Int64,j::Int64,h::Float64,tt::Float64,m::Array{Float64,1},x1::Array{Float64,2},v1::Array{Float64,2},jac_step::Array{Float64,2},dtdq::Array{Float64,2})
+function findtransit2!(i::Int64,j::Int64,n::Int64,h::Float64,tt::Float64,m::Array{Float64,1},x1::Array{Float64,2},v1::Array{Float64,2},jac_step::Array{Float64,2},dtdq::Array{Float64,2})
 # Computes the transit time, approximating the motion as a fraction of a DH17 step forward in time.
 # Also computes the Jacobian of the transit time with respect to the initial parameters, dtdq[7,n].
 # Initial guess using linear interpolation:

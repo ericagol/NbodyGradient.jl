@@ -118,5 +118,5 @@ println("Scatter in dAdt: ",std(dAdt))
 #plot(time,vvec[3,:]-vfvec[3,:],".")
 # Check that velocities match finite difference values
 
-@test isapprox(jac_init,jac_init_num)
+@test isapprox(jac_init,jac_init_num;norm=maxabs)
 end
