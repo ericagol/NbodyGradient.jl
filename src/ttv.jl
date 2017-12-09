@@ -20,6 +20,7 @@ const vtmp = zeros(Float64,3);const  dvdr0 = zeros(Float64,3);const  dvda0=zeros
 # Computes TTVs as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
 function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dlnq::Float64,iq::Int64,jq::Int64)
 #fcons = open("fcons.txt","w");
+# Set up mass, position & velocity arrays.  NDIM =3
 m=zeros(Float64,n)
 x=zeros(Float64,NDIM,n)
 v=zeros(Float64,NDIM,n)
@@ -27,6 +28,7 @@ v=zeros(Float64,NDIM,n)
 fill!(tt,0.0)
 # Counter for transits of each planet:
 fill!(count,0)
+# Insert masses from the elements array:
 for i=1:n
   m[i] = elements[i,1]
 end
@@ -62,15 +64,39 @@ ttv!(n,t0,h,tmax,m,x,v,tt,count)
 return dq
 end
 
-# Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements. TBD [ ]
+# Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
 function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4})
-# (At the moment dtdq0 is derivative with respect to initial x,v,m).
+# 
+# Input quantities:
+# n     = number of bodies
+# t0    = initial time of integration  [days]
+# h     = time step [days]
+# tmax  = duration of integration [days]
+# elements[i,j] = 2D n x 7 array of the masses & orbital elements of the bodies (currently first body's orbital elements are ignored)
+#            elements are ordered as: mass, period, t0, e*cos(omega), e*sin(omega), inclination, longitude of ascending node (Omega)
+# tt    = array of transit times of size [n x max(ntt)] (currently only compute transits of star, so first row is zero) [days]
+# count = array of the number of transits for each body
+# dtdq0 = derivative of transit times with respect to initial x,v,m [various units: day/length (3), day^2/length (3), day/mass]
+#         4D array  [n x max(ntt) ] x [n x 7] - derivatives of transits of each planet with respect to initial positions/velocities
+#             masses of *all* bodies.  Note: mass derivatives are *after* positions/velocities, even though they are at start
+#             of the elements[i,j] array.
+#
+# Output quantity:
+# dtdelements = 4D array  [n x max(ntt) ] x [n x 7] - derivatives of transits of each planet with respect to initial orbital
+#             elements/masses of *all* bodies.  Note: mass derivatives are *after* elements, even though they are at start
+#             of the elements[i,j] array
+#
+# Example: see test_ttv_elements.jl in test/ directory
+#
+# Define initial mass, position & velocity arrays:
 m=zeros(Float64,n)
 x=zeros(Float64,NDIM,n)
 v=zeros(Float64,NDIM,n)
 # Fill the transit-timing & jacobian arrays with zeros:
 fill!(tt,0.0)
 fill!(dtdq0,0.0)
+# Create an array for the derivatives with respect to the masses/orbital elements:
+dtdelements = copy(dtdq0)
 # Counter for transits of each planet:
 fill!(count,0)
 for i=1:n
@@ -86,15 +112,14 @@ ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0)
 tmp = zeros(Float64,7,n)
 for i=1:n, j=1:count[i]
   # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
-  tmp = dtdq0[i,j,:,:]
   for k=1:n, l=1:7
-    dtdq0[i,j,l,k] = 0.0
+    dtdelements[i,j,l,k] = 0.0
     for p=1:n, q=1:7
-      dtdq0[i,j,l,k] += tmp[q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
+      dtdelements[i,j,l,k] += dtdq0[i,j,q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
     end
   end
 end
-return
+return dtdelements
 end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
