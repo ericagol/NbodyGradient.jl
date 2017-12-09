@@ -9,8 +9,8 @@ t0 = 7257.93115525
 #h  = 0.12
 h  = 0.05
 #tmax = 600.0
-tmax = 800.0
-#tmax = 10.0
+#tmax = 800.0
+tmax = 10.0
 
 # Read in initial conditions:
 elements = readdlm("elements.txt",',')
@@ -70,25 +70,26 @@ println("Maximum error on derivative: ",maximum(abs.(dtdelements4-dtdelements8))
 # Compute derivatives numerically:
 #nq = 15
 # This "summarizes" best numerical derivative:
-dtdelements0_sum = zeros(n,maximum(ntt),7,n)
-#itdq0 = zeros(Int64,n,maximum(ntt),7,n)
-#dlnq = [1e-2,3.16e-3,1e-3,3.16e-4,1e-4,3.16e-5,1e-5,3.16e-6,1e-6,3.16e-7,1e-7,3.16e-8,1e-8,3.16e-9,1e-9]
+dtdelements0_sum = zeros(BigFloat,n,maximum(ntt),7,n)
 
 n_body = n
-#t0 = 7257.93115525
-#x,v = init_nbody(elements,t0,n_body,jac_init)
+# Compute derivatives with BigFloat for additional precision:
 elements0 = copy(elements)
-delement = [1e-5,1e-6,1e-6,1e-6,1e-5,1e-5,1e-10]
+delement = big.([1e-15,1e-15,1e-15,1e-15,1e-15,1e-15,1e-15])
+tt2 = big.(tt2)
+tt3 = big.(tt3)
+t0big = big(t0); tmaxbig = big(tmax); hbig = big(h)
+zero = big(0.0)
 # Now, compute derivatives numerically:
-for jq=1:n_body
+for jq=2:n_body
   for iq=1:7
-    elements .= elements0
-    dq0 = delement[iq]; if jq==1 && iq==7 ; dq0 = 1e-5; end  # Vary mass of star by a larger factor
+    elementsbig = big.(elements0)
+    dq0 = delement[iq]; if jq==1 && iq==7 ; dq0 = big(1e-10); end  # Vary mass of star by a larger factor
     if iq == 7; ivary = 1; else; ivary = iq+1; end  # Shift mass variation to end
-    elements[jq,ivary] += dq0
-    dq_plus = ttv_elements!(n,t0,h,tmax,elements,tt2,count2,0.0,0,0)
-    elements[jq,ivary] -= 2dq0
-    dq_minus = ttv_elements!(n,t0,h,tmax,elements,tt3,count2,0.0,0,0)
+    elementsbig[jq,ivary] += dq0
+    @time dq_plus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt2,count2,zero,0,0)
+    elementsbig[jq,ivary] -= 2dq0
+    @time dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt3,count2,zero,0,0)
     #xm,vm = init_nbody(elements,t0,n_body)
     for i=1:n
       for k=1:count2[i]
@@ -104,7 +105,7 @@ println(maximum(abs.(dtdelements0-dtdelements0_sum)))
 nbad = 0
 ntot = 0
 diff_dtdelements0 = zeros(n,maximum(ntt),7,n)
-for i=2:n, j=1:count[i], k=1:7, l=1:n
+for i=1:n, j=1:count[i], k=1:7, l=2:n
   if abs(dtdelements0[i,j,k,l]-dtdelements0_sum[i,j,k,l]) > 0.1*abs(dtdelements0[i,j,k,l]) && ~(abs(dtdelements0[i,j,k,l]) == 0.0  && abs(dtdelements0_sum[i,j,k,l]) < 1e-3)
     nbad +=1
   end
@@ -120,7 +121,7 @@ using PyPlot
 
 nderiv = n^2*7*maximum(ntt)
 #mask[:,:,2,:] = false
-loglog(abs.(reshape(dtdelements0,nderiv)),abs.(reshape(dtdelements0_sum,nderiv)),".")
+loglog(abs.(reshape(dtdelements0,nderiv)),abs.(reshape(convert(Array{Float64,4},dtdelements0_sum),nderiv)),".")
 axis([1e-6,1e2,1e-12,1e2])
 loglog(abs.(reshape(dtdelements0,nderiv)),abs.(reshape(diff_dtdelements0,nderiv)),".")
 println("Maximum error: ",maximum(diff_dtdelements0))

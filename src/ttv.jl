@@ -18,12 +18,30 @@ const drvdr0 = zeros(Float64,3);const  drvda0=zeros(Float64,3);const  drvdk=zero
 const vtmp = zeros(Float64,3);const  dvdr0 = zeros(Float64,3);const  dvda0=zeros(Float64,3);const  dvdv0=zeros(Float64,3);const  dvdk=zeros(Float64,3)
 
 # Computes TTVs as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
-function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dlnq::Float64,iq::Int64,jq::Int64)
+#function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dlnq::Float64,iq::Int64,jq::Int64)
+function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64) where {T <: Real}
+# 
+# Input quantities:
+# n     = number of bodies
+# t0    = initial time of integration  [days]
+# h     = time step [days]
+# tmax  = duration of integration [days]
+# elements[i,j] = 2D n x 7 array of the masses & orbital elements of the bodies (currently first body's orbital elements are ignored)
+#            elements are ordered as: mass, period, t0, e*cos(omega), e*sin(omega), inclination, longitude of ascending node (Omega)
+# tt    = pre-allocated array to hold transit times of size [n x max(ntt)] (currently only compute transits of star, so first row is zero) [days]
+#         upon output, set to transit times of planets.
+# count = pre-allocated array of the number of transits for each body upon output
+#
+# dlnq  = fractional variation in initial parameter jq of body iq for finite-difference calculation of
+#         derivatives [this is only needed for testing derivative code, below].
+#
+# Example: see test_ttv_elements.jl in test/ directory
+#
 #fcons = open("fcons.txt","w");
 # Set up mass, position & velocity arrays.  NDIM =3
-m=zeros(Float64,n)
-x=zeros(Float64,NDIM,n)
-v=zeros(Float64,NDIM,n)
+m=zeros(eltype(elements),n)
+x=zeros(eltype(elements),NDIM,n)
+v=zeros(eltype(elements),NDIM,n)
 # Fill the transit-timing array with zeros:
 fill!(tt,0.0)
 # Counter for transits of each planet:
@@ -190,7 +208,8 @@ return
 end
 
 # Computes TTVs as a function of initial x,v,m.
-function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1})
+#function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1})
+function ttv!(n::Int64,t0::T,h::T,tmax::T,m::Array{T,1},x::Array{T,2},v::Array{T,2},tt::Array{T,2},count::Array{Int64,1}) where {T <: Real}
 # Make some copies to allocate space for saving prior step and computing coordinates at the times of transit.
 xprior = copy(x)
 vprior = copy(v)
@@ -203,9 +222,9 @@ istep = 0
 # Jacobian for each step (7 elements+mass, n_planets, 7 elements+mass, n planets):
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
-gsave = zeros(Float64,n)
+gsave = zeros(eltype(x),n)
 gi  = 0.0
-dt::Float64 = 0.0
+dt::eltype(h) = 0.0
 # Loop over time steps:
 while t < t0+tmax
   # Carry out a phi^2 mapping step:
@@ -676,7 +695,8 @@ return
 end
 
 # Used in computing the transit time:
-function g!(i::Int64,j::Int64,x::Array{Float64,2},v::Array{Float64,2})
+#function g!(i::Int64,j::Int64,x::Array{Float64,2},v::Array{Float64,2})
+function g!(i::Int64,j::Int64,x::Array{T,2},v::Array{T,2}) where {T <: Real}
 # See equation 8-10 Fabrycky (2008) in Seager Exoplanets book
 g = (x[1,j]-x[1,i])*(v[1,j]-v[1,i])+(x[2,j]-x[2,i])*(v[2,j]-v[2,i])
 return g
@@ -777,7 +797,8 @@ return
 end
 
 # Finds the transit by taking a partial dh17 step from prior times step:
-function findtransit2!(i::Int64,j::Int64,h::Float64,tt::Float64,m::Array{Float64,1},x1::Array{Float64,2},v1::Array{Float64,2})
+#function findtransit2!(i::Int64,j::Int64,h::Float64,tt::Float64,m::Array{Float64,1},x1::Array{Float64,2},v1::Array{Float64,2})
+function findtransit2!(i::Int64,j::Int64,h::T,tt::T,m::Array{T,1},x1::Array{T,2},v1::Array{T,2}) where {T <: Real}
 # Computes the transit time, approximating the motion as a fraction of a DH17 step forward in time.
 # Initial guess using linear interpolation:
 dt = 1.0
@@ -814,7 +835,7 @@ while abs(dt) > 1e-8 && iter < 20
   iter +=1
 end
 # Note: this is the time elapsed *after* the beginning of the timestep:
-return tt::Float64
+return tt::eltype(h)
 end
 
 # Finds the transit by taking a partial dh17 step from prior times step, computes timing Jacobian, dtdq, wrt initial cartesian coordinates, masses:
