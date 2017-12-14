@@ -59,9 +59,12 @@ dtdelements4 = ttv_elements!(n,t0,h/4.,tmax,elements,tt4,count,dtdq4)
 dtdq8 = zeros(n,maximum(ntt),7,n)
 dtdelements8 = zeros(n,maximum(ntt),7,n)
 dtdelements8 = ttv_elements!(n,t0,h/8.,tmax,elements,tt8,count,dtdq8)
-println("Maximum error on derivative: ",maximum(abs.(dtdelements0-dtdelements2)))
-println("Maximum error on derivative: ",maximum(abs.(dtdelements2-dtdelements4)))
-println("Maximum error on derivative: ",maximum(abs.(dtdelements4-dtdelements8)))
+#println("Maximum error on derivative: ",maximum(abs.(dtdelements0-dtdelements2)))
+#println("Maximum error on derivative: ",maximum(abs.(dtdelements2-dtdelements4)))
+#println("Maximum error on derivative: ",maximum(abs.(dtdelements4-dtdelements8)))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements0)-asinh.(dtdelements2))))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements2)-asinh.(dtdelements4))))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements4)-asinh.(dtdelements8))))
 #read(STDIN,Char)
 
 # Check that this is working properly:
@@ -111,7 +114,8 @@ for jq=1:n_body
   end
 end
 
-println("Max diff dtdelements: ",maximum(abs.(dtdelements0[mask]./dtdelements0_sum[mask]-1.0)))
+#println("Max diff dtdelements: ",maximum(abs.(dtdelements0[mask]./dtdelements0_sum[mask]-1.0)))
+println("Max diff asinh(dtdelements): ",maximum(abs.(asinh.(dtdelements0[mask])-asinh.(dtdelements0_sum[mask]))))
 
 #ntot = 0
 #diff_dtdelements0 = zeros(n,maximum(ntt),7,n)
@@ -131,7 +135,10 @@ println("Max diff dtdelements: ",maximum(abs.(dtdelements0[mask]./dtdelements0_s
 
 
 
-@test isapprox(dtdelements0[mask],dtdelements0_sum[mask];norm=maxabs)
+#@test isapprox(dtdelements0[mask],dtdelements0_sum[mask];norm=maxabs)
+@test isapprox(asinh.(dtdelements0[mask]),asinh.(dtdelements0_sum[mask]);norm=maxabs)
+#unit = ones(dtdelements0[mask])
+#@test isapprox(dtdelements0[mask]./dtdelements0_sum[mask],unit;norm=maxabs)
 end
 
 ## Make a plot of some TTVs:

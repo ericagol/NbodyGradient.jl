@@ -13,6 +13,7 @@ n = 3
 #n = 2
 t0 = 7257.93115525
 h  = 0.05
+#h  = 0.0001
 hbig = big(h)
 #h  = 0.075
 tmax = 600.0
@@ -20,6 +21,7 @@ dlnq = big(1e-12)
 
 #nstep = 8000
 nstep = 500
+#nstep = 1
 
 elements = readdlm("elements.txt",',')
 # Increase mass of inner planets:
@@ -184,20 +186,23 @@ end
 #  end
 #end
 
-jacmax = 0.0
+jacmax = 0.0; jac_diff = 0.0
 imax = 0; jmax = 0; kmax = 0; lmax = 0
 for i=1:7, j=1:3, k=1:7, l=1:3
   if jac_step[(j-1)*7+i,(l-1)*7+k] != 0
     diff = abs(jac_step_num[(j-1)*7+i,(l-1)*7+k]/jac_step[(j-1)*7+i,(l-1)*7+k]-1.0)
     if diff > jacmax
-      jacmax = diff; imax = i; jmax = j; kmax = k; lmax = l
+      jac_diff = diff; imax = i; jmax = j; kmax = k; lmax = l; jacmax = jac_step[(j-1)*7+i,(l-1)*7+k]
     end
   end
 end
 
-println("Maximum fractional error: ",jacmax," ",imax," ",jmax," ",kmax," ",lmax)
+println("Maximum fractional error: ",jac_diff," ",imax," ",jmax," ",kmax," ",lmax," ",jacmax)
+#println(jac_step./jac_step_num)
 println("Maximum error jac_step:   ",maximum(abs.(jac_step-jac_step_num)))
+println("Maximum diff asinh(jac_step):   ",maximum(abs.(asinh.(jac_step)-asinh.(jac_step_num))))
 
 #@test isapprox(jac_step,jac_step_num)
-@test isapprox(jac_step,jac_step_num;norm=maxabs)
+#@test isapprox(jac_step,jac_step_num;norm=maxabs)
+@test isapprox(asinh.(jac_step),asinh.(jac_step_num);norm=maxabs)
 end

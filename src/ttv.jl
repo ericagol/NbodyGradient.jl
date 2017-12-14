@@ -1099,6 +1099,7 @@ dt = 1.0
 iter = 0
 r3 = 0.0
 gdot = 0.0
+gsky = 0.0
 x = copy(x1)
 v = copy(v1)
 while abs(dt) > TRANSIT_TOL && iter < 20
@@ -1127,6 +1128,9 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   # Add refinement to estimated time:
   tt += dt
   iter +=1
+end
+if iter >= 20
+  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
 end
 # Compute time derivatives:
 x = copy(x1)
@@ -1158,7 +1162,8 @@ for p=1:n
   indp = (p-1)*7
   for k=1:7
     # Compute derivatives:
-    dtdq[k,p] = -((jac_step[indj,indp+k]-jac_step[indi,indp+k])*(v[1,j]-v[1,i])+(jac_step[indj+1,indp+k]-jac_step[indi+1,indp+k])*(v[2,j]-v[2,i])+
+    #g = (x[1,j]-x[1,i])*(v[1,j]-v[1,i])+(x[2,j]-x[2,i])*(v[2,j]-v[2,i])
+    dtdq[k,p] = -((jac_step[indj  ,indp+k]-jac_step[indi  ,indp+k])*(v[1,j]-v[1,i])+(jac_step[indj+1,indp+k]-jac_step[indi+1,indp+k])*(v[2,j]-v[2,i])+
                   (jac_step[indj+3,indp+k]-jac_step[indi+3,indp+k])*(x[1,j]-x[1,i])+(jac_step[indj+4,indp+k]-jac_step[indi+4,indp+k])*(x[2,j]-x[2,i]))/gdot
   end
 end
