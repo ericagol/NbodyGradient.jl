@@ -6,6 +6,7 @@ const YEAR  = 365.242
 const GNEWT = 39.4845/YEAR^2
 const NDIM  = 3
 const KEPLER_TOL = 1e-8
+const TRANSIT_TOL = 1e-8
 const third = 1./3.
 const alpha0 = 0.0
 include("kepler_step.jl")
@@ -80,6 +81,65 @@ if dlnq != 0.0 && iq > 0 && iq < 7
 end
 ttv!(n,t0,h,tmax,m,x,v,tt,count)
 return dq
+end
+
+# Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
+function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat)
+# 
+# Input quantities:
+# n     = number of bodies
+# t0    = initial time of integration  [days]
+# h     = time step [days]
+# tmax  = duration of integration [days]
+# elements[i,j] = 2D n x 7 array of the masses & orbital elements of the bodies (currently first body's orbital elements are ignored)
+#            elements are ordered as: mass, period, t0, e*cos(omega), e*sin(omega), inclination, longitude of ascending node (Omega)
+# tt    = array of transit times of size [n x max(ntt)] (currently only compute transits of star, so first row is zero) [days]
+# count = array of the number of transits for each body
+# dtdq0 = derivative of transit times with respect to initial x,v,m [various units: day/length (3), day^2/length (3), day/mass]
+#         4D array  [n x max(ntt) ] x [n x 7] - derivatives of transits of each planet with respect to initial positions/velocities
+#             masses of *all* bodies.  Note: mass derivatives are *after* positions/velocities, even though they are at start
+#             of the elements[i,j] array.
+#
+# Output quantity:
+# dtdelements = 4D array  [n x max(ntt) ] x [n x 7] - derivatives of transits of each planet with respect to initial orbital
+#             elements/masses of *all* bodies.  Note: mass derivatives are *after* elements, even though they are at start
+#             of the elements[i,j] array
+#
+# Example: see test_ttv_elements.jl in test/ directory
+#
+# Define initial mass, position & velocity arrays:
+m=zeros(Float64,n)
+x=zeros(Float64,NDIM,n)
+v=zeros(Float64,NDIM,n)
+# Fill the transit-timing & jacobian arrays with zeros:
+fill!(tt,0.0)
+fill!(dtdq0,0.0)
+fill!(dtdq0_num,0.0)
+# Create an array for the derivatives with respect to the masses/orbital elements:
+dtdelements = copy(dtdq0)
+# Counter for transits of each planet:
+fill!(count,0)
+for i=1:n
+  m[i] = elements[i,1]
+end
+# Initialize the N-body problem using nested hierarchy of Keplerians:
+jac_init     = zeros(Float64,7*n,7*n)
+x,v = init_nbody(elements,t0,n,jac_init)
+#x,v = init_nbody(elements,t0,n)
+ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,dtdq0_num,dlnq)
+# Need to apply initial jacobian TBD - convert from
+# derivatives with respect to (x,v,m) to (elements,m):
+tmp = zeros(Float64,7,n)
+for i=1:n, j=1:count[i]
+  # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
+  for k=1:n, l=1:7
+    dtdelements[i,j,l,k] = 0.0
+    for p=1:n, q=1:7
+      dtdelements[i,j,l,k] += dtdq0[i,j,q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
+    end
+  end
+end
+return dtdelements
 end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
@@ -165,8 +225,7 @@ gsave = zeros(Float64,n)
 dt::Float64 = 0.0
 gi = 0.0
 while t < t0+tmax
-  # Carry out a phi^2 mapping step:
-#  phi2!(x,v,h,m,n)
+  # Carry out a dh17 mapping step:
   dh17!(x,v,h,m,n,jac_step)
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody (note that this could be modified to see if
@@ -175,17 +234,13 @@ while t < t0+tmax
     # Compute the relative sky velocity dotted with position:
     gi = g!(i,1,x,v)
     ri = sqrt(x[1,i]^2+x[2,i]^2+x[3,i]^2)
-    # See if sign switches, and if planet is in front of star (by a good amount):
+    # See if sign of g switches, and if planet is in front of star (by a good amount):
+    # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
     if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri
-      # A transit has occurred between the time steps.
-      # Approximate the planet-star motion as a Keplerian, weighting over timestep:
+      # A transit has occurred between the time steps - integrate dh17! between timesteps
       count[i] += 1
-#      tt[i,count[i]]=t+findtransit!(i,h,gi,gsave[i],m,xprior,vprior,x,v)
-      dt = -gsave[i]*h/(gi-gsave[i])
-#      dt = findtransit2!(1,i,n,h,dt,m,xprior,vprior)
-      xtransit .= xprior
-      vtransit .= vprior
-      jac_transit .= jac_prior
+      dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
+      xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
       dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
       tt[i,count[i]]=t+dt
       # Save for posterity:
@@ -205,6 +260,203 @@ while t < t0+tmax
   istep +=1
 end
 return 
+end
+
+# Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
+function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4})
+xprior = copy(x)
+vprior = copy(v)
+xtransit = copy(x)
+vtransit = copy(v)
+# Set the time to the initial time:
+t = t0
+# Set step counter to zero:
+istep = 0
+# Jacobian for each step (7- 6 elements+mass, n_planets, 7 - 6 elements+mass, n planets):
+jac_prior = zeros(Float64,7*n,7*n)
+jac_transit = zeros(Float64,7*n,7*n)
+# Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
+dtdq = zeros(Float64,7,n)
+# Initialize the Jacobian to the identity matrix:
+jac_step = eye(Float64,7*n)
+
+# Save the g function, which computes the relative sky velocity dotted with relative position
+# between the planets and star:
+gsave = zeros(Float64,n)
+# Loop over time steps:
+dt::Float64 = 0.0
+gi = 0.0
+while t < t0+tmax
+  # Carry out a dh17 mapping step:
+  dh17!(x,v,h,m,n,jac_step)
+  # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
+  # Star is body 1; planets are 2-nbody (note that this could be modified to see if
+  # any body transits another body):
+  for i=2:n
+    # Compute the relative sky velocity dotted with position:
+    gi = g!(i,1,x,v)
+    ri = sqrt(x[1,i]^2+x[2,i]^2+x[3,i]^2)
+    # See if sign of g switches, and if planet is in front of star (by a good amount):
+    # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
+    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri
+      # A transit has occurred between the time steps - integrate dh17! between timesteps
+      count[i] += 1
+      dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
+      xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
+      dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
+      tt[i,count[i]]=t+dt
+      # Save for posterity:
+      for k=1:7, p=1:n
+        dtdq0[i,count[i],k,p] = dtdq[k,p]
+      end
+    end
+    gsave[i] = gi
+  end
+  # Save the current state as prior state:
+  xprior .= x
+  vprior .= v
+  jac_prior .= jac_step
+  # Increment time by the time step:
+  t += h
+  # Increment counter by one:
+  istep +=1
+end
+return
+end
+
+# Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
+function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4})
+xprior = copy(x)
+vprior = copy(v)
+xtransit = copy(x)
+vtransit = copy(v)
+# Set the time to the initial time:
+t = t0
+# Set step counter to zero:
+istep = 0
+# Jacobian for each step (7- 6 elements+mass, n_planets, 7 - 6 elements+mass, n planets):
+jac_prior = zeros(Float64,7*n,7*n)
+jac_transit = zeros(Float64,7*n,7*n)
+# Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
+dtdq = zeros(Float64,7,n)
+# Initialize the Jacobian to the identity matrix:
+jac_step = eye(Float64,7*n)
+
+# Save the g function, which computes the relative sky velocity dotted with relative position
+# between the planets and star:
+gsave = zeros(Float64,n)
+# Loop over time steps:
+dt::Float64 = 0.0
+gi = 0.0
+while t < t0+tmax
+  # Carry out a dh17 mapping step:
+  dh17!(x,v,h,m,n,jac_step)
+  # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
+  # Star is body 1; planets are 2-nbody (note that this could be modified to see if
+  # any body transits another body):
+  for i=2:n
+    # Compute the relative sky velocity dotted with position:
+    gi = g!(i,1,x,v)
+    ri = sqrt(x[1,i]^2+x[2,i]^2+x[3,i]^2)
+    # See if sign of g switches, and if planet is in front of star (by a good amount):
+    # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
+    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri
+      # A transit has occurred between the time steps - integrate dh17! between timesteps
+      count[i] += 1
+      dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
+      xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
+      dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
+      tt[i,count[i]]=t+dt
+      # Save for posterity:
+      for k=1:7, p=1:n
+        dtdq0[i,count[i],k,p] = dtdq[k,p]
+      end
+    end
+    gsave[i] = gi
+  end
+  # Save the current state as prior state:
+  xprior .= x
+  vprior .= v
+  jac_prior .= jac_step
+  # Increment time by the time step:
+  t += h
+  # Increment counter by one:
+  istep +=1
+end
+return
+end
+
+# Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
+# This version is used to test findtransit2 by computing finite difference derivative of findtransit2.
+function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat)
+xprior = copy(x)
+vprior = copy(v)
+xtransit = copy(x); xtransit_plus = big.(x); xtransit_minus = big.(x)
+vtransit = copy(v); vtransit_plus = big.(v); vtransit_minus = big.(v)
+m_plus = big.(m); m_minus = big.(m); hbig = big(h); dq = big(0.0)
+# Set the time to the initial time:
+t = t0
+# Set step counter to zero:
+istep = 0
+# Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
+dtdq = zeros(Float64,7,n)
+# Initialize the Jacobian to the identity matrix:
+jac_prior = zeros(Float64,7*n,7*n)
+jac_step = eye(Float64,7*n)
+
+# Save the g function, which computes the relative sky velocity dotted with relative position
+# between the planets and star:
+gsave = zeros(Float64,n)
+# Loop over time steps:
+dt::Float64 = 0.0
+gi = 0.0
+while t < t0+tmax
+  # Carry out a dh17 mapping step:
+  dh17!(x,v,h,m,n,jac_step)
+  # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
+  # Star is body 1; planets are 2-nbody (note that this could be modified to see if
+  # any body transits another body):
+  for i=2:n
+    # Compute the relative sky velocity dotted with position:
+    gi = g!(i,1,x,v)
+    ri = sqrt(x[1,i]^2+x[2,i]^2+x[3,i]^2)
+    # See if sign of g switches, and if planet is in front of star (by a good amount):
+    # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
+    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri
+      # A transit has occurred between the time steps - integrate dh17! between timesteps
+      count[i] += 1
+      dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
+      xtransit .= xprior; vtransit .= vprior
+      dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,eye(jac_step),dtdq) # Just computing derivative since prior timestep, so start with identity matrix
+      tt[i,count[i]]=t+dt
+      # Save for posterity:
+      for k=1:7, p=1:n
+        dtdq0[i,count[i],k,p] = dtdq[k,p]
+        # Compute numerical approximation of dtdq:
+        dt_plus = big(dt)  # Starting estimate
+        xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m)
+        if k < 4; dq = dlnq*xtransit_plus[k,p]; xtransit_plus[k,p] += dq; elseif k < 7; dq =vtransit_plus[k-3,p]*dlnq; vtransit_plus[k-3,p] += dq; else; dq  = m_plus[p]*dlnq; m_plus[p] += dq; end
+        dt_plus = findtransit2!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus) # 20%
+        dt_minus= big(dt)  # Starting estimate
+        xtransit_minus .= big.(xprior); vtransit_minus .= big.(vprior); m_minus .= big.(m)
+        if k < 4; dq = dlnq*xtransit_minus[k,p];xtransit_minus[k,p] -= dq; elseif k < 7; dq =vtransit_minus[k-3,p]*dlnq; vtransit_minus[k-3,p] -= dq; else; dq  = m_minus[p]*dlnq; m_minus[p] -= dq; end
+        dt_minus= findtransit2!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus) # 20%
+        # Compute finite-different derivative:
+        dtdq0_num[i,count[i],k,p] = (dt_plus-dt_minus)/(2dq)
+      end
+    end
+    gsave[i] = gi
+  end
+  # Save the current state as prior state:
+  xprior .= x
+  vprior .= v
+  jac_prior .= jac_step
+  # Increment time by the time step:
+  t += h
+  # Increment counter by one:
+  istep +=1
+end
+return
 end
 
 # Computes TTVs as a function of initial x,v,m.
@@ -807,7 +1059,7 @@ r3 = 0.0
 gdot = 0.0
 x = copy(x1)
 v = copy(v1)
-while abs(dt) > 1e-8 && iter < 20
+while abs(dt) > TRANSIT_TOL && iter < 20
   x .= x1
   v .= v1
   # Advance planet state at start of step to estimated transit time:
@@ -849,7 +1101,7 @@ r3 = 0.0
 gdot = 0.0
 x = copy(x1)
 v = copy(v1)
-while abs(dt) > 1e-8 && iter < 20
+while abs(dt) > TRANSIT_TOL && iter < 20
   x .= x1
   v .= v1
   # Advance planet state at start of step to estimated transit time:
@@ -889,6 +1141,7 @@ for k=1:n
   if k != i
     r3 = sqrt((x[1,k]-x[1,i])^2+(x[2,k]-x[2,i])^2 +(x[3,k]-x[3,i])^2)^3
     gdot += GNEWT*m[k]*((x[1,k]-x[1,i])*(x[1,j]-x[1,i])+(x[2,k]-x[2,i])*(x[2,j]-x[2,i]))/r3
+# g = (x[1,j]-x[1,i])*(v[1,j]-v[1,i])+(x[2,j]-x[2,i])*(v[2,j]-v[2,i])
   end
   if k != j
     r3 = sqrt((x[1,k]-x[1,j])^2+(x[2,k]-x[2,j])^2 +(x[3,k]-x[3,j])^2)^3

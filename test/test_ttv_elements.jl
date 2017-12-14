@@ -9,7 +9,7 @@
 n = 3
 t0 = 7257.93115525
 #h  = 0.12
-h  = 0.05
+h  = 0.04
 #tmax = 600.0
 #tmax = 800.0
 tmax = 100.0
@@ -86,6 +86,7 @@ tt2 = big.(tt2)
 tt3 = big.(tt3)
 t0big = big(t0); tmaxbig = big(tmax); hbig = big(h)
 zero = big(0.0)
+mask = zeros(Bool, size(dtdq0))
 # Now, compute derivatives numerically:
 for jq=1:n_body
   for iq=1:7
@@ -97,16 +98,20 @@ for jq=1:n_body
     elementsbig[jq,ivary] -= 2dq0
     dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt3,count2,zero,0,0)
     #xm,vm = init_nbody(elements,t0,n_body)
-    for i=1:n
+    for i=2:n
       for k=1:count2[i]
         # Compute double-sided derivative for more accuracy:
         dtdelements0_sum[i,k,iq,jq] = (tt2[i,k]-tt3[i,k])/(2.*dq0)
+        # Ignore inclination & longitude of nodes variations:
+        if iq != 5 && iq != 6 && ~(jq == 1 && iq < 7) && ~(jq == i && iq == 7)
+          mask[i,k,iq,jq] = true
+        end
       end
     end
   end
 end
 
-println("Max diff dtdelements: ",maximum(abs.(dtdelements0-dtdelements0_sum)))
+println("Max diff dtdelements: ",maximum(abs.(dtdelements0[mask]./dtdelements0_sum[mask]-1.0)))
 
 #ntot = 0
 #diff_dtdelements0 = zeros(n,maximum(ntt),7,n)
@@ -126,7 +131,7 @@ println("Max diff dtdelements: ",maximum(abs.(dtdelements0-dtdelements0_sum)))
 
 
 
-@test isapprox(dtdelements0,dtdelements0_sum;norm=maxabs)
+@test isapprox(dtdelements0[mask],dtdelements0_sum[mask];norm=maxabs)
 end
 
 ## Make a plot of some TTVs:

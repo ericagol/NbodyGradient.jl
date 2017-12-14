@@ -105,7 +105,7 @@ dtpdt0 = 1.0
 m=n*(time-tp)
 dmdp = -m/period
 dmdtp = -n
-# Kepler solver: instead of true anomly, return eccentric anomaly:
+# Kepler solver: instead of true anomaly, return eccentric anomaly:
 ekep=ekepler(m,ecc)
 cosekep = cos(ekep); sinekep = sin(ekep)
 # Compute the radial distance:
@@ -169,8 +169,8 @@ jac_init[1:3,6] = dxdcom
 jac_init[1:3,7] = dxda*dsemidm
 jac_init[4:6,1] = dvdp + dvda*dsemidp +  dvdekep*dekepdm*(dmdp+dmdtp*dtpdp)
 jac_init[4:6,2] = dvdekep*dekepdm*dmdtp*dtpdt0
-jac_init[4:6,3] = dvdecos + dvdekep*(dekepdm*dmdtp*dtpdecos + dekepdecos) # <-- These two lines still have a bug!
-jac_init[4:6,4] = dvdesin + dvdekep*(dekepdm*dmdtp*dtpdesin + dekepdesin) # <-----'
+jac_init[4:6,3] = dvdecos + dvdekep*(dekepdm*dmdtp*dtpdecos + dekepdecos)
+jac_init[4:6,4] = dvdesin + dvdekep*(dekepdm*dmdtp*dtpdesin + dekepdesin)
 jac_init[4:6,5] = dvdinc
 jac_init[4:6,6] = dvdcom
 jac_init[4:6,7] = dvda*dsemidm

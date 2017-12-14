@@ -1,7 +1,7 @@
 #include("../src/ttv.jl")
 #include("/Users/ericagol/Computer/Julia/regress.jl")
 
-@testset "ttv_elements" begin
+#@testset "ttv_cartesian" begin
 
 # This routine takes derivative of transit times with respect
 # to the initial cartesian coordinates of bodies. [ ]
@@ -11,7 +11,7 @@
 n = 3
 t0 = 7257.93115525
 #h  = 0.12
-h  = 0.05
+h  = 0.04
 #tmax = 600.0
 tmax = 100.0
 #tmax = 10.0
@@ -83,17 +83,21 @@ end
 nbad = 0
 ntot = 0
 diff_dtdq0 = zeros(n,maximum(ntt),7,n)
+mask = zeros(Bool, size(dtdq0))
 for i=2:n, j=1:count[i], k=1:7, l=1:n
   if abs(dtdq0[i,j,k,l]-dtdq0_sum[i,j,k,l]) > 0.1*abs(dtdq0[i,j,k,l]) && ~(abs(dtdq0[i,j,k,l]) == 0.0  && abs(dtdq0_sum[i,j,k,l]) < 1e-3)
 #    println(i," ",j," ",k," ",l," ",dtdq0[i,j,k,l]," ",dtdq0_sum[i,j,k,l]," ",itdq0[i,j,k,l])
     nbad +=1
   end
   diff_dtdq0[i,j,k,l] = abs(dtdq0[i,j,k,l]-dtdq0_sum[i,j,k,l])
+  if k != 2 && k != 5
+    mask[i,j,k,l] = true
+  end
   ntot +=1
 end
-println("Max diff dtdq0: ",maximum(abs.(dtdq0-dtdq0_sum)))
-@test isapprox(dtdq0,convert(Array{Float64,4},dtdq0_sum);norm=maxabs)
-end
+println("Max diff log(dtdq0): ",maximum(abs.(dtdq0_sum[mask]./dtdq0[mask]-1.0)))
+@test isapprox(dtdq0[mask],convert(Array{Float64,4},dtdq0_sum)[mask];norm=maxabs)
+#end
 
 #using PyPlot
 #
