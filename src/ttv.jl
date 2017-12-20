@@ -130,12 +130,15 @@ ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,dtdq0_num,dlnq)
 # Need to apply initial jacobian TBD - convert from
 # derivatives with respect to (x,v,m) to (elements,m):
 tmp = zeros(Float64,7,n)
+ntt_max = size(tt)[2]
 for i=1:n, j=1:count[i]
+  if j <= ntt_max
   # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
-  for k=1:n, l=1:7
-    dtdelements[i,j,l,k] = 0.0
-    for p=1:n, q=1:7
-      dtdelements[i,j,l,k] += dtdq0[i,j,q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
+    for k=1:n, l=1:7
+      dtdelements[i,j,l,k] = 0.0
+      for p=1:n, q=1:7
+        dtdelements[i,j,l,k] += dtdq0[i,j,q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
+      end
     end
   end
 end
@@ -188,13 +191,16 @@ ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0)
 # Need to apply initial jacobian TBD - convert from
 # derivatives with respect to (x,v,m) to (elements,m):
 tmp = zeros(Float64,7,n)
+ntt_max = size(tt)[2]
 for i=1:n, j=1:count[i]
+  if j <= ntt_max
   # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
-  for k=1:n, l=1:7
-    dtdelements[i,j,l,k] = 0.0
-    for p=1:n, q=1:7
-      dtdelements[i,j,l,k] += dtdq0[i,j,q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
-    end
+    for k=1:n, l=1:7
+      dtdelements[i,j,l,k] = 0.0
+      for p=1:n, q=1:7
+        dtdelements[i,j,l,k] += dtdq0[i,j,q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
+      end
+     end
   end
 end
 return dtdelements
@@ -224,9 +230,12 @@ gsave = zeros(Float64,n)
 # Loop over time steps:
 dt::Float64 = 0.0
 gi = 0.0
-while t < t0+tmax
+ntt_max = size(tt)[2]
+param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m))
+while t < (t0+tmax) && param_real
   # Carry out a dh17 mapping step:
   dh17!(x,v,h,m,n,jac_step)
+  param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody (note that this could be modified to see if
   # any body transits another body):
@@ -239,13 +248,15 @@ while t < t0+tmax
     if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri
       # A transit has occurred between the time steps - integrate dh17! between timesteps
       count[i] += 1
-      dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
-      xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
-      dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
-      tt[i,count[i]]=t+dt
-      # Save for posterity:
-      for k=1:7, p=1:n
-        dtdq0[i,count[i],k,p] = dtdq[k,p]
+      if count[i] <= ntt_max
+        dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
+        xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
+        dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
+        tt[i,count[i]]=t+dt
+        # Save for posterity:
+        for k=1:7, p=1:n
+          dtdq0[i,count[i],k,p] = dtdq[k,p]
+        end
       end
     end
     gsave[i] = gi
@@ -286,9 +297,12 @@ gsave = zeros(Float64,n)
 # Loop over time steps:
 dt::Float64 = 0.0
 gi = 0.0
-while t < t0+tmax
+ntt_max = size(tt)[2]
+param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
+while t < t0+tmax && param_real
   # Carry out a dh17 mapping step:
   dh17!(x,v,h,m,n,jac_step)
+  param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody (note that this could be modified to see if
   # any body transits another body):
@@ -301,13 +315,15 @@ while t < t0+tmax
     if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri
       # A transit has occurred between the time steps - integrate dh17! between timesteps
       count[i] += 1
-      dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
-      xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
-      dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
-      tt[i,count[i]]=t+dt
-      # Save for posterity:
-      for k=1:7, p=1:n
-        dtdq0[i,count[i],k,p] = dtdq[k,p]
+      if count[i] <= ntt_max
+        dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
+        xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
+        dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
+        tt[i,count[i]]=t+dt
+        # Save for posterity:
+        for k=1:7, p=1:n
+          dtdq0[i,count[i],k,p] = dtdq[k,p]
+        end
       end
     end
     gsave[i] = gi
@@ -348,9 +364,12 @@ gsave = zeros(Float64,n)
 # Loop over time steps:
 dt::Float64 = 0.0
 gi = 0.0
-while t < t0+tmax
+ntt_max = size(tt)[2]
+param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
+while t < t0+tmax && param_real
   # Carry out a dh17 mapping step:
   dh17!(x,v,h,m,n,jac_step)
+  param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody (note that this could be modified to see if
   # any body transits another body):
@@ -366,10 +385,12 @@ while t < t0+tmax
       dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
       xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
       dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
-      tt[i,count[i]]=t+dt
-      # Save for posterity:
-      for k=1:7, p=1:n
-        dtdq0[i,count[i],k,p] = dtdq[k,p]
+      if count[i] <= ntt_max
+        tt[i,count[i]]=t+dt
+        # Save for posterity:
+        for k=1:7, p=1:n
+          dtdq0[i,count[i],k,p] = dtdq[k,p]
+        end
       end
     end
     gsave[i] = gi
@@ -410,9 +431,12 @@ gsave = zeros(Float64,n)
 # Loop over time steps:
 dt::Float64 = 0.0
 gi = 0.0
-while t < t0+tmax
+ntt_max = size(tt)[2]
+param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
+while t < t0+tmax && param_real
   # Carry out a dh17 mapping step:
   dh17!(x,v,h,m,n,jac_step)
+  param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody (note that this could be modified to see if
   # any body transits another body):
@@ -425,24 +449,26 @@ while t < t0+tmax
     if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri
       # A transit has occurred between the time steps - integrate dh17! between timesteps
       count[i] += 1
-      dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
-      xtransit .= xprior; vtransit .= vprior
-      dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,eye(jac_step),dtdq) # Just computing derivative since prior timestep, so start with identity matrix
-      tt[i,count[i]]=t+dt
-      # Save for posterity:
-      for k=1:7, p=1:n
-        dtdq0[i,count[i],k,p] = dtdq[k,p]
-        # Compute numerical approximation of dtdq:
-        dt_plus = big(dt)  # Starting estimate
-        xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m)
-        if k < 4; dq = dlnq*xtransit_plus[k,p]; xtransit_plus[k,p] += dq; elseif k < 7; dq =vtransit_plus[k-3,p]*dlnq; vtransit_plus[k-3,p] += dq; else; dq  = m_plus[p]*dlnq; m_plus[p] += dq; end
-        dt_plus = findtransit2!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus) # 20%
-        dt_minus= big(dt)  # Starting estimate
-        xtransit_minus .= big.(xprior); vtransit_minus .= big.(vprior); m_minus .= big.(m)
-        if k < 4; dq = dlnq*xtransit_minus[k,p];xtransit_minus[k,p] -= dq; elseif k < 7; dq =vtransit_minus[k-3,p]*dlnq; vtransit_minus[k-3,p] -= dq; else; dq  = m_minus[p]*dlnq; m_minus[p] -= dq; end
-        dt_minus= findtransit2!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus) # 20%
-        # Compute finite-different derivative:
-        dtdq0_num[i,count[i],k,p] = (dt_plus-dt_minus)/(2dq)
+      if count[i] <= ntt_max
+        dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
+        xtransit .= xprior; vtransit .= vprior
+        dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,eye(jac_step),dtdq) # Just computing derivative since prior timestep, so start with identity matrix
+        tt[i,count[i]]=t+dt
+        # Save for posterity:
+        for k=1:7, p=1:n
+          dtdq0[i,count[i],k,p] = dtdq[k,p]
+          # Compute numerical approximation of dtdq:
+          dt_plus = big(dt)  # Starting estimate
+          xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m)
+          if k < 4; dq = dlnq*xtransit_plus[k,p]; xtransit_plus[k,p] += dq; elseif k < 7; dq =vtransit_plus[k-3,p]*dlnq; vtransit_plus[k-3,p] += dq; else; dq  = m_plus[p]*dlnq; m_plus[p] += dq; end
+          dt_plus = findtransit2!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus) # 20%
+          dt_minus= big(dt)  # Starting estimate
+          xtransit_minus .= big.(xprior); vtransit_minus .= big.(vprior); m_minus .= big.(m)
+          if k < 4; dq = dlnq*xtransit_minus[k,p];xtransit_minus[k,p] -= dq; elseif k < 7; dq =vtransit_minus[k-3,p]*dlnq; vtransit_minus[k-3,p] -= dq; else; dq  = m_minus[p]*dlnq; m_minus[p] -= dq; end
+          dt_minus= findtransit2!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus) # 20%
+          # Compute finite-different derivative:
+          dtdq0_num[i,count[i],k,p] = (dt_plus-dt_minus)/(2dq)
+        end
       end
     end
     gsave[i] = gi
@@ -478,10 +504,13 @@ gsave = zeros(eltype(x),n)
 gi  = 0.0
 dt::eltype(h) = 0.0
 # Loop over time steps:
-while t < t0+tmax
+ntt_max = size(tt)[2]
+param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m))
+while t < t0+tmax && param_real
   # Carry out a phi^2 mapping step:
 #  phi2!(x,v,h,m,n)
   dh17!(x,v,h,m,n)
+  param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody:
   for i=2:n
@@ -494,11 +523,13 @@ while t < t0+tmax
       # Approximate the planet-star motion as a Keplerian, weighting over timestep:
       count[i] += 1
 #      tt[i,count[i]]=t+findtransit!(i,h,gi,gsave[i],m,xprior,vprior,x,v)
-      dt = -gsave[i]*h/(gi-gsave[i])
-      xtransit .= xprior
-      vtransit .= vprior
-      dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit)
-      tt[i,count[i]]=t+dt
+      if count[i] <= ntt_max
+        dt = -gsave[i]*h/(gi-gsave[i])
+        xtransit .= xprior
+        vtransit .= vprior
+        dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit)
+        tt[i,count[i]]=t+dt
+      end
 #      tt[i,count[i]]=t+findtransit2!(1,i,n,h,gi,gsave[i],m,xprior,vprior)
     end
     gsave[i] = gi

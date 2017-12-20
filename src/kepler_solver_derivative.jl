@@ -74,6 +74,7 @@ if beta0 > 0.0
   end
 else
   println("Not elliptic ",beta0," x0 ",x0)
+  r= 0.0; fill!(state,0.0); rinv=0.0; s=0.0; ds=0.0; iter = 0
 end
 # recompute beta:
 state[8]= r
@@ -153,6 +154,7 @@ if beta0 > 0.0
   compute_jacobian!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r0,dr0dt,r,jacobian)
 else
   println("Not elliptic ",beta0," x0 ",x0)
+  r= 0.0; fill!(state,0.0); rinv=0.0; s=0.0; ds=0.0; iter = 0
 end
 # recompute beta:
 state[8]= r
@@ -229,6 +231,7 @@ if beta0 < 0.0
   end
 else
   println("Not hyperbolic",beta0," x0 ",x0)
+  r= 0.0; fill!(state,0.0); rinv=0.0; s=0.0; ds=0.0; iter = 0
 end
 # recompute beta:
 state[8]= r
@@ -305,6 +308,7 @@ if beta0 < 0.0
   compute_jacobian!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r0,dr0dt,r,jacobian)
 else
   println("Not hyperbolic",beta0," x0 ",x0)
+  r= 0.0; fill!(state,0.0); rinv=0.0; s=0.0; ds=0.0; iter = 0
 end
 # recompute beta:
 state[8]= r
