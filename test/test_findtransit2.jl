@@ -10,10 +10,6 @@
 
 @testset "findtransit2" begin
 
-# This routine takes derivative of transit times with respect
-# to the initial cartesian coordinates of bodies. [ ]
-# (I still need to write this routine since now dtdq0 is turning
-# into derivative wrt elements).
 #n = 8
 n = 3
 t0 = 7257.93115525

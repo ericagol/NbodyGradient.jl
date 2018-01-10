@@ -202,6 +202,32 @@ println("Maximum fractional error: ",jac_diff," ",imax," ",jmax," ",kmax," ",lma
 println("Maximum error jac_step:   ",maximum(abs.(jac_step-jac_step_num)))
 println("Maximum diff asinh(jac_step):   ",maximum(abs.(asinh.(jac_step)-asinh.(jac_step_num))))
 
+# Compute dqdt:
+
+dqdt = zeros(7*n)
+dqdt_num = zeros(BigFloat,7*n)
+x = copy(x0)
+v = copy(v0)
+m = copy(m0)
+dh17!(x,v,h,m,n,dqdt)
+xm= big.(x0)
+vm= big.(v0)
+mm= big.(m0)
+dq = hbig*dlnq
+hbig -= dq
+dh17!(xm,vm,hbig,mm,n)
+xp= big.(x0)
+vp= big.(v0)
+mp= big.(m0)
+hbig += 2dq
+dh17!(xp,vp,hbig,mp,n)
+for i=1:n, k=1:3
+  dqdt_num[(i-1)*7+  k] = .5*(xp[k,i]-xm[k,i])/dq
+  dqdt_num[(i-1)*7+3+k] = .5*(vp[k,i]-vm[k,i])/dq
+end
+dqdt_num = convert(Array{Float64,1},dqdt_num)
+println("dqdt: ",dqdt," ",dqdt_num," diff: ",dqdt-dqdt_num)
+
 #@test isapprox(jac_step,jac_step_num)
 #@test isapprox(jac_step,jac_step_num;norm=maxabs)
 @test isapprox(asinh.(jac_step),asinh.(jac_step_num);norm=maxabs)

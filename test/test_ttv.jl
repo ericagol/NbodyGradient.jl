@@ -25,6 +25,8 @@ count1 = zeros(Int64,n)
 # Call the ttv function:
 @time ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
 @time ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
+# Write out every 10th step to a file:
+@time ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,"test_out.txt",10)
 # Now call with half the timestep:
 count2 = zeros(Int64,n)
 ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0)

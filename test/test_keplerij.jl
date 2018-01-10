@@ -44,14 +44,16 @@ v0[2,1] = 5e-1*sqrt(v0[1,1]^2+v0[3,1]^2)
 v0[2,2] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 
 jac_ij = zeros(Float64,14,14)
+dqdt_ij = zeros(Float64,14)
+dqdt_num = zeros(BigFloat,14)
 i=1 ; j=2
 x = copy(x0) ; v=copy(v0)
 # Predict values of s:
 #println("Before first step: ",x," ",v)
-keplerij!(m,x,v,i,j,h,jac_ij)
+keplerij!(m,x,v,i,j,h,jac_ij,dqdt_ij)
 #println("After first step: ",x," ",v)
 x0 = copy(x) ; v0 = copy(v)
-keplerij!(m,x,v,i,j,h,jac_ij)
+keplerij!(m,x,v,i,j,h,jac_ij,dqdt_ij)
 
 # xtest = copy(x0) ; vtest=copy(v0)
 # keplerij!(m,xtest,vtest,i,j,h,jac_ij)
@@ -62,6 +64,27 @@ jac_ij_num = zeros(BigFloat,14,14)
 xsave = big.(x)
 vsave = big.(v)
 msave = big.(m)
+
+# Compute the time derivatives:
+# Initial positions, velocities & masses:
+xm = big.(x0)
+vm = big.(v0)
+mm = big.(msave)
+dq = dlnq * hbig
+hbig -= dq
+keplerij!(mm,xm,vm,i,j,hbig)
+xp = big.(x0)
+vp = big.(v0)
+hbig += 2dq
+keplerij!(mm,xp,vp,i,j,hbig)
+# Now x & v are final positions & velocities after time step
+for k=1:3
+  dqdt_num[   k] = .5*(xp[k,i]-xm[k,i])/dq
+  dqdt_num[ 3+k] = .5*(vp[k,i]-vm[k,i])/dq
+  dqdt_num[ 7+k] = .5*(xp[k,j]-xm[k,j])/dq
+  dqdt_num[10+k] = .5*(vp[k,j]-vm[k,j])/dq
+end
+hbig = big(h)
 
 for jj=1:3
   # Initial positions, velocities & masses:
@@ -227,7 +250,7 @@ jac_ij_num[14,14] =  1.0
 emax = 0.0; imax = 0; jmax = 0
 for i=1:14, j=1:14
   if jac_ij[i,j] != 0.0
-    diff = abs(jac_ij_num[i,j]/jac_ij[i,j]-1.0)
+    diff = abs(convert(Float64,jac_ij_num[i,j])/jac_ij[i,j]-1.0)
     if  diff > emax
       emax = diff; imax = i; jmax = j
     end
@@ -236,8 +259,11 @@ end
 println("Maximum fractional error: ",emax," ",imax," ",jmax)
 #println(jac_ij)
 #println(convert(Array{Float64,2},jac_ij_num))
-println("Maximum absolute error:   ",maximum(abs.(jac_ij_num-jac_ij)))
+println("Maximum jac_ij error:   ",maximum(abs.(convert(Array{Float64,2},jac_ij_num)-jac_ij)))
+println("Max dqdt error: ",maximum(abs.(dqdt_ij-convert(Array{Float64,1},dqdt_num))))
 
 @test isapprox(jac_ij_num,jac_ij;norm=maxabs)
+@test isapprox(dqdt_ij,convert(Array{Float64,1},dqdt_num);norm=maxabs)
+#println("dqdt: ",dqdt_ij," ",dqdt_num," Max error: ",maximum(dqdt_ij-dqdt_num))
 end
 end

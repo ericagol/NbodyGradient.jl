@@ -20,7 +20,7 @@ const vtmp = zeros(Float64,3);const  dvdr0 = zeros(Float64,3);const  dvda0=zeros
 
 # Computes TTVs as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
 #function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dlnq::Float64,iq::Int64,jq::Int64)
-function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64) where {T <: Real}
+function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,fout="",iout=-1) where {T <: Real}
 # 
 # Input quantities:
 # n     = number of bodies
@@ -79,11 +79,12 @@ if dlnq != 0.0 && iq > 0 && iq < 7
     v[iq-3,jq] += dq
   end
 end
-ttv!(n,t0,h,tmax,m,x,v,tt,count)
+ttv!(n,t0,h,tmax,m,x,v,tt,count,fout,iout)
 return dq
 end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
+# This version is used to test/debug findtransit2 by computing finite difference derivative of findtransit2.
 function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat)
 # 
 # Input quantities:
@@ -251,7 +252,8 @@ while t < (t0+tmax) && param_real
       if count[i] <= ntt_max
         dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
-        dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
+#        dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
+        dt = findtransit3!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
         tt[i,count[i]]=t+dt
         # Save for posterity:
         for k=1:7, p=1:n
@@ -487,7 +489,7 @@ end
 
 # Computes TTVs as a function of initial x,v,m.
 #function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1})
-function ttv!(n::Int64,t0::T,h::T,tmax::T,m::Array{T,1},x::Array{T,2},v::Array{T,2},tt::Array{T,2},count::Array{Int64,1}) where {T <: Real}
+function ttv!(n::Int64,t0::T,h::T,tmax::T,m::Array{T,1},x::Array{T,2},v::Array{T,2},tt::Array{T,2},count::Array{Int64,1},fout::String,iout::Int64) where {T <: Real}
 # Make some copies to allocate space for saving prior step and computing coordinates at the times of transit.
 xprior = copy(x)
 vprior = copy(v)
@@ -506,6 +508,10 @@ dt::eltype(h) = 0.0
 # Loop over time steps:
 ntt_max = size(tt)[2]
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m))
+if fout != ""
+  # Open file for output:
+  file_handle =open(fout,"a")
+end
 while t < t0+tmax && param_real
   # Carry out a phi^2 mapping step:
 #  phi2!(x,v,h,m,n)
@@ -537,10 +543,18 @@ while t < t0+tmax && param_real
   # Save the current state as prior state:
   xprior .=x
   vprior .=v
+  if mod(istep,iout) == 0 && iout > 0
+    # Write to file:
+    writedlm(file_handle,[t;reshape(x,3n);reshape(v,3n)]') # Transpose to write each line
+  end
   # Increment time by the time step:
   t += h
   # Increment counter by one:
   istep +=1
+end
+if fout != ""
+  # Close output file:
+  close(file_handle)
 end
 return
 end
@@ -563,6 +577,19 @@ function driftij!(x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T) where {T <
 for k=1:NDIM
   x[k,i] += h*v[k,i]
   x[k,j] += h*v[k,j]
+end
+return
+end
+
+function driftij!(x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T,dqdt::Array{T,1},fac::T) where {T <: Real}
+indi = (i-1)*7
+indj = (j-1)*7
+for k=1:NDIM
+  x[k,i] += h*v[k,i]
+  x[k,j] += h*v[k,j]
+  # Time derivatives:
+  dqdt[indi+k] += fac*v[k,i] + h*dqdt[indi+3+k]
+  dqdt[indj+k] += fac*v[k,j] + h*dqdt[indj+3+k]
 end
 return
 end
@@ -626,7 +653,7 @@ return
 end
 
 # Carries out a Kepler step for bodies i & j
-function keplerij!(m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},i::Int64,j::Int64,h::Float64,jac_ij::Array{Float64,2})
+function keplerij!(m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},i::Int64,j::Int64,h::Float64,jac_ij::Array{Float64,2},dqdt::Array{Float64,1})
 # The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
 # Initial state:
 state0 = zeros(Float64,12)
@@ -718,6 +745,22 @@ for k=1:NDIM
 end
 # Advance center of mass & individual Keplerian motions:
 centerm!(m,mijinv,x,v,vcm,delx,delv,i,j,h)
+# Compute the time derivatives:
+for k=1:NDIM
+  # Define relative velocity and acceleration:
+  vij = state[1+NDIM+k]
+  acc_ij = gm*state[1+k]/state[8]^3
+  # Position derivative, body i:
+  dqdt[   k] = vcm[k] + mj*vij
+  # Velocity derivative, body i:
+  dqdt[ 3+k] = -mj*acc_ij
+  # Time derivative of mass is zero, so we skip this.
+  # Position derivative, body j:
+  dqdt[ 7+k] = vcm[k] - mi*vij
+  # Velocity derivative, body j:
+  dqdt[10+k] =  mi*acc_ij
+  # Time derivative of mass is zero, so we skip this.
+end
 return
 end
 
@@ -796,7 +839,8 @@ end
 return
 end
 
-function phisalpha!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},alpha::Float64,n::Int64,jac_step::Array{Float64,2})
+function phisalpha!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},
+  alpha::Float64,n::Int64,jac_step::Array{Float64,2},dqdt_phi::Array{Float64,1})
 # Computes the 4th-order correction:
 #function [v] = phisalpha(x,v,h,m,alpha)
 #n = size(m,2);
@@ -871,6 +915,9 @@ indi = 0; indj=0; indd = 0
       fac = fac1*(rij[k]*fac2- r2*aij[k])
       v[k,i] += m[j]*fac
       v[k,j] -= m[i]*fac
+      # Compute time derivative:
+      dqdt_phi[indi+3+k] += 3.0/h*m[j]*fac
+      dqdt_phi[indj+3+k] -= 3.0/h*m[i]*fac
       # Mass derivative (first part is easy):
       jac_step[indi+3+k,indj+7] += fac
       jac_step[indj+3+k,indi+7] -= fac
@@ -992,11 +1039,13 @@ alpha = alpha0; sevn = 7*n
 jac_phi = zeros(Float64,sevn,sevn)
 jac_copy = zeros(Float64,sevn,sevn)
 jac_ij = zeros(Float64,14,14)
+dqdt_ij = zeros(Float64,14)
+dqdt_phi = zeros(Float64,sevn)
 jac_tmp1 = zeros(Float64,14,sevn)
 jac_tmp2 = zeros(Float64,14,sevn)
 # alpha = 0. is similar in precision to alpha=0.25
 if alpha != 0.0
-  phisalpha!(x,v,h,m,alpha,n,jac_phi)
+  phisalpha!(x,v,h,m,alpha,n,jac_phi,dqdt_phi)
   jac_step .= jac_phi*jac_step # < 1%
 end
 drift!(x,v,h2,n,jac_step)
@@ -1009,7 +1058,7 @@ i2 = 1:sevn
 #    indj = 7j-6:7j
     indj = (j-1)*7
     driftij!(x,v,i,j,-h2,jac_step,n)
-    keplerij!(m,x,v,i,j,h2,jac_ij) # 21%
+    keplerij!(m,x,v,i,j,h2,jac_ij,dqdt_ij) # 21%
     # Pick out indices for bodies i & j:
 #    i1 = [indi;indj]
 #    jac_step[i1,i2] = *(jac_ij,jac_step[i1,i2])
@@ -1033,7 +1082,8 @@ i2 = 1:sevn
   end
 end
 if alpha != 1.0
-  phisalpha!(x,v,h,m,2.*(1.-alpha),n,jac_phi) # 10%
+#  phisalpha!(x,v,h,m,2.*(1.-alpha),n,jac_phi) # 10%
+  phisalpha!(x,v,h,m,2.*(1.-alpha),n,jac_phi,dqdt_phi) # 10%
   @inbounds for i in eachindex(jac_step)
     jac_copy[i] = jac_step[i]
   end
@@ -1047,7 +1097,7 @@ for i=n-1:-1:1
   for j=n:-1:i+1
 #    indj=7j-6:7j
     indj=(j-1)*7
-    keplerij!(m,x,v,i,j,h2,jac_ij) # 23%
+    keplerij!(m,x,v,i,j,h2,jac_ij,dqdt_ij) # 23%
     # Pick out indices for bodies i & j:
 #    i1 = [indi;indj]
     # Carry out multiplication on the i/j components of matrix:
@@ -1073,8 +1123,83 @@ for i=n-1:-1:1
 end
 drift!(x,v,h2,n,jac_step)
 if alpha != 0.0
-  phisalpha!(x,v,h,m,alpha,n,jac_phi)
+#  phisalpha!(x,v,h,m,alpha,n,jac_phi)
+  phisalpha!(x,v,h,m,alpha,n,jac_phi,dqdt_phi) # 10%
   jac_step .= jac_phi*jac_step # < 1%
+end
+return
+end
+
+# Carries out the DH17 mapping & computes the derivative with respect to time step, h:
+function dh17!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},n::Int64,dqdt::Array{Float64,1})
+h2 = 0.5*h
+# This routine assumes that alpha = 0.0
+sevn = 7*n
+jac_phi = zeros(Float64,sevn,sevn)
+jac_ij = zeros(Float64,14,14)
+dqdt_ij = zeros(Float64,14)
+dqdt_phi = zeros(Float64,sevn)
+dqdt_tmp1 = zeros(Float64,14)
+fill!(dqdt,0.0)
+drift!(x,v,h2,n)
+# Compute time derivative of drift step:
+for i=1:n, k=1:3
+  dqdt[(i-1)*7+k] = 0.5*v[i,k] + h2*dqdt[(i-1)*7+3+k]
+end
+indi = 0:1; indj = 0:1
+i2 = 1:sevn
+@inbounds for i=1:n-1
+  indi = (i-1)*7
+  for j=i+1:n
+    indj = (j-1)*7
+    driftij!(x,v,i,j,-h2,dqdt,-0.5)
+    keplerij!(m,x,v,i,j,h2,jac_ij,dqdt_ij) # 21%
+    # Copy current time derivatives for multiplication purposes:
+    @inbounds for k1=1:7
+      dqdt_tmp1[  k1] = dqdt[indi+k1]
+      dqdt_tmp1[7+k1] = dqdt[indj+k1]
+    end
+    # Add in partial derivatives with respect to time:
+    # Need to multiply by 1/2 since we're taking 1/2 time step:
+    BLAS.gemm!('N','N',1.0,jac_ij,dqdt_tmp1,0.5,dqdt_ij)
+    # Copy back time derivatives:
+    @inbounds for k1=1:7
+      dqdt[indi+k1] = dqdt_ij[  k1]
+      dqdt[indj+k1] = dqdt_ij[7+k1]
+    end
+  end
+end
+phisalpha!(x,v,h,m,2.,n,jac_phi,dqdt_phi) # 10%
+# Add in time derivative with respect to prior parameters:
+BLAS.gemm!('N','N',1.0,jac_phi,dqdt,1.0,dqdt_phi)
+# Copy result to dqdt:
+dqdt .= dqdt_phi
+indi=0; indj=0
+for i=n-1:-1:1
+  indi=(i-1)*7
+  for j=n:-1:i+1
+    indj=(j-1)*7
+    keplerij!(m,x,v,i,j,h2,jac_ij,dqdt_ij) # 23%
+    # Copy current time derivatives for multiplication purposes:
+    @inbounds for k1=1:7
+      dqdt_tmp1[  k1] = dqdt[indi+k1]
+      dqdt_tmp1[7+k1] = dqdt[indj+k1]
+    end
+    # Add in partial derivatives with respect to time:
+    # Need to multiply by 1/2 since we're taking 1/2 time step:
+    BLAS.gemm!('N','N',1.0,jac_ij,dqdt_tmp1,0.5,dqdt_ij)
+    # Copy back time derivatives:
+    @inbounds for k1=1:7
+      dqdt[indi+k1] = dqdt_ij[  k1]
+      dqdt[indj+k1] = dqdt_ij[7+k1]
+    end
+    driftij!(x,v,i,j,-h2,dqdt,-0.5)
+  end
+end
+drift!(x,v,h2,n)
+# Compute time derivative of drift step:
+for i=1:n, k=1:3
+  dqdt[(i-1)*7+k] += 0.5*v[i,k] + h2*dqdt[(i-1)*7+3+k]
 end
 return
 end
@@ -1185,6 +1310,68 @@ for k=1:n
 end
 # Compute derivative of g with respect to time:
 gdot += (v[1,j]-v[1,i])^2+(v[2,j]-v[2,i])^2
+# Set dtdq to zero:
+fill!(dtdq,0.0)
+indj = (j-1)*7+1
+indi = (i-1)*7+1
+for p=1:n
+  indp = (p-1)*7
+  for k=1:7
+    # Compute derivatives:
+    #g = (x[1,j]-x[1,i])*(v[1,j]-v[1,i])+(x[2,j]-x[2,i])*(v[2,j]-v[2,i])
+    dtdq[k,p] = -((jac_step[indj  ,indp+k]-jac_step[indi  ,indp+k])*(v[1,j]-v[1,i])+(jac_step[indj+1,indp+k]-jac_step[indi+1,indp+k])*(v[2,j]-v[2,i])+
+                  (jac_step[indj+3,indp+k]-jac_step[indi+3,indp+k])*(x[1,j]-x[1,i])+(jac_step[indj+4,indp+k]-jac_step[indi+4,indp+k])*(x[2,j]-x[2,i]))/gdot
+  end
+end
+# Note: this is the time elapsed *after* the beginning of the timestep:
+return tt::Float64
+end
+
+# Finds the transit by taking a partial dh17 step from prior times step, computes timing Jacobian, dtdq, wrt initial cartesian coordinates, masses:
+function findtransit3!(i::Int64,j::Int64,n::Int64,h::Float64,tt::Float64,m::Array{Float64,1},x1::Array{Float64,2},v1::Array{Float64,2},jac_step::Array{Float64,2},dtdq::Array{Float64,2})
+# Computes the transit time, approximating the motion as a fraction of a DH17 step forward in time.
+# Also computes the Jacobian of the transit time with respect to the initial parameters, dtdq[7,n].
+# Initial guess using linear interpolation:
+dt = 1.0
+iter = 0
+r3 = 0.0
+gdot = 0.0
+gsky = 0.0
+x = copy(x1)
+v = copy(v1)
+dqdt = zeros(Float64,7*n)
+while abs(dt) > TRANSIT_TOL && iter < 20
+  x .= x1
+  v .= v1
+  # Advance planet state at start of step to estimated transit time:
+#  dh17!(x,v,tt,m,n)
+  dh17!(x,v,tt,m,n,dqdt)
+  # Compute time offset:
+  gsky = g!(i,j,x,v)
+#  # Compute derivative of g with respect to time:
+  gdot = ((x[1,j]-x[1,i])*(dqdt[(j-1)*7+4]-dqdt[(i-1)*7+4])+(x[2,j]-x[2,i])*(dqdt[(j-1)*7+5]-dqdt[(i-1)*7+5])
+       +  (v[1,j]-v[1,i])*(dqdt[(j-1)*7+1]-dqdt[(i-1)*7+1])+(v[2,j]-v[2,i])*(dqdt[(j-1)*7+2]-dqdt[(i-1)*7+2]))
+  # Refine estimate of transit time with Newton's method:
+  dt = -gsky/gdot
+  # Add refinement to estimated time:
+  tt += dt
+  iter +=1
+end
+if iter >= 20
+  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
+end
+# Compute time derivatives:
+x = copy(x1); v = copy(v1)
+# Compute dgdt with the updated time step.
+dh17!(x,v,tt,m,n,jac_step)
+# Need to reset to compute dqdt:
+x = copy(x1); v = copy(v1)
+dh17!(x,v,tt,m,n,dqdt)
+# Compute time offset:
+gsky = g!(i,j,x,v)
+# Compute derivative of g with respect to time:
+gdot  = ((x[1,j]-x[1,i])*(dqdt[(j-1)*7+4]-dqdt[(i-1)*7+4])+(x[2,j]-x[2,i])*(dqdt[(j-1)*7+5]-dqdt[(i-1)*7+5])
+      +  (v[1,j]-v[1,i])*(dqdt[(j-1)*7+1]-dqdt[(i-1)*7+1])+(v[2,j]-v[2,i])*(dqdt[(j-1)*7+2]-dqdt[(i-1)*7+2]))
 # Set dtdq to zero:
 fill!(dtdq,0.0)
 indj = (j-1)*7+1

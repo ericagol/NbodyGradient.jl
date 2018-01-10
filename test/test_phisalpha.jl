@@ -53,7 +53,8 @@ dh17!(x0,v0,h,m,n)
 # x0 & v0 forward in time):
 x = copy(x0); v = copy(v0); m = copy(m0)
 # Compute jacobian exactly:
-phisalpha!(x,v,h,m,alpha,n,jac_step)
+dqdt_phi = zeros(7*n)
+phisalpha!(x,v,h,m,alpha,n,jac_step,dqdt_phi)
 
 
 # Now compute numerical derivatives, using BigFloat to avoid
@@ -63,13 +64,31 @@ jac_step_num = zeros(BigFloat,7*n,7*n)
 xsave = big.(x0)
 vsave = big.(v0)
 msave = big.(m0)
-hbig = big.(h)
+hbig = big(h)
 abig = big(alpha)
 # Carry out step using BigFloat for extra precision:
 phisalpha!(xsave,vsave,hbig,msave,abig,n)
 xbig = big.(x0)
 vbig = big.(v0)
 mbig = big.(m0)
+# Compute numerical derivatives wrt time:
+dqdt_num = zeros(BigFloat,7*n)
+# Vary time:
+phisalpha!(xbig,vbig,hbig,mbig,abig,n)
+# Initial positions, velocities & masses:
+xbig .= big.(x0)
+vbig .= big.(v0)
+mbig .= big.(m0)
+hbig = big(h)
+dq = dlnq * hbig
+hbig += dq
+phisalpha!(xbig,vbig,hbig,mbig,abig,n)
+# Now x & v are final positions & velocities after time step
+for i=1:n, k=1:3
+  dqdt_num[(i-1)*7+  k] = (xbig[k,i]-xsave[k,i])/dq
+  dqdt_num[(i-1)*7+3+k] = (vbig[k,i]-vsave[k,i])/dq
+end
+hbig = big(h)
 # Vary the initial parameters of planet j:
 for j=1:n
   # Vary the initial phase-space elements:
@@ -152,6 +171,9 @@ for i=1:7, j=1:3, k=1:7, l=1:3
 end
 
 println("Maximum jac_step phisalpha error: ",jacmax)
+dqdt_num = convert(Array{Float64,1},dqdt_num)
+println("Maximum dqdt_phi phisalpha error: ",maximum(abs.(dqdt_phi-dqdt_num)))
 
 @test isapprox(jac_step,jac_step_num;norm=maxabs)
+@test isapprox(dqdt_phi,dqdt_num;norm=maxabs)
 end
