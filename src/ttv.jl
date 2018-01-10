@@ -1144,7 +1144,7 @@ fill!(dqdt,0.0)
 drift!(x,v,h2,n)
 # Compute time derivative of drift step:
 for i=1:n, k=1:3
-  dqdt[(i-1)*7+k] = 0.5*v[i,k] + h2*dqdt[(i-1)*7+3+k]
+  dqdt[(i-1)*7+k] = 0.5*v[k,i] + h2*dqdt[(i-1)*7+3+k]
 end
 indi = 0:1; indj = 0:1
 i2 = 1:sevn
@@ -1199,7 +1199,7 @@ end
 drift!(x,v,h2,n)
 # Compute time derivative of drift step:
 for i=1:n, k=1:3
-  dqdt[(i-1)*7+k] += 0.5*v[i,k] + h2*dqdt[(i-1)*7+3+k]
+  dqdt[(i-1)*7+k] += 0.5*v[k,i] + h2*dqdt[(i-1)*7+3+k]
 end
 return
 end
