@@ -398,3 +398,25 @@ at which point we'll have the full derivatives. [x]
 
 12/1/2017
 Got full derivatives working - test_ttv_elements.jl runs this.
+
+1/10/2018
+
+Right now the tests have worse precision for the timing derivatives than
+I would like.  Using findtransit3, the precisions are:
+
+Max diff asinh(dtdq0): 3.8639078915603253e-13
+Max diff     dtdq0 : 3.8639078915603253e-13
+Test Summary: | Pass  Total
+findtransit2  |    1      1
+ntt: [0, 70, 45]
+Max diff asinh(dtdq0): 5.222652628748041638244953520370688377286201112678411598552984962014027693518471e-09
+Test Summary: | Pass  Total
+ttv_cartesian |    1      1
+Maximum error on derivative: 1.1433401326810255e-5
+Maximum error on derivative: 1.0217488768393679e-6
+Maximum error on derivative: 1.4808194390703022e-6
+Max diff asinh(dtdelements): 1.149686767558504144383802216862818083234905519290632648622369522372441641578197e-09
+Test Summary: | Pass  Total
+ttv_elements  |    1      1
+Base.Test.DefaultTestSet("ttv_elements", Any[], 1, false)
+

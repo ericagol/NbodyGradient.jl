@@ -7,6 +7,7 @@
 # to the initial orbital elements.
 #n = 8
 n = 3
+n_body = n
 t0 = 7257.93115525
 #h  = 0.12
 h  = 0.04
@@ -20,12 +21,14 @@ elements = readdlm("elements.txt",',')
 #elements[2,1] *= 10.0
 #elements[3,1] *= 10.0
 
+ntt = zeros(Int64,n)
+
 # Make an array, tt,  to hold transit times:
 # First, though, make sure it is large enough:
-ntt = zeros(Int64,n)
 for i=2:n
   ntt[i] = ceil(Int64,tmax/elements[i,2])+3
 end
+dtdq0 = zeros(n,maximum(ntt),7,n)
 tt  = zeros(n,maximum(ntt))
 tt1 = zeros(n,maximum(ntt))
 tt2 = zeros(n,maximum(ntt))
@@ -44,8 +47,22 @@ count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
 dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0)
 
+mask = zeros(Bool, size(dtdq0))
+for jq=1:n_body
+  for iq=1:7
+    if iq == 7; ivary = 1; else; ivary = iq+1; end  # Shift mass variation to end
+    for i=2:n
+      for k=1:count2[i]
+        # Ignore inclination & longitude of nodes variations:
+        if iq != 5 && iq != 6 && ~(jq == 1 && iq < 7) && ~(jq == i && iq == 7)
+          mask[i,k,iq,jq] = true
+        end
+      end
+    end
+  end
+end
+
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
-dtdq0 = zeros(n,maximum(ntt),7,n)
 dtdelements0 = zeros(n,maximum(ntt),7,n)
 dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
 dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
@@ -62,9 +79,12 @@ dtdelements8 = ttv_elements!(n,t0,h/8.,tmax,elements,tt8,count,dtdq8)
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements0-dtdelements2)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements2-dtdelements4)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements4-dtdelements8)))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements0)-asinh.(dtdelements2))))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements2)-asinh.(dtdelements4))))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements4)-asinh.(dtdelements8))))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements0[mask])-asinh.(dtdelements2[mask]))))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq0)-asinh.(dtdq2))))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements2[mask])-asinh.(dtdelements4[mask]))))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq2)-asinh.(dtdq4))))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements4[mask])-asinh.(dtdelements8[mask]))))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq4)-asinh.(dtdq8))))
 #read(STDIN,Char)
 
 # Check that this is working properly:
@@ -80,7 +100,6 @@ println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements4)-asinh.
 # This "summarizes" best numerical derivative:
 dtdelements0_sum = zeros(BigFloat,n,maximum(ntt),7,n)
 
-n_body = n
 # Compute derivatives with BigFloat for additional precision:
 elements0 = copy(elements)
 #delement = big.([1e-15,1e-15,1e-15,1e-15,1e-15,1e-15,1e-15])
@@ -89,7 +108,6 @@ tt2 = big.(tt2)
 tt3 = big.(tt3)
 t0big = big(t0); tmaxbig = big(tmax); hbig = big(h)
 zero = big(0.0)
-mask = zeros(Bool, size(dtdq0))
 # Now, compute derivatives numerically:
 for jq=1:n_body
   for iq=1:7

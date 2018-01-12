@@ -51,7 +51,8 @@ for j=1:n_body
   jac_init_num[j*7,j*7]=1.0
 end
 
-println("Maximum jac_init-jac_init_num: ",maximum(abs.(jac_init-jac_init_num)))
+#println("Maximum jac_init-jac_init_num: ",maximum(abs.(jac_init-jac_init_num)))
+println("Maximum jac_init-jac_init_num: ",maximum(abs.(asinh.(jac_init)-asinh.(jac_init_num))))
 #@test isapprox(jac_init_num,jac_init)
 @test isapprox(jac_init_num,jac_init;norm=maxabs)
 end

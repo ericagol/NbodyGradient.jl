@@ -16,20 +16,21 @@ end
 function kep_elliptic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,
   beta0::T,s0::T,state::Array{T,1}) where {T <: Real}
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
+zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 
 r0inv = inv(r0)
 beta0inv = inv(beta0)
 # Now, solve for s in elliptical Kepler case:
-if beta0 > 0.0
+if beta0 > zero
 # Initial guess (if s0 = 0):
-  if s0 == 0.0
+  if s0 == zero
     s = h*r0inv
   else
     s = copy(s0)
   end
   s0 = copy(s)
   sqb = sqrt(beta0)
-  y = 0.0; yp = 1.0
+  y = zero; yp = one
   iter = 0
   ds = Inf
   fac1 = k-r0*beta0
@@ -59,7 +60,7 @@ if beta0 > 0.0
 # Now, compute final values:
   g1bs = 2.*sx*cx/sqb
   g2bs = 2.*sx^2*beta0inv
-  f = 1.0 - k*r0inv*g2bs # eqn (25)
+  f = one - k*r0inv*g2bs # eqn (25)
   g = r0*g1bs + fac2*g2bs # eqn (27)
   for j=1:3
 # Position is components 2-4 of state:
@@ -68,14 +69,14 @@ if beta0 > 0.0
   r = sqrt(state[2]*state[2]+state[3]*state[3]+state[4]*state[4])
   rinv = inv(r)
   dfdt = -k*g1bs*rinv*r0inv
-  dgdt = r0*(1.0-beta0*g2bs+dr0dt*g1bs)*rinv
+  dgdt = r0*(one-beta0*g2bs+dr0dt*g1bs)*rinv
   for j=1:3
 # Velocity is components 5-7 of state:
     state[4+j] = x0[j]*dfdt+v0[j]*dgdt
   end
 else
   println("Not elliptic ",beta0," x0 ",x0)
-  r= 0.0; fill!(state,0.0); rinv=0.0; s=0.0; ds=0.0; iter = 0
+  r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
 end
 # recompute beta:
 state[8]= r
@@ -89,24 +90,24 @@ state[12] = ds
 return iter
 end
 
-function kep_elliptic!(x0::Array{Float64,1},v0::Array{Float64,1},r0::Float64,dr0dt::Float64,k::Float64,h::Float64,beta0::Float64,s0::Float64,state::Array{Float64,1},jacobian::Array{Float64,2})
-#function kep_elliptic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2}) where {T <: Real}
+#function kep_elliptic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2})
+function kep_elliptic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2}) where {T <: Real}
 # Computes the Jacobian as well
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
-
+zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 r0inv = inv(r0)
 beta0inv = inv(beta0)
 # Now, solve for s in elliptical Kepler case:
-if beta0 > 0.0
+if beta0 > zero
 # Initial guess (if s0 = 0):
-  if s0 == 0.0
+  if s0 == zero
     s = h*r0inv
   else
     s = copy(s0)
   end
   s0 = copy(s)
   sqb = sqrt(beta0)
-  y = 0.0; yp = 1.0
+  y = zero; yp = one
   iter = 0
   ds = Inf
   fac1 = k-r0*beta0
@@ -136,7 +137,7 @@ if beta0 > 0.0
 # Now, compute final values:
   g1bs = 2.*sx*cx/sqb
   g2bs = 2.*sx^2*beta0inv
-  f = 1.0 - k*r0inv*g2bs # eqn (25)
+  f = one - k*r0inv*g2bs # eqn (25)
   g = r0*g1bs + fac2*g2bs # eqn (27)
   for j=1:3
 # Position is components 2-4 of state:
@@ -145,17 +146,17 @@ if beta0 > 0.0
   r = sqrt(state[2]*state[2]+state[3]*state[3]+state[4]*state[4])
   rinv = inv(r)
   dfdt = -k*g1bs*rinv*r0inv
-  dgdt = r0*(1.0-beta0*g2bs+dr0dt*g1bs)*rinv
+  dgdt = r0*(one-beta0*g2bs+dr0dt*g1bs)*rinv
   for j=1:3
 # Velocity is components 5-7 of state:
     state[4+j] = x0[j]*dfdt+v0[j]*dgdt
   end
 # Now, compute the jacobian:
-  fill!(jacobian,0.0)
+  fill!(jacobian,zero)
   compute_jacobian!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r0,dr0dt,r,jacobian)
 else
   println("Not elliptic ",beta0," x0 ",x0)
-  r= 0.0; fill!(state,0.0); rinv=0.0; s=0.0; ds=0.0; iter = 0
+  r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
 end
 # recompute beta:
 state[8]= r
@@ -172,23 +173,24 @@ state[12] = ds
 return iter
 end
 
-#function kep_hyperbolic!(x0::Array{Float64,1},v0::Array{Float64,1},r0::Float64,dr0dt::Float64,k::Float64,h::Float64,beta0::Float64,s0::Float64,state::Array{Float64,1})
+#function kep_hyperbolic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,beta0::T,s0::T,state::Array{T,1})
 function kep_hyperbolic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,beta0::T,s0::T,state::Array{T,1}) where {T <: Real}
 # Solves equation (35) from Wisdom & Hernandez for the hyperbolic case.
+zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 
 r0inv = inv(r0)
 beta0inv = inv(beta0)
 # Now, solve for s in hyperbolic Kepler case:
-if beta0 < 0.0
+if beta0 < zero
 # Initial guess (if s0 = 0):
-  if s0 == 0.0
+  if s0 == zero
     s = h*r0inv
   else
     s = copy(s0)
   end
   s0 = copy(s)
   sqb = sqrt(-beta0)
-  y = 0.0; yp = 1.0
+  y = zero; yp = one
   iter = 0
   ds = Inf
   fac1 = k-r0*beta0
@@ -216,7 +218,7 @@ if beta0 < 0.0
 # Now, compute final values:
   g1bs = 2.0*sx*cx/sqb
   g2bs = -2.0*sx^2*beta0inv
-  f = 1.0 - k*r0inv*g2bs # eqn (25)
+  f = one - k*r0inv*g2bs # eqn (25)
   g = r0*g1bs + fac2*g2bs # eqn (27)
   for j=1:3
     state[1+j] = x0[j]*f+v0[j]*g
@@ -225,14 +227,14 @@ if beta0 < 0.0
   r = sqrt(state[2]*state[2]+state[3]*state[3]+state[4]*state[4])
   rinv = inv(r)
   dfdt = -k*g1bs*rinv*r0inv
-  dgdt = r0*(1.0-beta0*g2bs+dr0dt*g1bs)*rinv
+  dgdt = r0*(one-beta0*g2bs+dr0dt*g1bs)*rinv
   for j=1:3
 # Velocity is components 5-7 of state:
     state[4+j] = x0[j]*dfdt+v0[j]*dgdt
   end
 else
   println("Not hyperbolic",beta0," x0 ",x0)
-  r= 0.0; fill!(state,0.0); rinv=0.0; s=0.0; ds=0.0; iter = 0
+  r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
 end
 # recompute beta:
 state[8]= r
@@ -246,23 +248,24 @@ state[12] = ds
 return iter
 end
 
-function kep_hyperbolic!(x0::Array{Float64,1},v0::Array{Float64,1},r0::Float64,dr0dt::Float64,k::Float64,h::Float64,beta0::Float64,s0::Float64,state::Array{Float64,1},jacobian::Array{Float64,2})
-#function kep_hyperbolic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2}) where {T <: Real}
+#function kep_hyperbolic!(x0::Array{Float64,1},v0::Array{Float64,1},r0::Float64,dr0dt::Float64,k::Float64,h::Float64,beta0::Float64,s0::Float64,state::Array{Float64,1},jacobian::Array{Float64,2})
+function kep_hyperbolic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2}) where {T <: Real}
 # Solves equation (35) from Wisdom & Hernandez for the hyperbolic case.
+zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 
 r0inv = inv(r0)
 beta0inv = inv(beta0)
 # Now, solve for s in hyperbolic Kepler case:
-if beta0 < 0.0
+if beta0 < zero
 # Initial guess (if s0 = 0):
-  if s0 == 0.0
+  if s0 == zero
     s = h*r0inv
   else
     s = copy(s0)
   end
   s0 = copy(s)
   sqb = sqrt(-beta0)
-  y = 0.0; yp = 1.0
+  y = zero; yp = one
   iter = 0
   ds = Inf
   fac1 = k-r0*beta0
@@ -290,7 +293,7 @@ if beta0 < 0.0
 # Now, compute final values:
   g1bs = 2.0*sx*cx/sqb
   g2bs = -2.0*sx^2*beta0inv
-  f = 1.0 - k*r0inv*g2bs # eqn (25)
+  f = one - k*r0inv*g2bs # eqn (25)
   g = r0*g1bs + fac2*g2bs # eqn (27)
   for j=1:3
     state[1+j] = x0[j]*f+v0[j]*g
@@ -299,17 +302,17 @@ if beta0 < 0.0
   r = sqrt(state[2]*state[2]+state[3]*state[3]+state[4]*state[4])
   rinv = inv(r)
   dfdt = -k*g1bs*rinv*r0inv
-  dgdt = r0*(1.0-beta0*g2bs+dr0dt*g1bs)*rinv
+  dgdt = r0*(one-beta0*g2bs+dr0dt*g1bs)*rinv
   for j=1:3
 # Velocity is components 5-7 of state:
     state[4+j] = x0[j]*dfdt+v0[j]*dgdt
   end
 # Now, compute the jacobian:
-  fill!(jacobian,0.0)
+  fill!(jacobian,zero)
   compute_jacobian!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r0,dr0dt,r,jacobian)
 else
   println("Not hyperbolic",beta0," x0 ",x0)
-  r= 0.0; fill!(state,0.0); rinv=0.0; s=0.0; ds=0.0; iter = 0
+  r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
 end
 # recompute beta:
 state[8]= r
@@ -323,16 +326,14 @@ state[12] = ds
 return iter
 end
 
-function compute_jacobian!(h::Float64,k::Float64,x0::Array{Float64,1},
-  v0::Array{Float64,1},beta0::Float64,s::Float64,f::Float64,g::Float64,
-  dfdt::Float64,dgdt::Float64,cx::Float64,sx::Float64,g1::Float64,g2::Float64,
-  r0::Float64,dr0dt::Float64,r::Float64,jacobian::Array{Float64,2})
-#function compute_jacobian!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},beta0::T,s::T,f::T,g::T,dfdt::T,dgdt::T,cx::T,sx::T,g1::T,g2::T,r0::T,dr0dt::T,r::T,jacobian::Array{T,2}) where {T <: Real}
+# function compute_jacobian!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},beta0::T,s::T,f::T,g::T,dfdt::T,dgdt::T,cx::T,sx::T,g1::T,g2::T,r0::T,dr0dt::T,r::T,jacobian::Array{T,2})
+function compute_jacobian!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},beta0::T,s::T,f::T,g::T,dfdt::T,dgdt::T,cx::T,sx::T,g1::T,g2::T,r0::T,dr0dt::T,r::T,jacobian::Array{T,2}) where {T <: Real}
 # Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
 # with respect to initial state variable q0[j], where q = {x,v,k} & q0 = {x0,v0,k}.
 # Now, compute the Jacobian: (9/18/2017 notes)
 #g0 = cx^2-sx^2
-g0 = 1.0-beta0*g2
+zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
+g0 = one-beta0*g2
 g3 = (s-g1)/beta0
 dotalpha0 = r0*dr0dt  # unnecessary to divide by r0 for dr0dt & multiply for \dot\alpha_0
 absv0 = sqrt(dot(v0,v0))
@@ -405,6 +406,6 @@ for j=1:3
     jacobian[3+i,3+j] += dvdv0[i]*v0[j]/absv0 + dvda0[i]*x0[j]
   end
 end
-jacobian[7,7]=1.0
+jacobian[7,7]=one
 return
 end
