@@ -4,7 +4,7 @@ n = 8
 include("ttv.jl")
 t0 = 7257.93115525
 #h  = 0.12
-h  = 0.075
+h  = 0.05
 tmax = 600.0
 #tmax = 80.0
 
@@ -26,20 +26,23 @@ tt3 = zeros(n,maximum(ntt))
 count = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
-dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
-@time dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
+rstar = 1e12
+dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
+@time dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
 # Now call with half the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
-dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0)
+dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0,rstar)
 println("Timing error: ",maximum(abs.(tt2-tt1))*24.*3600.)
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtdq0 = zeros(n,maximum(ntt),7,n)
-ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
-@time ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
+dtdelements0 = zeros(n,maximum(ntt),7,n)
+
+dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
+@time dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
 
 Profile.clear()
 Profile.init(10^7,0.01)
-@profile ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
+#@profile dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar);
 #Profile.print()

@@ -32,19 +32,20 @@ tt3 = zeros(n,maximum(ntt))
 count = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
-dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
-dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
-dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
+rstar = 1e12
+dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
+dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
+dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
 # Now call with one tenth the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
-dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0)
+dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0,rstar)
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtdq0 = zeros(n,maximum(ntt),7,n)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0)
+dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
+dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
+dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
 #read(STDIN,Char)
 
 # Check that this is working properly:
@@ -65,9 +66,9 @@ hbig = big(h); t0big = big(t0); tmaxbig=big(tmax); tt2big = big.(tt2); tt3big = 
 for jq=1:n
   for iq=1:7
     elements2  = big.(elements)
-    dq_plus = ttv_elements!(n,t0big,hbig,tmaxbig,elements2,tt2big,count2,dlnq,iq,jq)
+    dq_plus = ttv_elements!(n,t0big,hbig,tmaxbig,elements2,tt2big,count2,dlnq,iq,jq,big(rstar))
     elements3  = big.(elements)
-    dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elements3,tt3big,count3,-dlnq,iq,jq)
+    dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elements3,tt3big,count3,-dlnq,iq,jq,big(rstar))
     for i=1:n
       for k=1:count2[i]
         # Compute double-sided derivative for more accuracy:

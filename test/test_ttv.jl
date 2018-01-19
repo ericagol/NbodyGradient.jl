@@ -23,13 +23,14 @@ tt2 = zeros(n,maximum(ntt))
 # Save a counter for the actual number of transit times of each planet:
 count1 = zeros(Int64,n)
 # Call the ttv function:
-@time ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
-@time ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0)
+rstar = 1e12
+@time ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
+@time ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
 # Write out every 10th step to a file:
-@time ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,"test_out.txt",10)
+@time ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar,"test_out.txt",10)
 # Now call with half the timestep:
 count2 = zeros(Int64,n)
-ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0)
+ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0,rstar)
 println("Timing error: ",maximum(abs.(tt1-tt2))*24.*3600.," sec")
 
 using PyPlot

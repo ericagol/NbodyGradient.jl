@@ -39,7 +39,9 @@ count = zeros(Int64,n)
 dtdq0 = zeros(n,maximum(ntt),7,n)
 dtdq0_num = zeros(BigFloat,n,maximum(ntt),7,n)
 dlnq = big(1e-15)
-dtdelements_num = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,dtdq0_num,dlnq)
+# Make radius of star large:
+rstar = 1e12
+dtdelements_num = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,dtdq0_num,dlnq,rstar)
 
 dtdq0_num = convert(Array{Float64,4},dtdq0_num)
 

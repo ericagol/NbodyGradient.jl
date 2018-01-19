@@ -7,8 +7,8 @@ const GNEWT = 39.4845/YEAR^2
 const NDIM  = 3
 #const KEPLER_TOL = 1e-8
 #const TRANSIT_TOL = 1e-8
-const KEPLER_TOL = eps(1.0)
-const TRANSIT_TOL = 10.*eps(1.0)
+const KEPLER_TOL = sqrt(eps(1.0))
+const TRANSIT_TOL = 10.*sqrt(eps(1.0))
 const third = 1./3.
 const alpha0 = 0.0
 include("kepler_step.jl")
@@ -22,7 +22,7 @@ const vtmp = zeros(Float64,3);const  dvdr0 = zeros(Float64,3);const  dvda0=zeros
 
 # Computes TTVs as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
 #function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dlnq::Float64,iq::Int64,jq::Int64)
-function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,fout="",iout=-1) where {T <: Real}
+function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T,fout="",iout=-1) where {T <: Real}
 # 
 # Input quantities:
 # n     = number of bodies
@@ -81,13 +81,13 @@ if dlnq != 0.0 && iq > 0 && iq < 7
     v[iq-3,jq] += dq
   end
 end
-ttv!(n,t0,h,tmax,m,x,v,tt,count,fout,iout)
+ttv!(n,t0,h,tmax,m,x,v,tt,count,fout,iout,rstar)
 return dq
 end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
 # This version is used to test/debug findtransit2 by computing finite difference derivative of findtransit2.
-function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat)
+function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64)
 # 
 # Input quantities:
 # n     = number of bodies
@@ -129,7 +129,7 @@ end
 jac_init     = zeros(Float64,7*n,7*n)
 x,v = init_nbody(elements,t0,n,jac_init)
 #x,v = init_nbody(elements,t0,n)
-ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,dtdq0_num,dlnq)
+ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,dtdq0_num,dlnq,rstar)
 # Need to apply initial jacobian TBD - convert from
 # derivatives with respect to (x,v,m) to (elements,m):
 tmp = zeros(Float64,7,n)
@@ -149,7 +149,7 @@ return dtdelements
 end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
-function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4})
+function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64)
 # 
 # Input quantities:
 # n     = number of bodies
@@ -190,7 +190,7 @@ end
 jac_init     = zeros(Float64,7*n,7*n)
 x,v = init_nbody(elements,t0,n,jac_init)
 #x,v = init_nbody(elements,t0,n)
-ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0)
+ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,rstar)
 # Need to apply initial jacobian TBD - convert from
 # derivatives with respect to (x,v,m) to (elements,m):
 tmp = zeros(Float64,7,n)
@@ -211,7 +211,7 @@ end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
 function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},
-  x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4})
+  x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64)
 xprior = copy(x)
 vprior = copy(v)
 xtransit = copy(x)
@@ -249,7 +249,7 @@ while t < (t0+tmax) && param_real
     ri = sqrt(x[1,i]^2+x[2,i]^2+x[3,i]^2)
     # See if sign of g switches, and if planet is in front of star (by a good amount):
     # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
-    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri
+    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri && ri < rstar
       # A transit has occurred between the time steps - integrate dh17! between timesteps
       count[i] += 1
       if count[i] <= ntt_max
@@ -279,7 +279,7 @@ return
 end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
-function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4})
+function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64)
 xprior = copy(x)
 vprior = copy(v)
 xtransit = copy(x)
@@ -317,7 +317,7 @@ while t < t0+tmax && param_real
     ri = sqrt(x[1,i]^2+x[2,i]^2+x[3,i]^2)
     # See if sign of g switches, and if planet is in front of star (by a good amount):
     # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
-    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri
+    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri && ri < rstar
       # A transit has occurred between the time steps - integrate dh17! between timesteps
       count[i] += 1
       if count[i] <= ntt_max
@@ -347,7 +347,7 @@ return
 end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
-function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4})
+function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64)
 xprior = copy(x)
 vprior = copy(v)
 xtransit = copy(x)
@@ -385,7 +385,7 @@ while t < t0+tmax && param_real
     ri = sqrt(x[1,i]^2+x[2,i]^2+x[3,i]^2)
     # See if sign of g switches, and if planet is in front of star (by a good amount):
     # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
-    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri
+    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri && ri < rstar
       # A transit has occurred between the time steps - integrate dh17! between timesteps
       count[i] += 1
       dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
@@ -416,7 +416,7 @@ end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
 # This version is used to test findtransit2 by computing finite difference derivative of findtransit2.
-function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat)
+function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64)
 xprior = copy(x)
 vprior = copy(v)
 xtransit = copy(x); xtransit_plus = big.(x); xtransit_minus = big.(x)
@@ -453,7 +453,7 @@ while t < t0+tmax && param_real
     ri = sqrt(x[1,i]^2+x[2,i]^2+x[3,i]^2)
     # See if sign of g switches, and if planet is in front of star (by a good amount):
     # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
-    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri
+    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri && ri < rstar
       # A transit has occurred between the time steps - integrate dh17! between timesteps
       count[i] += 1
       if count[i] <= ntt_max
@@ -497,7 +497,7 @@ end
 
 # Computes TTVs as a function of initial x,v,m.
 #function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1})
-function ttv!(n::Int64,t0::T,h::T,tmax::T,m::Array{T,1},x::Array{T,2},v::Array{T,2},tt::Array{T,2},count::Array{Int64,1},fout::String,iout::Int64) where {T <: Real}
+function ttv!(n::Int64,t0::T,h::T,tmax::T,m::Array{T,1},x::Array{T,2},v::Array{T,2},tt::Array{T,2},count::Array{Int64,1},fout::String,iout::Int64,rstar::T) where {T <: Real}
 # Make some copies to allocate space for saving prior step and computing coordinates at the times of transit.
 xprior = copy(x)
 vprior = copy(v)
@@ -532,7 +532,7 @@ while t < t0+tmax && param_real
     gi = g!(i,1,x,v)
     ri = sqrt(x[1,i]^2+x[2,i]^2+x[3,i]^2)
     # See if sign switches, and if planet is in front of star (by a good amount):
-    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri
+    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri && ri < rstar
       # A transit has occurred between the time steps.
       # Approximate the planet-star motion as a Keplerian, weighting over timestep:
       count[i] += 1
