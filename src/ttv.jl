@@ -9,6 +9,8 @@ const NDIM  = 3
 #const TRANSIT_TOL = 1e-8
 const KEPLER_TOL = sqrt(eps(1.0))
 const TRANSIT_TOL = 10.*sqrt(eps(1.0))
+#const KEPLER_TOL = eps(1.0)
+#const TRANSIT_TOL = 10.*eps(1.0)
 const third = 1./3.
 const alpha0 = 0.0
 include("kepler_step.jl")
@@ -132,7 +134,6 @@ x,v = init_nbody(elements,t0,n,jac_init)
 ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,dtdq0_num,dlnq,rstar)
 # Need to apply initial jacobian TBD - convert from
 # derivatives with respect to (x,v,m) to (elements,m):
-tmp = zeros(Float64,7,n)
 ntt_max = size(tt)[2]
 for i=1:n, j=1:count[i]
   if j <= ntt_max
@@ -193,7 +194,6 @@ x,v = init_nbody(elements,t0,n,jac_init)
 ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,rstar)
 # Need to apply initial jacobian TBD - convert from
 # derivatives with respect to (x,v,m) to (elements,m):
-tmp = zeros(Float64,7,n)
 ntt_max = size(tt)[2]
 for i=1:n, j=1:count[i]
   if j <= ntt_max
