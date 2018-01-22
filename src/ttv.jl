@@ -231,6 +231,10 @@ jac_step = eye(Float64,7*n)
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
 gsave = zeros(Float64,n)
+for i=2:n
+  # Compute the relative sky velocity dotted with position:
+  gsave[i]= g!(i,1,x,v)
+end
 # Loop over time steps:
 dt::Float64 = 0.0
 gi = 0.0
@@ -253,10 +257,10 @@ while t < (t0+tmax) && param_real
       # A transit has occurred between the time steps - integrate dh17! between timesteps
       count[i] += 1
       if count[i] <= ntt_max
-        dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
+        dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
-        dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
-#        dt = findtransit3!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
+        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq) # 20%
+#        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq) # 20%
         tt[i,count[i]]=t+dt
         # Save for posterity:
         for k=1:7, p=1:n
@@ -299,6 +303,10 @@ jac_step = eye(Float64,7*n)
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
 gsave = zeros(Float64,n)
+for i=2:n
+  # Compute the relative sky velocity dotted with position:
+  gsave[i]= g!(i,1,x,v)
+end
 # Loop over time steps:
 dt::Float64 = 0.0
 gi = 0.0
@@ -321,10 +329,10 @@ while t < t0+tmax && param_real
       # A transit has occurred between the time steps - integrate dh17! between timesteps
       count[i] += 1
       if count[i] <= ntt_max
-        dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
+        dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
-#        dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
-        dt = findtransit3!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
+        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq) # 20%
+#        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq) # 20%
         tt[i,count[i]]=t+dt
         # Save for posterity:
         for k=1:7, p=1:n
@@ -367,6 +375,10 @@ jac_step = eye(Float64,7*n)
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
 gsave = zeros(Float64,n)
+for i=2:n
+  # Compute the relative sky velocity dotted with position:
+  gsave[i]= g!(i,1,x,v)
+end
 # Loop over time steps:
 dt::Float64 = 0.0
 gi = 0.0
@@ -388,11 +400,11 @@ while t < t0+tmax && param_real
     if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri && ri < rstar
       # A transit has occurred between the time steps - integrate dh17! between timesteps
       count[i] += 1
-      dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
-      xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
-      dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
-#      dt = findtransit3!(1,i,n,h,dt,m,xtransit,vtransit,jac_transit,dtdq) # 20%
       if count[i] <= ntt_max
+        dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
+        xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
+        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq) # 20%
+#      dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq) # 20%
         tt[i,count[i]]=t+dt
         # Save for posterity:
         for k=1:7, p=1:n
@@ -435,6 +447,10 @@ jac_step = eye(Float64,7*n)
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
 gsave = zeros(Float64,n)
+for i=2:n
+  # Compute the relative sky velocity dotted with position:
+  gsave[i]= g!(i,1,x,v)
+end
 # Loop over time steps:
 dt::Float64 = 0.0
 gi = 0.0
@@ -457,10 +473,10 @@ while t < t0+tmax && param_real
       # A transit has occurred between the time steps - integrate dh17! between timesteps
       count[i] += 1
       if count[i] <= ntt_max
-        dt = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
+        dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         xtransit .= xprior; vtransit .= vprior
-        dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit,eye(jac_step),dtdq) # Just computing derivative since prior timestep, so start with identity matrix
-#        dt = findtransit3!(1,i,n,h,dt,m,xtransit,vtransit,eye(jac_step),dtdq) # Just computing derivative since prior timestep, so start with identity matrix
+        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,eye(jac_step),dtdq) # Just computing derivative since prior timestep, so start with identity matrix
+#        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,eye(jac_step),dtdq) # Just computing derivative since prior timestep, so start with identity matrix
         tt[i,count[i]]=t+dt
         # Save for posterity:
         for k=1:7, p=1:n
@@ -469,13 +485,13 @@ while t < t0+tmax && param_real
           dt_plus = big(dt)  # Starting estimate
           xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m)
           if k < 4; dq = dlnq*xtransit_plus[k,p]; xtransit_plus[k,p] += dq; elseif k < 7; dq =vtransit_plus[k-3,p]*dlnq; vtransit_plus[k-3,p] += dq; else; dq  = m_plus[p]*dlnq; m_plus[p] += dq; end
-          dt_plus = findtransit2!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus) # 20%
-#          dt_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus) # 20%
+#          dt_plus = findtransit2!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus) # 20%
+          dt_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus) # 20%
           dt_minus= big(dt)  # Starting estimate
           xtransit_minus .= big.(xprior); vtransit_minus .= big.(vprior); m_minus .= big.(m)
           if k < 4; dq = dlnq*xtransit_minus[k,p];xtransit_minus[k,p] -= dq; elseif k < 7; dq =vtransit_minus[k-3,p]*dlnq; vtransit_minus[k-3,p] -= dq; else; dq  = m_minus[p]*dlnq; m_minus[p] -= dq; end
-          dt_minus= findtransit2!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus) # 20%
-#          dt_minus= findtransit3!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus) # 20%
+#          dt_minus= findtransit2!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus) # 20%
+          dt_minus= findtransit3!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus) # 20%
           # Compute finite-different derivative:
           dtdq0_num[i,count[i],k,p] = (dt_plus-dt_minus)/(2dq)
         end
@@ -538,11 +554,11 @@ while t < t0+tmax && param_real
       count[i] += 1
 #      tt[i,count[i]]=t+findtransit!(i,h,gi,gsave[i],m,xprior,vprior,x,v)
       if count[i] <= ntt_max
-        dt = -gsave[i]*h/(gi-gsave[i])
+        dt0 = -gsave[i]*h/(gi-gsave[i])
         xtransit .= xprior
         vtransit .= vprior
-        dt = findtransit2!(1,i,n,h,dt,m,xtransit,vtransit)
-#        dt = findtransit3!(1,i,n,h,dt,m,xtransit,vtransit)
+        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit)
+#        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit)
         tt[i,count[i]]=t+dt
       end
 #      tt[i,count[i]]=t+findtransit2!(1,i,n,h,gi,gsave[i],m,xprior,vprior)
@@ -1256,6 +1272,9 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   # Add refinement to estimated time:
   tt += dt
   iter +=1
+end
+if iter >= 20
+  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
 end
 # Note: this is the time elapsed *after* the beginning of the timestep:
 return tt::typeof(h)
