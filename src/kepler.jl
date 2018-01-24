@@ -9,8 +9,8 @@ if m != 0.0
   d3=1e10
   de0=ecc*0.85*sign(ms)
   iter = 0
-  while abs(d3) > eps
-#  while abs(d3) > KEPLER_TOL
+#  while abs(d3) > eps
+  while abs(d3) > KEPLER_TOL
     f3=ecc*cos(de0+ms)
     f2=ecc*sin(de0+ms)
     f1=1.0-f3
@@ -41,8 +41,8 @@ if m != 0.0
   ms=mod(m,pi2)
   d3=1e10
   e0=ms+ecc*0.85*sin(ms)/abs(sin(ms))
-  while abs(d3) > eps
-#  while abs(d3) > KEPLER_TOL
+#  while abs(d3) > eps
+  while abs(d3) > KEPLER_TOL
     f3=ecc*cos(e0)
     f2=ecc*sin(e0)
     f1=1.0-f3

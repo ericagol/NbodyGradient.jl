@@ -12,105 +12,75 @@ den2 = yp*den12-num*.5*(ypp*den1-third*num*yppp)
 return -y*den12/den2
 end
 
-function solve_kepler!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},beta0::T,
-   r0::T,dr0dt::T,s0::T,state::Array{T,1}) where {T <: Real}
-zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
-# Solves elliptic Kepler's equation for both elliptic and hyperbolic cases.
-# Initial guess (if s0 = 0):
-r0inv = inv(r0)
-beta0inv = inv(beta0)
-signb = sign(beta0)
-if s0 == zero
-  s = h*r0inv
-else
-  s = copy(s0)
-end
-s0 = copy(s)
-sqb = sqrt(signb*beta0)
-y = zero; yp = one
-iter = 0
-ds = Inf
-fac1 = k-r0*beta0
-fac2 = r0*dr0dt
-while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
-  xx = sqb*s
-#  sx = sqb*sin(xx)
-#  cx = cos(xx)
-#  eval(Expr(:call,trig,xx,cx,sx))
-  if beta0 > 0
-    sx = sin(xx); cx = cos(xx)
-  else
-    cx = cosh(xx); sx = exp(xx)-cx
-  end
-  sx *= sqb
-# Third derivative:
-  yppp = fac1*cx - signb*fac2*sx
-# Take derivative:
-  yp = (-yppp+ k)*beta0inv
-# Second derivative:
-  ypp = signb*fac1*beta0inv*sx + fac2*cx
-  y  = (-ypp + fac2 +k*s)*beta0inv - h  # eqn 35
-# Now, compute fourth-order estimate:
-  ds = calc_ds_opt(y,yp,ypp,yppp)
-  s += ds
-  iter +=1
-end
-#println("iter: ",iter," s0: ",s0," s: ",s," ds: ",ds)
-# Since we updated s, need to recompute:
-xx = 0.5*sqb*s #; sx = sin(xx) ; cx = cos(xx)
-#xx = 0.5*sqb*s; cx = cosh(xx); sx = exp(xx)-cx
-#eval(Expr(:call,trig,xx,cx,sx))
-if beta0 > 0
-  sx = sin(xx); cx = cos(xx)
-else
-  cx = cosh(xx); sx = exp(xx)-cx
-end
-#if beta0 > 0
-#  cos_sin!(xx,cx,sx)
-#else
-#  cosh_sinh!(xx,cx,sx)
-#end
-#println("beta0: ",beta0," xx: ",xx," cx: ",cx," sx: ",sx)
-# Now, compute final values:
-g1bs = 2.*sx*cx/sqb
-g2bs = 2.*signb*sx^2*beta0inv
-f = one - k*r0inv*g2bs # eqn (25)
-g = r0*g1bs + fac2*g2bs # eqn (27)
-#println("f: ",f," g: ",g)
-#println("k: ",k," r0inv: ",r0inv," g2bs: ",g2bs," r0: ",r0," g1bs: ",g1bs," fac2: ",fac2)
-for j=1:3
-# Position is components 2-4 of state:
-  state[1+j] = x0[j]*f+v0[j]*g
-end
-r = sqrt(state[2]*state[2]+state[3]*state[3]+state[4]*state[4])
-rinv = inv(r)
-dfdt = -k*g1bs*rinv*r0inv
-dgdt = r0*(one-beta0*g2bs+dr0dt*g1bs)*rinv
-for j=1:3
-# Velocity is components 5-7 of state:
-  state[4+j] = x0[j]*dfdt+v0[j]*dgdt
-end
-return s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r,rinv,ds,iter
-end
-
 #function kep_elliptic!(x0::Array{Float64,1},v0::Array{Float64,1},r0::Float64,dr0dt::Float64,k::Float64,h::Float64,beta0::Float64,s0::Float64,state::Array{Float64,1})
-function kep_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,
+function kep_elliptic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,
   beta0::T,s0::T,state::Array{T,1}) where {T <: Real}
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
+
+r0inv = inv(r0)
+beta0inv = inv(beta0)
 # Now, solve for s in elliptical Kepler case:
-f = zero; g=zero; dfdt=zero; dgdt=zero; cx=zero;sx=zero;g1bs=zero;g2bs=zero
-s=zero; ds = zero; r = zero;rinv=zero; iter=0
-if beta0 > zero || beta0 < zero
-   s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r,rinv,ds,iter = solve_kepler!(h,k,x0,v0,beta0,r0,dr0dt,
-    s0,state)
+if beta0 > zero
+# Initial guess (if s0 = 0):
+  if s0 == zero
+    s = h*r0inv
+  else
+    s = copy(s0)
+  end
+  s0 = copy(s)
+  sqb = sqrt(beta0)
+  y = zero; yp = one
+  iter = 0
+  ds = Inf
+  fac1 = k-r0*beta0
+  fac2 = r0*dr0dt
+  while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
+    xx = sqb*s
+    sx = sqb*sin(xx)
+    cx = cos(xx)
+# Third derivative:
+    yppp = fac1*cx - fac2*sx
+# Take derivative:
+    yp = (-yppp+ k)*beta0inv
+# Second derivative:
+    ypp = fac1*beta0inv*sx + fac2*cx
+    y  = (-ypp + fac2 +k*s)*beta0inv - h  # eqn 35
+# Now, compute fourth-order estimate:
+    ds = calc_ds_opt(y,yp,ypp,yppp)
+    s += ds
+    iter +=1
+#    println(iter," ds: ",ds)
+  end
+#  if iter > 1
+#    println(iter," ",s," ",s/s0-1," ds: ",ds)
+#  end
+# Since we updated s, need to recompute:
+  xx = 0.5*sqb*s; sx = sin(xx) ; cx = cos(xx)
+# Now, compute final values:
+  g1bs = 2.*sx*cx/sqb
+  g2bs = 2.*sx^2*beta0inv
+  f = one - k*r0inv*g2bs # eqn (25)
+  g = r0*g1bs + fac2*g2bs # eqn (27)
+  for j=1:3
+# Position is components 2-4 of state:
+    state[1+j] = x0[j]*f+v0[j]*g
+  end
+  r = sqrt(state[2]*state[2]+state[3]*state[3]+state[4]*state[4])
+  rinv = inv(r)
+  dfdt = -k*g1bs*rinv*r0inv
+  dgdt = r0*(one-beta0*g2bs+dr0dt*g1bs)*rinv
+  for j=1:3
+# Velocity is components 5-7 of state:
+    state[4+j] = x0[j]*dfdt+v0[j]*dgdt
+  end
 else
-  println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
+  println("Not elliptic ",beta0," x0 ",x0)
   r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
 end
+# recompute beta:
 state[8]= r
 state[9] = (state[2]*state[5]+state[3]*state[6]+state[4]*state[7])*rinv
-# recompute beta:
 # beta is element 10 of state:
 state[10] = 2.0*k*rinv-(state[5]*state[5]+state[6]*state[6]+state[7]*state[7])
 # s is element 11 of state:
@@ -121,26 +91,71 @@ return iter
 end
 
 #function kep_elliptic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2})
-function kep_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2}) where {T <: Real}
+function kep_elliptic!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2}) where {T <: Real}
 # Computes the Jacobian as well
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 r0inv = inv(r0)
 beta0inv = inv(beta0)
 # Now, solve for s in elliptical Kepler case:
-f = zero; g=zero; dfdt=zero; dgdt=zero; cx=zero;sx=zero;g1bs=zero;g2bs=zero
-s=zero; ds=zero; r = zero;rinv=zero; iter=0
-if beta0 > zero || beta0 < zero
-#  solve_kepler!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r0,dr0dt,r,
-#    rinv,ds,s0,state,iter)
-   s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r,rinv,ds,iter = solve_kepler!(h,k,x0,v0,beta0,r0,dr0dt,
-    s0,state)
-# Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
-# with respect to initial state variable q0[j], where q = {x,v} & q0 = {x0,v0}.
+if beta0 > zero
+# Initial guess (if s0 = 0):
+  if s0 == zero
+    s = h*r0inv
+  else
+    s = copy(s0)
+  end
+  s0 = copy(s)
+  sqb = sqrt(beta0)
+  y = zero; yp = one
+  iter = 0
+  ds = Inf
+  fac1 = k-r0*beta0
+  fac2 = r0*dr0dt
+  while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
+    xx = sqb*s
+    sx = sqb*sin(xx)
+    cx = cos(xx)
+# Third derivative:
+    yppp = fac1*cx - fac2*sx
+# Take derivative:
+    yp = (-yppp+ k)*beta0inv
+# Second derivative:
+    ypp = fac1*beta0inv*sx + fac2*cx
+    y  = (-ypp + fac2 +k*s)*beta0inv - h  # eqn 35
+# Now, compute fourth-order estimate:
+    ds = calc_ds_opt(y,yp,ypp,yppp)
+    s += ds
+    iter +=1
+#    println(iter," ds: ",ds)
+  end
+#  if iter > 1
+#    println(iter," ",s," ",s/s0-1," ds: ",ds)
+#  end
+# Since we updated s, need to recompute:
+  xx = 0.5*sqb*s; sx = sin(xx) ; cx = cos(xx)
+# Now, compute final values:
+  g1bs = 2.*sx*cx/sqb
+  g2bs = 2.*sx^2*beta0inv
+  f = one - k*r0inv*g2bs # eqn (25)
+  g = r0*g1bs + fac2*g2bs # eqn (27)
+  for j=1:3
+# Position is components 2-4 of state:
+    state[1+j] = x0[j]*f+v0[j]*g
+  end
+  r = sqrt(state[2]*state[2]+state[3]*state[3]+state[4]*state[4])
+  rinv = inv(r)
+  dfdt = -k*g1bs*rinv*r0inv
+  dgdt = r0*(one-beta0*g2bs+dr0dt*g1bs)*rinv
+  for j=1:3
+# Velocity is components 5-7 of state:
+    state[4+j] = x0[j]*dfdt+v0[j]*dgdt
+  end
+# Now, compute the jacobian:
   fill!(jacobian,zero)
   compute_jacobian!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r0,dr0dt,r,jacobian)
 else
-  println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
+  println("Not elliptic ",beta0," x0 ",x0)
   r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
 end
 # recompute beta:
@@ -152,6 +167,9 @@ state[10] = 2.0*k*rinv-(state[5]*state[5]+state[6]*state[6]+state[7]*state[7])
 state[11] = s
 # ds is element 12 of state:
 state[12] = ds
+# Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
+# with respect to initial state variable q0[j], where q = {x,v} & q0 = {x0,v0}.
+
 return iter
 end
 
@@ -164,7 +182,56 @@ r0inv = inv(r0)
 beta0inv = inv(beta0)
 # Now, solve for s in hyperbolic Kepler case:
 if beta0 < zero
-#  solve_kepler!() 
+# Initial guess (if s0 = 0):
+  if s0 == zero
+    s = h*r0inv
+  else
+    s = copy(s0)
+  end
+  s0 = copy(s)
+  sqb = sqrt(-beta0)
+  y = zero; yp = one
+  iter = 0
+  ds = Inf
+  fac1 = k-r0*beta0
+  fac2 = r0*dr0dt
+  while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
+    xx = sqb*s; cx = cosh(xx); sx = sqb*(exp(xx)-cx)
+# Third derivative:
+    yppp = fac1*cx + fac2*sx
+# Take derivative:
+    yp = (-yppp+ k)*beta0inv
+# Second derivative:
+    ypp = -fac1*beta0inv*sx  + fac2*cx
+    y  = (-ypp +fac2 +k*s)*beta0inv - h  # eqn 35
+# Now, compute fourth-order estimate:
+    ds = calc_ds_opt(y,yp,ypp,yppp)
+    s += ds
+    iter +=1
+#    println(iter," ds: ",ds)
+  end
+#  if iter > 1
+#    #println("iter: ",iter," ds/s: ",ds/s0)
+#    println(iter," ",s," ",s/s0-1," ds: ",ds)
+#  end
+  xx = 0.5*sqb*s; cx = cosh(xx); sx = exp(xx)-cx
+# Now, compute final values:
+  g1bs = 2.0*sx*cx/sqb
+  g2bs = -2.0*sx^2*beta0inv
+  f = one - k*r0inv*g2bs # eqn (25)
+  g = r0*g1bs + fac2*g2bs # eqn (27)
+  for j=1:3
+    state[1+j] = x0[j]*f+v0[j]*g
+  end
+  # r = norm(x)
+  r = sqrt(state[2]*state[2]+state[3]*state[3]+state[4]*state[4])
+  rinv = inv(r)
+  dfdt = -k*g1bs*rinv*r0inv
+  dgdt = r0*(one-beta0*g2bs+dr0dt*g1bs)*rinv
+  for j=1:3
+# Velocity is components 5-7 of state:
+    state[4+j] = x0[j]*dfdt+v0[j]*dgdt
+  end
 else
   println("Not hyperbolic",beta0," x0 ",x0)
   r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0

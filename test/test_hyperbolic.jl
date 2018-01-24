@@ -44,7 +44,8 @@ beta0 = 2.0*k/r0-dot(v0,v0)
 xsave[10,1]=beta0
 #@inbounds for i=2:nsteps
 for i=2:nsteps
-  iter = kep_hyperbolic!(x0,v0,r0,dr0dt,k,h,beta0,s0,state)
+#  iter = kep_hyperbolic!(x0,v0,r0,dr0dt,k,h,beta0,s0,state)
+  iter = kep_ell_hyp!(x0,v0,r0,dr0dt,k,h,beta0,s0,state)
   s = state[11]
   ds = state[12]
   if iter > 2

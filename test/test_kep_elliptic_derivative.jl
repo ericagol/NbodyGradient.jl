@@ -48,12 +48,8 @@ xsave[9,1]=dr0dt
 beta0 = 2.0*k/r0-dot(v0,v0)
 xsave[10,1]=beta0
 jacobian=zeros(Float64,7,7)
-#iter = kep_elliptic!(x0,v0,r0,dr0dt,k,h,beta0,s0,state,jacobian)
-iter = kep_ell_hyp!(x0,v0,r0,dr0dt,k,h,beta0,s0,state,jacobian)
+iter = kep_elliptic!(x0,v0,r0,dr0dt,k,h,beta0,s0,state,jacobian)
 #println("Initial conditions: ",x0,v0)
-#println("Final state: ",state)
-#println("Differnce : ",state[2:4]-x0,state[5:7]-v0)
-#read(STDIN,Char)
 
 # Now, do finite differences at higher precision:
 kbig = big(k); s0big = big(0.0);  statebig = big.(state)
@@ -61,8 +57,7 @@ x0big = big.(x0); v0big = big.(v0)
 r0big = sqrt(x0big[1]*x0big[1]+x0big[2]*x0big[2]+x0big[3]*x0big[3])
 dr0dtbig = (x0big[1]*v0big[1]+x0big[2]*v0big[2]+x0big[3]*v0big[3])/r0big
 beta0big = 2*kbig/r0big-dot(v0big,v0big)
-#iter = kep_elliptic!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,statebig)
-iter = kep_ell_hyp!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,statebig)
+iter = kep_elliptic!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,statebig)
 #println("Final state: ",statebig[2:7])
 
 #read(STDIN,Char)
@@ -85,8 +80,7 @@ for j=1:3
   r0big = sqrt(x0big[1]*x0big[1]+x0big[2]*x0big[2]+x0big[3]*x0big[3])
   dr0dtbig = (x0big[1]*v0big[1]+x0big[2]*v0big[2]+x0big[3]*v0big[3])/r0big
   beta0big = 2*kbig/r0big-dot(v0big,v0big)
-#  iter = kep_elliptic!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,state_diffbig)
-  iter = kep_ell_hyp!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,state_diffbig)
+  iter = kep_elliptic!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,state_diffbig)
   x0big = copy(x0save)
   for i=1:3
     jac_num[  i,  j] = (state_diffbig[1+i]-statebig[1+i])/dq
@@ -103,8 +97,7 @@ for j=1:3
   r0big = sqrt(x0big[1]*x0big[1]+x0big[2]*x0big[2]+x0big[3]*x0big[3])
   dr0dtbig = (x0big[1]*v0big[1]+x0big[2]*v0big[2]+x0big[3]*v0big[3])/r0big
   beta0big = 2*kbig/r0big-dot(v0big,v0big)
-#  iter = kep_elliptic!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,state_diffbig)
-  iter = kep_ell_hyp!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,state_diffbig)
+  iter = kep_elliptic!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,state_diffbig)
   v0big = copy(v0save)
   for i=1:3
     jac_num[  i,3+j] = (state_diffbig[1+i]-statebig[1+i])/dq
@@ -117,8 +110,7 @@ for j=1:3
   r0big = sqrt(x0big[1]*x0big[1]+x0big[2]*x0big[2]+x0big[3]*x0big[3])
   dr0dtbig = (x0big[1]*v0big[1]+x0big[2]*v0big[2]+x0big[3]*v0big[3])/r0big
   beta0big = 2*kbig/r0big-dot(v0big,v0big)
-#  iter = kep_elliptic!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,state_diffbig)
-  iter = kep_ell_hyp!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,state_diffbig)
+  iter = kep_elliptic!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,state_diffbig)
   for i=1:3
     jac_num[  i,7] = (state_diffbig[1+i]-statebig[1+i])/dq
     jac_num[3+i,7] = (state_diffbig[4+i]-statebig[4+i])/dq

@@ -46,7 +46,7 @@ dtdelements_num = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,dtdq0_num,dl
 dtdq0_num = convert(Array{Float64,4},dtdq0_num)
 
 mask = zeros(Bool, size(dtdq0))
-for i=2:n, j=1:count[i], k=1:7, l=1:n
+for i=2:n, j=1:count[i], k=1:5, l=1:n
   mask[i,j,k,l] = true
 end
 #println("Max diff log(dtdq0): ",maximum(abs.(dtdq0_num[mask]./dtdq0[mask]-1.0)))

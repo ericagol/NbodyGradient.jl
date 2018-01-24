@@ -18,12 +18,11 @@ end
   dr0dt = (x0[1]*v0[1]+x0[2]*v0[2]+x0[3]*v0[3])/r0
   beta0 = 2*gm/r0-(v0[1]*v0[1]+v0[2]*v0[2]+v0[3]*v0[3])
   s0=state0[11]
-  iter = kep_ell_hyp!(x0,v0,r0,dr0dt,gm,h,beta0,s0,state)
-#  if beta0 > zero
-#    iter = kep_elliptic!(x0,v0,r0,dr0dt,gm,h,beta0,s0,state)
-#  else
-#    iter = kep_hyperbolic!(x0,v0,r0,dr0dt,gm,h,beta0,s0,state)
-#  end
+  if beta0 > zero
+    iter = kep_elliptic!(x0,v0,r0,dr0dt,gm,h,beta0,s0,state)
+  else
+    iter = kep_hyperbolic!(x0,v0,r0,dr0dt,gm,h,beta0,s0,state)
+  end
 return
 end
 
@@ -43,11 +42,10 @@ end
   dr0dt = (x0[1]*v0[1]+x0[2]*v0[2]+x0[3]*v0[3])/r0
   beta0 = 2*gm/r0-(v0[1]*v0[1]+v0[2]*v0[2]+v0[3]*v0[3])
   s0=state0[11]
-  iter = kep_ell_hyp!(x0,v0,r0,dr0dt,gm,h,beta0,s0,state,jacobian)
-#  if beta0 > zero
-#    iter = kep_elliptic!(x0,v0,r0,dr0dt,gm,h,beta0,s0,state,jacobian)
-#  else
-#    iter = kep_hyperbolic!(x0,v0,r0,dr0dt,gm,h,beta0,s0,state,jacobian)
-#  end
+  if beta0 > zero
+    iter = kep_elliptic!(x0,v0,r0,dr0dt,gm,h,beta0,s0,state,jacobian)
+  else
+    iter = kep_hyperbolic!(x0,v0,r0,dr0dt,gm,h,beta0,s0,state,jacobian)
+  end
 return
 end
