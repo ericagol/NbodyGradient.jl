@@ -14,6 +14,7 @@ const TRANSIT_TOL = 10.*sqrt(eps(1.0))
 const third = 1./3.
 const alpha0 = 0.0
 include("kepler_step.jl")
+include("kepler_drift_step.jl")
 include("init_nbody.jl")
 
 const pxpr0 = zeros(Float64,3);const  pxpa0=zeros(Float64,3);const  pxpk=zeros(Float64,3);const  pxps=zeros(Float64,3);const  pxpbeta=zeros(Float64,3)
@@ -635,6 +636,41 @@ end
 return
 end
 
+# Carries out a Kepler step and reverse drift for bodies i & j
+function kepler_driftij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T,drift_first::Bool) where {T <: Real}
+# The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
+# Initial state:
+state0 = zeros(typeof(h),12)
+state0[11] = 0.0
+# Final state (after a step):
+state = zeros(typeof(h),12)
+for k=1:NDIM
+  state0[1+k] = x[k,i] - x[k,j]
+  state0[4+k] = v[k,i] - v[k,j]
+end
+gm = GNEWT*(m[i]+m[j])
+if gm == 0
+#  Do nothing
+#  for k=1:3
+#    x[k,i] += h*v[k,i]
+#    x[k,j] += h*v[k,j]
+#  end
+else
+  # predicted value of s
+  state0[11] = 0.0
+  kepler_drift_step!(gm, h, state0, state,drift_first)
+  mijinv =1.0/(m[i] + m[j])
+  for k=1:3
+    # Add kepler-drift differences, weighted by masses, to start of step:
+    x[k,i] += m[j]*mijinv*state[1+k]
+    x[k,j] -= m[i]*mijinv*state[1+k]
+    v[k,i] += m[j]*mijinv*state[4+k]
+    v[k,j] -= m[i]*mijinv*state[4+k]
+  end
+end
+return
+end
+
 # Carries out a Kepler step for bodies i & j
 #function keplerij!(m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},i::Int64,j::Int64,h::Float64)
 function keplerij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T) where {T <: Real}
@@ -1014,6 +1050,30 @@ end
   # Mass remains unchanged:
   jac_step[indi+7,indi+7] += 1.0
 end
+return
+end
+
+# Carries out the AH18 mapping:
+function ah18!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64) where {T <: Real}
+# New version of solver that consolidates keplerij and driftij:
+h2 = 0.5*h
+drift!(x,v,h2,n)
+@inbounds for i=1:n-1
+  for j=i+1:n
+#    driftij!(x,v,i,j,-h2)
+#    keplerij!(m,x,v,i,j,h2)
+    kepler_driftij!(m,x,v,i,j,h2,true)
+  end
+end
+phisalpha!(x,v,h,m,2.,n)
+for i=n-1:-1:1
+  for j=n:-1:i+1
+#    keplerij!(m,x,v,i,j,h2)
+#    driftij!(x,v,i,j,-h2)
+    kepler_driftij!(m,x,v,i,j,h2,false)
+  end
+end
+drift!(x,v,h2,n)
 return
 end
 

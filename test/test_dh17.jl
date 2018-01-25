@@ -51,9 +51,14 @@ x0[2,3] = -5e-1*sqrt(x0[1,2]^2+x0[3,2]^2)
 v0[2,1] = 5e-1*sqrt(v0[1,1]^2+v0[3,1]^2)
 v0[2,2] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 v0[2,3] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
-
+xtest = copy(x0); vtest=copy(v0)
 # Take a single step (so that we aren't at initial coordinates):
 dh17!(x0,v0,h,m,n)
+# Take a single AH18 step:
+ah18!(xtest,vtest,h,m,n)
+
+println("Comparing dh17 and ah18: ",x0-xtest,v0-vtest)
+read(STDIN,Char)
 
 # Now, copy these to compute Jacobian (so that I don't step
 # x0 & v0 forward in time):
