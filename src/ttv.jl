@@ -1055,7 +1055,8 @@ end
 
 # Carries out the AH18 mapping:
 function ah18!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64) where {T <: Real}
-# New version of solver that consolidates keplerij and driftij:
+# New version of solver that consolidates keplerij and driftij, and sets
+# alpha = 0:
 h2 = 0.5*h
 drift!(x,v,h2,n)
 @inbounds for i=1:n-1
