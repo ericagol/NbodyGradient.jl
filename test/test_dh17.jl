@@ -58,7 +58,7 @@ dh17!(x0,v0,h,m,n)
 ah18!(xtest,vtest,h,m,n)
 
 println("Comparing dh17 and ah18: ",x0-xtest,v0-vtest)
-read(STDIN,Char)
+#read(STDIN,Char)
 
 # Now, copy these to compute Jacobian (so that I don't step
 # x0 & v0 forward in time):

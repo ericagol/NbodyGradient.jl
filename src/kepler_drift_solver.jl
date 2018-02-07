@@ -1,5 +1,7 @@
 # Wisdom & Hernandez version of Kepler solver, but with quartic convergence.
 
+using ForwardDiff
+
 #function calc_ds_opt(y::T,yp::T,ypp::T,yppp::T) where {T <: Real}
 ## Computes quartic Newton's update to equation y=0 using first through 3rd derivatives.
 ## Uses techniques outlined in Murray & Dermott for Kepler solver.
@@ -34,6 +36,7 @@ fac1 = k-r0*beta0
 fac2 = r0*dr0dt
 while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
   xx = sqb*s
+  println("xx: ",xx)
   if beta0 > 0
     sx = sin(xx); cx = cos(xx)
   else
@@ -146,7 +149,7 @@ if beta0 > zero || beta0 < zero
 # Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
 # with respect to initial state variable q0[j], where q = {x,v} & q0 = {x0,v0}.
   fill!(jacobian,zero)
-  compute_jacobian_kep_drift!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,r0,dr0dt,r,jacobian)
+  compute_jacobian_kep_drift!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,r0,dr0dt,r,jacobian,drift_first)
 else
   println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
   r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
@@ -165,7 +168,7 @@ return iter
 end
 
 function compute_jacobian_kep_drift!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},beta0::T,s::T,
-  f::T,g::T,dfdt::T,dgdtm1::T,cx::T,sx::T,g1::T,g2::T,r0::T,dr0dt::T,r::T,jacobian::Array{T,2}) where {T <: Real}
+  f::T,g::T,dfdt::T,dgdtm1::T,cx::T,sx::T,g1::T,g2::T,r0::T,dr0dt::T,r::T,jacobian::Array{T,2},drift_first::Bool) where {T <: Real}
 # This needs to be updated to incorporate backwards drifts. [ ]
 # Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
 # with respect to initial state variable q0[j], where q = {x,v,k} & q0 = {x0,v0,k}.
