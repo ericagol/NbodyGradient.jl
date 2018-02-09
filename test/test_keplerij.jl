@@ -9,7 +9,7 @@
 
 n = 3
 t0 = 7257.93115525
-h  = 10.05
+h  = 0.05
 hbig  = big(h)
 tmax = 600.0
 #dlnq = 1e-8
@@ -53,7 +53,16 @@ x = copy(x0) ; v=copy(v0)
 keplerij!(m,x,v,i,j,h,jac_ij,dqdt_ij)
 #println("After first step: ",x," ",v)
 x0 = copy(x) ; v0 = copy(v)
+xbig = big.(x) ; vbig=big.(v); mbig = big.(m)
 keplerij!(m,x,v,i,j,h,jac_ij,dqdt_ij)
+# Now compute Jacobian with BigFloat precision:
+jac_ij_big = zeros(BigFloat,14,14)
+dqdt_ij_big = zeros(BigFloat,14)
+KEPLER_TOL = sqrt(eps(big(1.0)))
+keplerij!(mbig,xbig,vbig,i,j,hbig,jac_ij_big,dqdt_ij_big)
+#println("jac_ij: ",convert(Array{Float64,2},jac_ij_big))
+#println("jac_ij - jac_ij_big: ",convert(Array{Float64,2},jac_ij_big)-jac_ij)
+println("max(jac_ij - jac_ij_big): ",maxabs(convert(Array{Float64,2},jac_ij_big)-jac_ij))
 
 # xtest = copy(x0) ; vtest=copy(v0)
 # keplerij!(m,xtest,vtest,i,j,h,jac_ij)
@@ -259,8 +268,9 @@ end
 println("Maximum fractional error: ",emax," ",imax," ",jmax)
 #println(jac_ij)
 #println(convert(Array{Float64,2},jac_ij_num))
-println("Maximum jac_ij error:   ",maximum(abs.(convert(Array{Float64,2},jac_ij_num)-jac_ij)))
-println("Max dqdt error: ",maximum(abs.(dqdt_ij-convert(Array{Float64,1},dqdt_num))))
+println("Maximum jac_ij error:   ",maxabs(convert(Array{Float64,2},jac_ij_num)-jac_ij))
+println("Maximum jac_ij_big-jac_ij_num:   ",maxabs(convert(Array{Float64,2},jac_ij_num-jac_ij_big)))
+println("Max dqdt error: ",maxabs(dqdt_ij-convert(Array{Float64,1},dqdt_num)))
 
 @test isapprox(jac_ij_num,jac_ij;norm=maxabs)
 @test isapprox(dqdt_ij,convert(Array{Float64,1},dqdt_num);norm=maxabs)

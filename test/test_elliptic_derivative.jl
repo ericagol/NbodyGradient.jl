@@ -22,7 +22,7 @@ vcirc = sqrt(k/r0)
 # Define initial velocity at apastron:
 v0 = [.9*vcirc,0.01*vcirc,0.01*vcirc]  # The eccentricity is about ~2(1-v0/vcirc).
 dr0dt = (x0[1]*v0[1]+x0[2]*v0[2]+x0[3]*v0[3])/r0
-h = 100.0 # 18-day timesteps
+h = 18.0 # 18-day timesteps
 hbig = big(h)
 
 s0::Float64 = 0.0
@@ -61,16 +61,20 @@ x0big = big.(x0); v0big = big.(v0)
 r0big = sqrt(x0big[1]*x0big[1]+x0big[2]*x0big[2]+x0big[3]*x0big[3])
 dr0dtbig = (x0big[1]*v0big[1]+x0big[2]*v0big[2]+x0big[3]*v0big[3])/r0big
 beta0big = 2*kbig/r0big-dot(v0big,v0big)
+jacobian_big =zeros(BigFloat,7,7)
 #iter = kep_elliptic!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,statebig)
-iter = kep_ell_hyp!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,statebig)
+iter = kep_ell_hyp!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,statebig,jacobian_big)
 #println("Final state: ",statebig[2:7])
+jac_frac = jacobian./convert(Array{Float64,2},jacobian_big)-1.0
+println("Fractional Jacobian difference: ",maxabs(jac_frac[.~isnan.(jac_frac)]))
+#println(jacobian)
+#println(jac_frac)
 
 #read(STDIN,Char)
 #s = statebig[11]
 # Now, compute the Jacobian numerically:
 #jac_num = zeros(Float64,7,7)
 jac_num = zeros(BigFloat,7,7)
-#dlnq = 1e-4
 # jac_num[i,j]: derivative of (x_i,v_i,k) with respect to (x_{0,j},v_{0,j},k):
 for j=1:3
   x0save = copy(x0big)
@@ -126,20 +130,18 @@ for j=1:3
   kbig = copy(ksave)
   jac_num[7,  7] = 1.0
 end
+println("Maximum jac_big-jac_num: ",maxabs(convert(Array{Float64,2},jacobian_big-jac_num)))
+#println(convert(Array{Float64,2},jacobian_big))
+#println(convert(Array{Float64,2},jacobian_big./jac_num-1.0))
 return xsave,jac_num,jacobian
 end
 
 # First try:
-const KEPLER_TOL = 1e-12
-xsave,jac_num1,jacobian=test_elliptic_derivative(big(1e-15))
+xsave,jac_num1,jacobian=test_elliptic_derivative(big(1e-20))
 # Second try:
 #xsave,jac_num2,jacobian=test_elliptic_derivative(1e-6)
 
 
-#println("Jac dlnq=1e-7 ")
-#jac_num1
-#println("Jac dlnq=1e-6 ")
-#jac_num2
 #jacobian
 #jac_num1-jac_num2
 #println("Fraction errors on Jacobian: ",jac_num1./jacobian-1.0)
@@ -147,14 +149,14 @@ xsave,jac_num1,jacobian=test_elliptic_derivative(big(1e-15))
 emax = 0.0; imax = 0; jmax = 0
 for i=1:7, j=1:7
   if jacobian[i,j] != 0.0
-    diff = abs(jac_num1[i,j]/jacobian[i,j]-1.0)
+    diff = abs(convert(Float64,jac_num1[i,j])/jacobian[i,j]-1.0)
     if  diff > emax
       emax = diff; imax = i; jmax = j
     end
   end
 end
 println("Maximum fractional error: ",emax," ",imax," ",jmax)
-println("Maximum error jacobian: ",maximum(abs.(jacobian-jac_num1)))
+println("Maximum jacobian-jac_num: ",maxabs(jacobian-convert(Array{Float64,2},jac_num1)))
 
 #@test isapprox(jacobian,jac_num1)
 @test isapprox(jacobian,jac_num1;norm=maxabs)

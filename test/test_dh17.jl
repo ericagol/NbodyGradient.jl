@@ -6,22 +6,20 @@
 
 # Next, try computing three-body Keplerian Jacobian:
 
-@testset "dh17" begin
+#@testset "dh17" begin
 
 #n = 8
 n = 3
 #n = 2
 t0 = 7257.93115525
 h  = 0.05
-#h  = 0.0001
 hbig = big(h)
-#h  = 0.075
 tmax = 600.0
 dlnq = big(1e-12)
 
 #nstep = 8000
-nstep = 500
-#nstep = 1
+#nstep = 500
+nstep = 1
 
 elements = readdlm("elements.txt",',')
 # Increase mass of inner planets:
@@ -52,12 +50,18 @@ v0[2,1] = 5e-1*sqrt(v0[1,1]^2+v0[3,1]^2)
 v0[2,2] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 v0[2,3] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 xtest = copy(x0); vtest=copy(v0)
+xbig = big.(x0); vbig = big.(v0)
 # Take a single step (so that we aren't at initial coordinates):
 dh17!(x0,v0,h,m,n)
+# Take a step with big precision:
+#dh17!(xbig,vbig,big(h),big.(m),n)
+ah18!(xbig,vbig,big(h),big.(m),n)
 # Take a single AH18 step:
 ah18!(xtest,vtest,h,m,n)
 
-println("Comparing dh17 and ah18: ",x0-xtest,v0-vtest)
+println("Comparing dh17 and ah18: ",x0./xtest-1.0,v0./vtest-1.0)
+println("Comparing dh17 and big: ",x0./convert(Array{Float64,2},xbig)-1.0,v0./convert(Array{Float64,2},vbig)-1.0)
+println("Comparing ah18 and big: ",xtest./convert(Array{Float64,2},xbig)-1.0,vtest./convert(Array{Float64,2},vbig)-1.0)
 #read(STDIN,Char)
 
 # Now, copy these to compute Jacobian (so that I don't step
@@ -65,10 +69,22 @@ println("Comparing dh17 and ah18: ",x0-xtest,v0-vtest)
 x = copy(x0)
 v = copy(v0)
 m = copy(m0)
-# Compute jacobian exactly:
+xbig = big.(x0)
+vbig = big.(v0)
+mbig = big.(m0)
+# Compute jacobian exactly over nstep steps:
 for istep=1:nstep
   dh17!(x,v,h,m,n,jac_step)
 end
+
+# Initialize with identity matrix:
+jac_big= eye(BigFloat,7*n)
+# Compute jacobian exactly over nstep steps:
+for istep=1:nstep
+  dh17!(xbig,vbig,hbig,mbig,n,jac_big)
+end
+println("Comparing jac_step and jac_big: ",maxabs(jac_step-jac_big))
+
 # Test that both versions of dh17 give the same answer:
 xtest = copy(x0)
 vtest = copy(v0)
@@ -76,7 +92,7 @@ m = copy(m0)
 for istep=1:nstep
   dh17!(xtest,vtest,h,m,n)
 end
-#println("x/v difference: ",x-xtest,v-vtest)
+println("x/v difference: ",x-xtest,v-vtest)
 
 # Now compute numerical derivatives:
 jac_step_num = zeros(BigFloat,7*n,7*n)
@@ -237,4 +253,4 @@ println("dqdt: ",dqdt," ",dqdt_num," diff: ",dqdt-dqdt_num)
 #@test isapprox(jac_step,jac_step_num;norm=maxabs)
 @test isapprox(asinh.(jac_step),asinh.(jac_step_num);norm=maxabs)
 @test isapprox(dqdt,dqdt_num;norm=maxabs)
-end
+#end

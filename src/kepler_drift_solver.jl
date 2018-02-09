@@ -1,6 +1,6 @@
 # Wisdom & Hernandez version of Kepler solver, but with quartic convergence.
 
-using ForwardDiff
+include("g3.jl")
 
 #function calc_ds_opt(y::T,yp::T,ypp::T,yppp::T) where {T <: Real}
 ## Computes quartic Newton's update to equation y=0 using first through 3rd derivatives.
@@ -34,9 +34,9 @@ iter = 0
 ds = Inf
 fac1 = k-r0*beta0
 fac2 = r0*dr0dt
+KEPLER_TOL = sqrt(eps(h))
 while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
   xx = sqb*s
-  println("xx: ",xx)
   if beta0 > 0
     sx = sin(xx); cx = cos(xx)
   else
@@ -67,8 +67,9 @@ g1bs = 2.*sx*cx/sqb
 g2bs = 2.*signb*sx^2*beta0inv
 g0bs = 1.0-beta0*g2bs
 # This should be computed to prevent roundoff error. [ ]
-g3bs = (1.0-g1bs)*beta0inv
-# Compute Gauss' kepler functions:
+#g3bs = (1.0-g1bs)*beta0inv
+g3bs = g3_series(s,beta0)
+# Compute Gauss' Kepler functions:
 f = one - k*r0inv*g2bs # eqn (25)
 g = r0*g1bs + fac2*g2bs # eqn (27)
 if drift_first
@@ -80,23 +81,29 @@ rinv = inv(r)
 dfdt = -k*g1bs*rinv*r0inv
 if drift_first
   # Drift backwards before Kepler step: (1/22/2018)
-#  fm1 = -k*r0inv*g2bs
-  fm1 = f-1.0
+  fm1 = -k*r0inv*g2bs
+#  fm1 = f-1.0
 #  gmh = -k*g3bs
-  gmh = g-h*f
+#  gmh = g-h*f
+  gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+fac2*g2bs^2+k*g3bs*g2bs)
+#   gmh = -k*g3bs+h*k*r0inv*g2bs
 else
   # Drift backwards after Kepler step: (1/24/2018)
   # (Note: these functions need to be recomputed to prevent roundoff error. [ ])
 #  fm1 = -k*rinv*(g0bs*g2bs-g1bs^2+k*r0inv*(g2bs^2-g1bs^2*g3bs^2))
   fm1 = f-1.0-h*dfdt
+#  fm1 =  k*rinv*(g2bs-k*r0inv*H1_series(s,beta0))
 #  gmh = k*rinv*(r0*(g1bs*g2bs-g0bs*g3bs)+fac2*(g2bs^2-g1bs*g3bs))
   # This is g-h*dgdt
   gmh = g-h*(1.0-k*rinv*g2bs)
+#  gmh = k*rinv*(r0*H2_series(s,beta0)+fac2*H1_series(s,beta0))
 end
 # Compute velocity component functions:
-dgdtm1 = -k*rinv*g2bs
 if drift_first
-  dgdtm1 -= h*dfdt
+  dgdtm1 = -k*rinv*g2bs - h*dfdt
+#  dgdtm1 = k*r0inv*rinv*(r0*g0bs*g2bs+fac2*g1bs*g2bs+k*g1bs*g3bs)
+else
+  dgdtm1 = -k*rinv*g2bs
 end
 for j=1:3
 # Compute difference vectors (finish - start) of step:

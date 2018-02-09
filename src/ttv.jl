@@ -5,11 +5,8 @@
 const YEAR  = 365.242
 const GNEWT = 39.4845/YEAR^2
 const NDIM  = 3
-#const KEPLER_TOL = 1e-8
 #const TRANSIT_TOL = 1e-8
-const KEPLER_TOL = sqrt(eps(1.0))
 const TRANSIT_TOL = 10.*sqrt(eps(1.0))
-#const KEPLER_TOL = eps(1.0)
 #const TRANSIT_TOL = 10.*eps(1.0)
 const third = 1./3.
 const alpha0 = 0.0
@@ -211,8 +208,10 @@ return dtdelements
 end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
-function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},
-  x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64)
+#function ttv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},
+#  x::Array{Float64,2},v::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64)
+function ttv!(n::Int64,t0::T,h::T,tmax::T,m::Array{T,1},
+  x::Array{T,2},v::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dtdq0::Array{T,4},rstar::T) where {T <: Real}
 xprior = copy(x)
 vprior = copy(v)
 xtransit = copy(x)
@@ -222,16 +221,16 @@ t = t0
 # Set step counter to zero:
 istep = 0
 # Jacobian for each step (7- 6 elements+mass, n_planets, 7 - 6 elements+mass, n planets):
-jac_prior = zeros(Float64,7*n,7*n)
-jac_transit = zeros(Float64,7*n,7*n)
+jac_prior = zeros(typeof(h),7*n,7*n)
+jac_transit = zeros(typeof(h),7*n,7*n)
 # Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
-dtdq = zeros(Float64,7,n)
+dtdq = zeros(typeof(h),7,n)
 # Initialize the Jacobian to the identity matrix:
-jac_step = eye(Float64,7*n)
+jac_step = eye(typeof(h),7*n)
 
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
-gsave = zeros(Float64,n)
+gsave = zeros(typeof(h),n)
 for i=2:n
   # Compute the relative sky velocity dotted with position:
   gsave[i]= g!(i,1,x,v)
@@ -621,7 +620,7 @@ return
 end
 
 # Drifts bodies i & j and computes Jacobian:
-function driftij!(x::Array{Float64,2},v::Array{Float64,2},i::Int64,j::Int64,h::Float64,jac_step::Array{Float64,2},nbody::Int64)
+function driftij!(x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T,jac_step::Array{T,2},nbody::Int64) where {T <: Real}
 indi = (i-1)*7
 indj = (j-1)*7
 for k=1:NDIM
@@ -641,7 +640,6 @@ function kepler_driftij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::I
 # The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
 # Initial state:
 state0 = zeros(typeof(h),12)
-state0[11] = 0.0
 # Final state (after a step):
 state = zeros(typeof(h),12)
 for k=1:NDIM
@@ -657,7 +655,6 @@ if gm == 0
 #  end
 else
   # predicted value of s
-  state0[11] = 0.0
   kepler_drift_step!(gm, h, state0, state,drift_first)
   mijinv =1.0/(m[i] + m[j])
   for k=1:3
@@ -677,7 +674,6 @@ function keplerij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h
 # The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
 # Initial state:
 state0 = zeros(typeof(h),12)
-state0[11] = 0.0
 # Final state (after a step):
 state = zeros(typeof(h),12)
 delx = zeros(typeof(h),NDIM)
@@ -695,7 +691,6 @@ if gm == 0
   end
 else
   # predicted value of s
-  state0[11]=0.0
   kepler_step!(gm, h, state0, state)
   for k=1:NDIM
     delx[k] = state[1+k] - state0[1+k]
@@ -718,7 +713,6 @@ function keplerij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h
 # The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
 # Initial state:
 state0 = zeros(typeof(h),12)
-state0[11] = 0.0
 # Final state (after a step):
 state = zeros(typeof(h),12)
 delx = zeros(typeof(h),NDIM)
@@ -835,7 +829,7 @@ return
 end
 
 # Drifts all particles:
-function drift!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,n::Int64,jac_step::Array{Float64,2})
+function drift!(x::Array{T,2},v::Array{T,2},h::T,n::Int64,jac_step::Array{T,2}) where {T <: Real}
 indi = 0
 @inbounds for i=1:n
   indi = (i-1)*7
@@ -1066,7 +1060,7 @@ drift!(x,v,h2,n)
     kepler_driftij!(m,x,v,i,j,h2,true)
   end
 end
-phisalpha!(x,v,h,m,2.,n)
+phisalpha!(x,v,h,m,convert(typeof(h),2),n)
 for i=n-1:-1:1
   for j=n:-1:i+1
 #    keplerij!(m,x,v,i,j,h2)
@@ -1119,35 +1113,33 @@ return g
 end
 
 # Carries out the DH17 mapping & computes the Jacobian:
-function dh17!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},n::Int64,jac_step::Array{Float64,2})
-h2 = 0.5*h
-alpha = alpha0; sevn = 7*n
-jac_phi = zeros(Float64,sevn,sevn)
-jac_copy = zeros(Float64,sevn,sevn)
-jac_ij = zeros(Float64,14,14)
-dqdt_ij = zeros(Float64,14)
-dqdt_phi = zeros(Float64,sevn)
-jac_tmp1 = zeros(Float64,14,sevn)
-jac_tmp2 = zeros(Float64,14,sevn)
+#function dh17!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},n::Int64,jac_step::Array{Float64,2})
+function dh17!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2}) where {T <: Real}
+zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0); half = convert(typeof(h),0.5); two = convert(typeof(h),2.0)
+h2 = half*h
+alpha = convert(typeof(h),alpha0)
+sevn = 7*n
+jac_phi = zeros(typeof(h),sevn,sevn)
+jac_copy = zeros(typeof(h),sevn,sevn)
+jac_ij = zeros(typeof(h),14,14)
+dqdt_ij = zeros(typeof(h),14)
+dqdt_phi = zeros(typeof(h),sevn)
+jac_tmp1 = zeros(typeof(h),14,sevn)
+jac_tmp2 = zeros(typeof(h),14,sevn)
 # alpha = 0. is similar in precision to alpha=0.25
-if alpha != 0.0
+if alpha != zero
   phisalpha!(x,v,h,m,alpha,n,jac_phi,dqdt_phi)
   jac_step .= jac_phi*jac_step # < 1%
 end
 drift!(x,v,h2,n,jac_step)
-indi = 0:1; indj = 0:1
-i2 = 1:sevn
+indi = 0; indj = 0
 @inbounds for i=1:n-1
-#  indi = 7i-6:7i
   indi = (i-1)*7
   for j=i+1:n
-#    indj = 7j-6:7j
     indj = (j-1)*7
     driftij!(x,v,i,j,-h2,jac_step,n)
     keplerij!(m,x,v,i,j,h2,jac_ij,dqdt_ij) # 21%
     # Pick out indices for bodies i & j:
-#    i1 = [indi;indj]
-#    jac_step[i1,i2] = *(jac_ij,jac_step[i1,i2])
     @inbounds for k2=1:sevn, k1=1:7
       jac_tmp1[k1,k2] = jac_step[indi+k1,k2]
     end
@@ -1156,7 +1148,11 @@ i2 = 1:sevn
     end
     # Carry out multiplication on the i/j components of matrix:
 #    jac_tmp2 = BLAS.gemm('N','N',jac_ij,jac_tmp1)
-    BLAS.gemm!('N','N',1.0,jac_ij,jac_tmp1,0.0,jac_tmp2)
+    if typeof(h) == BigFloat
+      jac_tmp2 = *(jac_ij,jac_tmp1)
+    else
+      BLAS.gemm!('N','N',one,jac_ij,jac_tmp1,zero,jac_tmp2)
+    end
     # Copy back to the Jacobian:
     @inbounds for k2=1:sevn, k1=1:7
        jac_step[indi+k1,k2]=jac_tmp2[k1,k2]
@@ -1164,30 +1160,29 @@ i2 = 1:sevn
     @inbounds for k2=1:sevn, k1=1:7
       jac_step[indj+k1,k2]=jac_tmp2[7+k1,k2]
     end
-#    jac_step[i1,i2] =jac_tmp
   end
 end
-if alpha != 1.0
+if alpha != one
 #  phisalpha!(x,v,h,m,2.*(1.-alpha),n,jac_phi) # 10%
-  phisalpha!(x,v,h,m,2.*(1.-alpha),n,jac_phi,dqdt_phi) # 10%
+  phisalpha!(x,v,h,m,two*(one-alpha),n,jac_phi,dqdt_phi) # 10%
   @inbounds for i in eachindex(jac_step)
     jac_copy[i] = jac_step[i]
   end
 #  jac_step .= jac_phi*jac_step # < 1%  Perhaps use gemm?! [ ]
-  BLAS.gemm!('N','N',1.0,jac_phi,jac_copy,0.0,jac_step)
+  if typeof(h) == BigFloat
+    jac_step = *(jac_phi,jac_copy)
+  else
+    BLAS.gemm!('N','N',one,jac_phi,jac_copy,zero,jac_step)
+  end
 end
 indi=0; indj=0
 for i=n-1:-1:1
-#  indi=7i-6:7i
   indi=(i-1)*7
   for j=n:-1:i+1
-#    indj=7j-6:7j
     indj=(j-1)*7
     keplerij!(m,x,v,i,j,h2,jac_ij,dqdt_ij) # 23%
     # Pick out indices for bodies i & j:
-#    i1 = [indi;indj]
     # Carry out multiplication on the i/j components of matrix:
-#    jac_step[i1,i2] = *(jac_ij,jac_step[i1,i2])
     @inbounds for k2=1:sevn, k1=1:7
       jac_tmp1[k1,k2] = jac_step[indi+k1,k2]
     end
@@ -1196,7 +1191,11 @@ for i=n-1:-1:1
     end
     # Carry out multiplication on the i/j components of matrix:
 #    jac_tmp2 = BLAS.gemm('N','N',jac_ij,jac_tmp1)
-    BLAS.gemm!('N','N',1.0,jac_ij,jac_tmp1,0.0,jac_tmp2)
+    if typeof(h) == BigFloat
+      jac_tmp2 = *(jac_ij,jac_tmp1)
+    else
+      BLAS.gemm!('N','N',one,jac_ij,jac_tmp1,zero,jac_tmp2)
+    end
     # Copy back to the Jacobian:
     @inbounds for k2=1:sevn, k1=1:7
        jac_step[indi+k1,k2]=jac_tmp2[k1,k2]
@@ -1208,7 +1207,7 @@ for i=n-1:-1:1
   end
 end
 drift!(x,v,h2,n,jac_step)
-if alpha != 0.0
+if alpha != zero
 #  phisalpha!(x,v,h,m,alpha,n,jac_phi)
   phisalpha!(x,v,h,m,alpha,n,jac_phi,dqdt_phi) # 10%
   jac_step .= jac_phi*jac_step # < 1%
@@ -1234,7 +1233,6 @@ for i=1:n, k=1:3
   dqdt[(i-1)*7+k] = half*v[k,i] + h2*dqdt[(i-1)*7+3+k]
 end
 indi = 0:1; indj = 0:1
-i2 = 1:sevn
 @inbounds for i=1:n-1
   indi = (i-1)*7
   for j=i+1:n

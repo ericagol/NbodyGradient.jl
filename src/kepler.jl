@@ -1,6 +1,6 @@
 function ekepler(m::T,ecc::T) where {T <: Real}
+KEPLER_TOL = sqrt(eps(m))
 if m != 0.0
-  eps=1e-15
 #real*8 e,e0,eps,m,ms,pi2,f0,f1,f2,f3,d1,d2,d3
 # This routine solves Kepler's equation for E as a function of (e,M)
 # using the procedure outlined in Murray & Dermott:
@@ -9,7 +9,6 @@ if m != 0.0
   d3=1e10
   de0=ecc*0.85*sign(ms)
   iter = 0
-#  while abs(d3) > eps
   while abs(d3) > KEPLER_TOL
     f3=ecc*cos(de0+ms)
     f2=ecc*sin(de0+ms)
@@ -32,8 +31,8 @@ return ekep::typeof(m)
 end
 
 function ekepler2(m::T,ecc::T) where {T <: Real}
+KEPLER_TOL = sqrt(eps(m))
 if m != 0.0
-  eps=1e-12
 #real*8 e,e0,eps,m,ms,pi2,f0,f1,f2,f3,d1,d2,d3
 # This routine solves Kepler's equation for E as a function of (e,M)
 # using the procedure outlined in Murray & Dermott:
@@ -41,7 +40,6 @@ if m != 0.0
   ms=mod(m,pi2)
   d3=1e10
   e0=ms+ecc*0.85*sin(ms)/abs(sin(ms))
-#  while abs(d3) > eps
   while abs(d3) > KEPLER_TOL
     f3=ecc*cos(e0)
     f2=ecc*sin(e0)

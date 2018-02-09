@@ -31,6 +31,7 @@ iter = 0
 ds = Inf
 fac1 = k-r0*beta0
 fac2 = r0*dr0dt
+KEPLER_TOL = sqrt(eps(h))
 while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
   xx = sqb*s
   if beta0 > 0
