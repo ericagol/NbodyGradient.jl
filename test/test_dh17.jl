@@ -59,10 +59,9 @@ ah18!(xbig,vbig,big(h),big.(m),n)
 # Take a single AH18 step:
 ah18!(xtest,vtest,h,m,n)
 
-println("Comparing dh17 and ah18: ",x0./xtest-1.0,v0./vtest-1.0)
-println("Comparing dh17 and big: ",x0./convert(Array{Float64,2},xbig)-1.0,v0./convert(Array{Float64,2},vbig)-1.0)
-println("Comparing ah18 and big: ",xtest./convert(Array{Float64,2},xbig)-1.0,vtest./convert(Array{Float64,2},vbig)-1.0)
-#read(STDIN,Char)
+#println("Comparing dh17 and ah18: ",x0./xtest-1.0,v0./vtest-1.0)
+#println("Comparing dh17 and big: ",x0./convert(Array{Float64,2},xbig)-1.0,v0./convert(Array{Float64,2},vbig)-1.0)
+#println("Comparing ah18 and big: ",xtest./convert(Array{Float64,2},xbig)-1.0,vtest./convert(Array{Float64,2},vbig)-1.0)
 
 # Now, copy these to compute Jacobian (so that I don't step
 # x0 & v0 forward in time):
@@ -76,14 +75,25 @@ mbig = big.(m0)
 for istep=1:nstep
   dh17!(x,v,h,m,n,jac_step)
 end
+#println(typeof(h)," ",jac_step)
+#read(STDIN,Char)
 
+
+# The following lines have a Julia bug - jac_big gets
+# misaligned or shifted when returned.  If I modify dh17! to output
+# jac_step, then it works.
 # Initialize with identity matrix:
-jac_big= eye(BigFloat,7*n)
-# Compute jacobian exactly over nstep steps:
-for istep=1:nstep
-  dh17!(xbig,vbig,hbig,mbig,n,jac_big)
-end
-println("Comparing jac_step and jac_big: ",maxabs(jac_step-jac_big))
+#jac_big= eye(BigFloat,7*n)
+#jac_copy = eye(BigFloat,7*n)
+## Compute jacobian exactly over nstep steps:
+#for istep=1:nstep
+#  jac_copy = dh17!(xbig,vbig,hbig,mbig,n,jac_big)
+#end
+#println(typeof(hbig)," ",convert(Array{Float64,2},jac_copy))
+#println("Comparing x & xbig: ",maximum(abs,x-xbig))
+#println("Comparing v & vbig: ",maximum(abs,v-vbig))
+#println("Comparing jac_step and jac_big: ",maxabs(jac_step-jac_copy))
+#println("Comparing jac_step and jac_big: ",jac_step./convert(Array{Float64,2},jac_big))
 
 # Test that both versions of dh17 give the same answer:
 xtest = copy(x0)

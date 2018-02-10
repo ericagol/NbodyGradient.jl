@@ -1073,7 +1073,6 @@ return
 end
 
 # Carries out the DH17 mapping:
-#function dh17!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},n::Int64)
 function dh17!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64) where {T <: Real}
 alpha = convert(typeof(h),alpha0)
 h2 = 0.5*h
@@ -1113,7 +1112,6 @@ return g
 end
 
 # Carries out the DH17 mapping & computes the Jacobian:
-#function dh17!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},n::Int64,jac_step::Array{Float64,2})
 function dh17!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2}) where {T <: Real}
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0); half = convert(typeof(h),0.5); two = convert(typeof(h),2.0)
 h2 = half*h
@@ -1212,7 +1210,8 @@ if alpha != zero
   phisalpha!(x,v,h,m,alpha,n,jac_phi,dqdt_phi) # 10%
   jac_step .= jac_phi*jac_step # < 1%
 end
-return
+#println("jac_step: ",typeof(h)," ",convert(Array{Float64,2},jac_step))
+return #jac_step
 end
 
 # Carries out the DH17 mapping & computes the derivative with respect to time step, h:
