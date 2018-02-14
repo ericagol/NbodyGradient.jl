@@ -2,8 +2,6 @@
 
 #include("../src/ttv.jl")
 
-#function dh17!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},n::Int64,jac_step::Array{Float64,2})
-
 # Next, try computing three-body Keplerian Jacobian:
 
 #@testset "dh17" begin
@@ -30,7 +28,15 @@ m =zeros(n)
 x0=zeros(3,n)
 v0=zeros(3,n)
 
-# Predict values of s:
+# Define which pairs will have impulse rather than -drift+Kepler:
+pair = ones(Bool,n,n)
+# We want Keplerian between star & planets, and impulses between
+# planets.  Impulse is indicated with 'true', -drift+Kepler with 'false':
+for i=2:n
+  pair[1,i] = false
+  # We don't need to define this, but let's anyways:
+  pair[i,1] = false
+end
 
 # Initialize with identity matrix:
 jac_step = eye(Float64,7*n)
@@ -52,16 +58,11 @@ v0[2,3] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 xtest = copy(x0); vtest=copy(v0)
 xbig = big.(x0); vbig = big.(v0)
 # Take a single step (so that we aren't at initial coordinates):
-dh17!(x0,v0,h,m,n)
+dh17!(x0,v0,h,m,n,pair)
 # Take a step with big precision:
-#dh17!(xbig,vbig,big(h),big.(m),n)
-ah18!(xbig,vbig,big(h),big.(m),n)
+ah18!(xbig,vbig,big(h),big.(m),n,pair)
 # Take a single AH18 step:
-ah18!(xtest,vtest,h,m,n)
-
-#println("Comparing dh17 and ah18: ",x0./xtest-1.0,v0./vtest-1.0)
-#println("Comparing dh17 and big: ",x0./convert(Array{Float64,2},xbig)-1.0,v0./convert(Array{Float64,2},vbig)-1.0)
-#println("Comparing ah18 and big: ",xtest./convert(Array{Float64,2},xbig)-1.0,vtest./convert(Array{Float64,2},vbig)-1.0)
+ah18!(xtest,vtest,h,m,n,pair)
 
 # Now, copy these to compute Jacobian (so that I don't step
 # x0 & v0 forward in time):
@@ -73,7 +74,7 @@ vbig = big.(v0)
 mbig = big.(m0)
 # Compute jacobian exactly over nstep steps:
 for istep=1:nstep
-  dh17!(x,v,h,m,n,jac_step)
+  dh17!(x,v,h,m,n,jac_step,pair)
 end
 #println(typeof(h)," ",jac_step)
 #read(STDIN,Char)
@@ -87,7 +88,7 @@ end
 #jac_copy = eye(BigFloat,7*n)
 ## Compute jacobian exactly over nstep steps:
 #for istep=1:nstep
-#  jac_copy = dh17!(xbig,vbig,hbig,mbig,n,jac_big)
+#  jac_copy = dh17!(xbig,vbig,hbig,mbig,n,jac_big,pair)
 #end
 #println(typeof(hbig)," ",convert(Array{Float64,2},jac_copy))
 #println("Comparing x & xbig: ",maximum(abs,x-xbig))
@@ -100,7 +101,7 @@ xtest = copy(x0)
 vtest = copy(v0)
 m = copy(m0)
 for istep=1:nstep
-  dh17!(xtest,vtest,h,m,n)
+  dh17!(xtest,vtest,h,m,n,pair)
 end
 println("x/v difference: ",x-xtest,v-vtest)
 
@@ -122,7 +123,7 @@ for j=1:n
       xm[jj,j] = -dq
     end
     for istep=1:nstep
-      dh17!(xm,vm,hbig,mm,n)
+      dh17!(xm,vm,hbig,mm,n,pair)
     end
     xp = big.(x0)
     vp = big.(v0)
@@ -135,7 +136,7 @@ for j=1:n
       xp[jj,j] = dq
     end
     for istep=1:nstep
-      dh17!(xp,vp,hbig,mp,n)
+      dh17!(xp,vp,hbig,mp,n,pair)
     end
   # Now x & v are final positions & velocities after time step
     for i=1:n
@@ -156,7 +157,7 @@ for j=1:n
       vm[jj,j] = -dq
     end
     for istep=1:nstep
-      dh17!(xm,vm,hbig,mm,n)
+      dh17!(xm,vm,hbig,mm,n,pair)
     end
     xp= big.(x0)
     vp= big.(v0)
@@ -169,7 +170,7 @@ for j=1:n
       vp[jj,j] = dq
     end
     for istep=1:nstep
-      dh17!(xp,vp,hbig,mp,n)
+      dh17!(xp,vp,hbig,mp,n,pair)
     end
     for i=1:n
       for k=1:3
@@ -185,7 +186,7 @@ for j=1:n
   dq = mm[j]*dlnq
   mm[j] -= dq
   for istep=1:nstep
-    dh17!(xm,vm,hbig,mm,n)
+    dh17!(xm,vm,hbig,mm,n,pair)
   end
   xp= big.(x0)
   vp= big.(v0)
@@ -193,7 +194,7 @@ for j=1:n
   dq = mp[j]*dlnq
   mp[j] += dq
   for istep=1:nstep
-    dh17!(xp,vp,hbig,mp,n)
+    dh17!(xp,vp,hbig,mp,n,pair)
   end
   for i=1:n
     for k=1:3
@@ -240,24 +241,25 @@ dqdt_num = zeros(BigFloat,7*n)
 x = copy(x0)
 v = copy(v0)
 m = copy(m0)
-dh17!(x,v,h,m,n,dqdt)
+dh17!(x,v,h,m,n,dqdt,pair)
 xm= big.(x0)
 vm= big.(v0)
 mm= big.(m0)
 dq = hbig*dlnq
 hbig -= dq
-dh17!(xm,vm,hbig,mm,n)
+dh17!(xm,vm,hbig,mm,n,pair)
 xp= big.(x0)
 vp= big.(v0)
 mp= big.(m0)
 hbig += 2dq
-dh17!(xp,vp,hbig,mp,n)
+dh17!(xp,vp,hbig,mp,n,pair)
 for i=1:n, k=1:3
   dqdt_num[(i-1)*7+  k] = .5*(xp[k,i]-xm[k,i])/dq
   dqdt_num[(i-1)*7+3+k] = .5*(vp[k,i]-vm[k,i])/dq
 end
 dqdt_num = convert(Array{Float64,1},dqdt_num)
-println("dqdt: ",dqdt," ",dqdt_num," diff: ",dqdt-dqdt_num)
+#println("dqdt: ",dqdt," ",dqdt_num," diff: ",dqdt-dqdt_num)
+println("dqdt-dqdt_num: ",maxabs(dqdt-convert(Array{Float64,1},dqdt_num)))
 
 #@test isapprox(jac_step,jac_step_num)
 #@test isapprox(jac_step,jac_step_num;norm=maxabs)
