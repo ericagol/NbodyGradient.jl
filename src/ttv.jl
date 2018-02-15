@@ -22,7 +22,7 @@ const vtmp = zeros(Float64,3);const  dvdr0 = zeros(Float64,3);const  dvda0=zeros
 
 # Computes TTVs as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
 #function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dlnq::Float64,iq::Int64,jq::Int64)
-function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T,fout="",iout=-1,pair = zeros(Bool,n,n)) where {T <: Real}
+function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,n,n)) where {T <: Real}
 # 
 # Input quantities:
 # n     = number of bodies
@@ -87,7 +87,7 @@ end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
 # This version is used to test/debug findtransit2 by computing finite difference derivative of findtransit2.
-function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64,pair=zeros(Bool,n,n))
+function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64;pair=zeros(Bool,n,n))
 # 
 # Input quantities:
 # n     = number of bodies
@@ -148,7 +148,7 @@ return dtdelements
 end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
-function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64,pair=zeros(Bool,n,n))
+function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64;pair=zeros(Bool,n,n))
 # 
 # Input quantities:
 # n     = number of bodies
@@ -846,13 +846,14 @@ rij = zeros(typeof(h),3)
 @inbounds for i=1:n-1
   for j = i+1:n
     if pair[i,j]
+      r2 = 0.0
       for k=1:3
         rij[k] = x[k,i] - x[k,j]
+        r2 += rij[k]^2
       end
-      r2 = rij[1]*rij[1]+rij[2]*rij[2]+rij[3]*rij[3]
-      r3 = r2*sqrt(r2)
+      r3_inv = 1.0/(r2*sqrt(r2))
       for k=1:3
-        fac = h*GNEWT*rij[k]/r3
+        fac = h*GNEWT*rij[k]*r3_inv
         v[k,i] -= m[j]*fac
         v[k,j] += m[i]*fac
       end

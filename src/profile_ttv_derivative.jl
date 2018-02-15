@@ -4,7 +4,7 @@ n = 8
 include("ttv.jl")
 t0 = 7257.93115525
 #h  = 0.12
-h  = 0.075
+h  = 0.05
 tmax = 600.0
 #tmax = 80.0
 
@@ -29,18 +29,29 @@ count1 = zeros(Int64,n)
 rstar = 1e12
 dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
 @time dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
-# Now call with half the timestep:
+# Now, try calling with kicks between planets rather than -drift+Kepler:
+pair_input = ones(Bool,n,n)
+# We want Keplerian between star & planets, and impulses between
+# planets.  Impulse is indicated with 'true', -drift+Kepler with 'false':
+for i=2:n
+  pair_input[1,i] = false
+  # We don't need to define this, but let's anyways:
+  pair_input[i,1] = false
+end
+@time dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar;pair=pair_input)
+
+# Now call with smaller timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
-dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0,rstar)
+dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0,rstar;pair=pair_input)
 println("Timing error: ",maximum(abs.(tt2-tt1))*24.*3600.)
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtdq0 = zeros(n,maximum(ntt),7,n)
 dtdelements0 = zeros(n,maximum(ntt),7,n)
 
-dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
-@time dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
+dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar;pair=pair_input)
+@time dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar;pair=pair_input)
 
 Profile.clear()
 Profile.init(10^7,0.01)
