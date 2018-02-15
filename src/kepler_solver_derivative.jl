@@ -32,25 +32,30 @@ return -y*den12/den2
 end
 
 function solve_kepler!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},beta0::T,
-   r0::T,dr0dt::T,s0::T,state::Array{T,1}) where {T <: Real}
+   r0::T,s0::T,state::Array{T,1}) where {T <: Real}
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 # Solves elliptic Kepler's equation for both elliptic and hyperbolic cases.
 # Initial guess (if s0 = 0):
 r0inv = inv(r0)
 beta0inv = inv(beta0)
 signb = sign(beta0)
+sqb = sqrt(signb*beta0)
+zeta = k-r0*beta0
+eta = dot(x0,v0)
 if s0 == zero
-  s = h*r0inv
+  # Use cubic estimate:
+  if zeta != zero
+    s = cubic(3eta/zeta,6r0/zeta,-6h/zeta)
+  else
+    s = h*r0inv
+  end
 else
   s = copy(s0)
 end
 s0 = copy(s)
-sqb = sqrt(signb*beta0)
 y = zero; yp = one
 iter = 0
 ds = Inf
-zeta = k-r0*beta0
-eta = dot(x0,v0)
 KEPLER_TOL = sqrt(eps(h))
 while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
   xx = sqb*s
@@ -91,7 +96,7 @@ end
 r = sqrt(state[2]*state[2]+state[3]*state[3]+state[4]*state[4])
 rinv = inv(r)
 dfdt = -k*g1bs*rinv*r0inv
-dgdt = r0*(one-beta0*g2bs+dr0dt*g1bs)*rinv
+dgdt = (r0-r0*beta0*g2bs+eta*g1bs)*rinv
 for j=1:3
 # Velocity is components 5-7 of state:
   state[4+j] = x0[j]*dfdt+v0[j]*dgdt
@@ -99,7 +104,7 @@ end
 return s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r,rinv,ds,iter
 end
 
-function kep_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,
+function kep_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,k::T,h::T,
   beta0::T,s0::T,state::Array{T,1}) where {T <: Real}
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
@@ -107,7 +112,7 @@ zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 f = zero; g=zero; dfdt=zero; dgdt=zero; cx=zero;sx=zero;g1bs=zero;g2bs=zero
 s=zero; ds = zero; r = zero;rinv=zero; iter=0
 if beta0 > zero || beta0 < zero
-   s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r,rinv,ds,iter = solve_kepler!(h,k,x0,v0,beta0,r0,dr0dt,
+   s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r,rinv,ds,iter = solve_kepler!(h,k,x0,v0,beta0,r0,
     s0,state)
 else
   println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
@@ -125,7 +130,7 @@ state[12] = ds
 return iter
 end
 
-function kep_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,
+function kep_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,k::T,h::T,
   beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2}) where {T <: Real}
 # Computes the Jacobian as well
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
@@ -136,12 +141,12 @@ beta0inv = inv(beta0)
 f = zero; g=zero; dfdt=zero; dgdt=zero; cx=zero;sx=zero;g1bs=zero;g2bs=zero
 s=zero; ds=zero; r = zero;rinv=zero; iter=0
 if beta0 > zero || beta0 < zero
-   s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r,rinv,ds,iter = solve_kepler!(h,k,x0,v0,beta0,r0,dr0dt,
+   s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r,rinv,ds,iter = solve_kepler!(h,k,x0,v0,beta0,r0,
     s0,state)
 # Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
 # with respect to initial state variable q0[j], where q = {x,v} & q0 = {x0,v0}.
   fill!(jacobian,zero)
-  compute_jacobian!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r0,dr0dt,r,jacobian)
+  compute_jacobian!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r0,r,jacobian)
 else
   println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
   r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
@@ -159,16 +164,16 @@ return iter
 end
 
 function compute_jacobian!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},beta0::T,s::T,
-  f::T,g::T,dfdt::T,dgdt::T,cx::T,sx::T,g1::T,g2::T,r0::T,dr0dt::T,r::T,jacobian::Array{T,2}) where {T <: Real}
+  f::T,g::T,dfdt::T,dgdt::T,cx::T,sx::T,g1::T,g2::T,r0::T,r::T,jacobian::Array{T,2}) where {T <: Real}
 # Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
 # with respect to initial state variable q0[j], where q = {x,v,k} & q0 = {x0,v0,k}.
 # Now, compute the Jacobian: (9/18/2017 notes)
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 g0 = one-beta0*g2
 g3 = (s-g1)/beta0
-dotalpha0 = r0*dr0dt  # unnecessary to divide by r0 for dr0dt & multiply for \dot\alpha_0
+eta = dot(x0,v0)  # unnecessary to divide by r0 for multiply for \dot\alpha_0
 absv0 = sqrt(dot(v0,v0))
-dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-dotalpha0*s*g1)/(2beta0*r)
+dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-eta*s*g1)/(2beta0*r)
 dsdr0 = -(2k/r0^2*dsdbeta+g1/r)
 dsda0 = -g2/r
 dsdv0 = -2absv0*dsdbeta
@@ -181,19 +186,19 @@ for i=1:3
   pxpr0[i] = k/r0^2*g2*x0[i]+g1*v0[i]
   pxpa0[i] = g2*v0[i]
   pxpk[i]  = -g2/r0*x0[i]
-  pxps[i]  = -k/r0*g1*x0[i]+(r0*g0+dotalpha0*g1)*v0[i]
-  pxpbeta[i] = -k/(2beta0*r0)*(s*g1-2g2)*x0[i]+1/(2beta0)*(s*r0*g0-r0*g1+s*dotalpha0*g1-2*dotalpha0*g2)*v0[i]
+  pxps[i]  = -k/r0*g1*x0[i]+(r0*g0+eta*g1)*v0[i]
+  pxpbeta[i] = -k/(2beta0*r0)*(s*g1-2g2)*x0[i]+1/(2beta0)*(s*r0*g0-r0*g1+s*eta*g1-2*eta*g2)*v0[i]
   prvpr0[i] = k*g1/r0^2*x0[i]+g0*v0[i]
   prvpa0[i] = g1*v0[i]
   prvpk[i] = -g1/r0*x0[i]
-  prvps[i] = -k*g0/r0*x0[i]+(-beta0*r0*g1+dotalpha0*g0)*v0[i]
-  prvpbeta[i] = -k/(2beta0*r0)*(s*g0-g1)*x0[i]+1/(2beta0)*(-s*r0*beta0*g1+dotalpha0*s*g0-dotalpha0*g1)*v0[i]
+  prvps[i] = -k*g0/r0*x0[i]+(-beta0*r0*g1+eta*g0)*v0[i]
+  prvpbeta[i] = -k/(2beta0*r0)*(s*g0-g1)*x0[i]+1/(2beta0)*(-s*r0*beta0*g1+eta*s*g0-eta*g1)*v0[i]
 end
 prpr0 = g0
 prpa0 = g1
 prpk  = g2
-prps = (k-beta0*r0)*g1+dotalpha0*g0
-prpbeta = 1/(2beta0)*(s*(k-beta0*r0)*g1+dotalpha0*s*g0-dotalpha0*g1-2k*g2)
+prps = (k-beta0*r0)*g1+eta*g0
+prpbeta = 1/(2beta0)*(s*(k-beta0*r0)*g1+eta*s*g0-eta*g1-2k*g2)
 for i=1:3
   dxdr0[i] = pxps[i]*dsdr0 + pxpbeta[i]*dbetadr0 + pxpr0[i]
   dxda0[i] = pxps[i]*dsda0 + pxpa0[i]

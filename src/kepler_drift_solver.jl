@@ -14,7 +14,7 @@ include("g3.jl")
 #end
 
 function solve_kepler_drift!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},beta0::T,
-   r0::T,dr0dt::T,s0::T,state::Array{T,1},drift_first::Bool) where {T <: Real}
+   r0::T,s0::T,state::Array{T,1},drift_first::Bool) where {T <: Real}
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 # Solves elliptic Kepler's equation for both elliptic and hyperbolic cases,
 # along with a drift before or after the kepler step.
@@ -113,7 +113,7 @@ end
 return s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,g3bs,r,rinv,ds,iter
 end
 
-function kep_drift_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,
+function kep_drift_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,k::T,h::T,
   beta0::T,s0::T,state::Array{T,1},drift_first::Bool) where {T <: Real}
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
@@ -121,7 +121,7 @@ zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 f = zero; g=zero; dfdt=zero; dgdtm1=zero; cx=zero;sx=zero;g1bs=zero;g2bs=zero;g3bs=zero
 s=zero; ds = zero; r = zero;rinv=zero; iter=0
 if beta0 > zero || beta0 < zero
-   s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,g3bs,r,rinv,ds,iter = solve_kepler_drift!(h,k,x0,v0,beta0,r0,dr0dt,
+   s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,g3bs,r,rinv,ds,iter = solve_kepler_drift!(h,k,x0,v0,beta0,r0,
     s0,state,drift_first)
 else
   println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
@@ -140,7 +140,7 @@ state[12] = ds
 return iter
 end
 
-function kep_drift_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,dr0dt::T,k::T,h::T,
+function kep_drift_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,k::T,h::T,
   beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2},drift_first::Bool) where {T <: Real}
 # Computes the Jacobian as well
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
@@ -151,12 +151,12 @@ beta0inv = inv(beta0)
 f = zero; g=zero; dfdt=zero; dgdtm1=zero; cx=zero;sx=zero;g1bs=zero;g2bs=zero;g3bs=zero
 s=zero; ds=zero; r = zero;rinv=zero; iter=0
 if beta0 > zero || beta0 < zero
-   s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,g3bs,r,rinv,ds,iter = solve_kepler_drift!(h,k,x0,v0,beta0,r0,dr0dt,
+   s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,g3bs,r,rinv,ds,iter = solve_kepler_drift!(h,k,x0,v0,beta0,r0,
     s0,state,drift_first)
 # Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
 # with respect to initial state variable q0[j], where q = {x,v} & q0 = {x0,v0}.
   fill!(jacobian,zero)
-  compute_jacobian_kep_drift!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,r0,dr0dt,r,jacobian,drift_first)
+  compute_jacobian_kep_drift!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,r0,r,jacobian,drift_first)
 else
   println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
   r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
@@ -175,7 +175,7 @@ return iter
 end
 
 function compute_jacobian_kep_drift!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},beta0::T,s::T,
-  f::T,g::T,dfdt::T,dgdtm1::T,cx::T,sx::T,g1::T,g2::T,r0::T,dr0dt::T,r::T,jacobian::Array{T,2},drift_first::Bool) where {T <: Real}
+  f::T,g::T,dfdt::T,dgdtm1::T,cx::T,sx::T,g1::T,g2::T,r0::T,r::T,jacobian::Array{T,2},drift_first::Bool) where {T <: Real}
 # This needs to be updated to incorporate backwards drifts. [ ]
 # Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
 # with respect to initial state variable q0[j], where q = {x,v,k} & q0 = {x0,v0,k}.
@@ -183,7 +183,7 @@ function compute_jacobian_kep_drift!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},bet
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 g0 = one-beta0*g2
 g3 = (s-g1)/beta0
-eta = dot(x0,v0) # unnecessary to divide by r0 for dr0dt & multiply for \dot\alpha_0
+eta = dot(x0,v0) 
 absv0 = sqrt(dot(v0,v0))
 dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-eta*s*g1)/(2beta0*r)
 dsdr0 = -(2k/r0^2*dsdbeta+g1/r)
