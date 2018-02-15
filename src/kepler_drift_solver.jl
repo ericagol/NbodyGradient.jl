@@ -32,8 +32,8 @@ sqb = sqrt(signb*beta0)
 y = zero; yp = one
 iter = 0
 ds = Inf
-fac1 = k-r0*beta0
-fac2 = r0*dr0dt
+zeta = k-r0*beta0
+eta = dot(x0,v0)
 KEPLER_TOL = sqrt(eps(h))
 while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
   xx = sqb*s
@@ -44,12 +44,12 @@ while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
   end
   sx *= sqb
 # Third derivative:
-  yppp = fac1*cx - signb*fac2*sx
+  yppp = zeta*cx - signb*eta*sx
 # First derivative:
   yp = (-yppp+ k)*beta0inv
 # Second derivative:
-  ypp = signb*fac1*beta0inv*sx + fac2*cx
-  y  = (-ypp + fac2 +k*s)*beta0inv - h  # eqn 35
+  ypp = signb*zeta*beta0inv*sx + eta*cx
+  y  = (-ypp + eta +k*s)*beta0inv - h  # eqn 35
 # Now, compute fourth-order estimate:
   ds = calc_ds_opt(y,yp,ypp,yppp)
   s += ds
@@ -71,7 +71,7 @@ g0bs = 1.0-beta0*g2bs
 g3bs = g3_series(s,beta0)
 # Compute Gauss' Kepler functions:
 f = one - k*r0inv*g2bs # eqn (25)
-g = r0*g1bs + fac2*g2bs # eqn (27)
+g = r0*g1bs + eta*g2bs # eqn (27)
 if drift_first
   r = norm(f*(x0-h*v0)+g*v0)
 else
@@ -85,7 +85,7 @@ if drift_first
 #  fm1 = f-1.0
 #  gmh = -k*g3bs
 #  gmh = g-h*f
-  gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+fac2*g2bs^2+k*g3bs*g2bs)
+  gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+eta*g2bs^2+k*g3bs*g2bs)
 #   gmh = -k*g3bs+h*k*r0inv*g2bs
 else
   # Drift backwards after Kepler step: (1/24/2018)
@@ -93,15 +93,15 @@ else
 #  fm1 = -k*rinv*(g0bs*g2bs-g1bs^2+k*r0inv*(g2bs^2-g1bs^2*g3bs^2))
   fm1 = f-1.0-h*dfdt
 #  fm1 =  k*rinv*(g2bs-k*r0inv*H1_series(s,beta0))
-#  gmh = k*rinv*(r0*(g1bs*g2bs-g0bs*g3bs)+fac2*(g2bs^2-g1bs*g3bs))
+#  gmh = k*rinv*(r0*(g1bs*g2bs-g0bs*g3bs)+eta*(g2bs^2-g1bs*g3bs))
   # This is g-h*dgdt
   gmh = g-h*(1.0-k*rinv*g2bs)
-#  gmh = k*rinv*(r0*H2_series(s,beta0)+fac2*H1_series(s,beta0))
+#  gmh = k*rinv*(r0*H2_series(s,beta0)+eta*H1_series(s,beta0))
 end
 # Compute velocity component functions:
 if drift_first
   dgdtm1 = -k*rinv*g2bs - h*dfdt
-#  dgdtm1 = k*r0inv*rinv*(r0*g0bs*g2bs+fac2*g1bs*g2bs+k*g1bs*g3bs)
+#  dgdtm1 = k*r0inv*rinv*(r0*g0bs*g2bs+eta*g1bs*g2bs+k*g1bs*g3bs)
 else
   dgdtm1 = -k*rinv*g2bs
 end
@@ -183,9 +183,9 @@ function compute_jacobian_kep_drift!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},bet
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 g0 = one-beta0*g2
 g3 = (s-g1)/beta0
-dotalpha0 = r0*dr0dt  # unnecessary to divide by r0 for dr0dt & multiply for \dot\alpha_0
+eta = dot(x0,v0) # unnecessary to divide by r0 for dr0dt & multiply for \dot\alpha_0
 absv0 = sqrt(dot(v0,v0))
-dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-dotalpha0*s*g1)/(2beta0*r)
+dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-eta*s*g1)/(2beta0*r)
 dsdr0 = -(2k/r0^2*dsdbeta+g1/r)
 dsda0 = -g2/r
 dsdv0 = -2absv0*dsdbeta
@@ -198,19 +198,19 @@ for i=1:3
   pxpr0[i] = k/r0^2*g2*x0[i]+g1*v0[i]
   pxpa0[i] = g2*v0[i]
   pxpk[i]  = -g2/r0*x0[i]
-  pxps[i]  = -k/r0*g1*x0[i]+(r0*g0+dotalpha0*g1)*v0[i]
-  pxpbeta[i] = -k/(2beta0*r0)*(s*g1-2g2)*x0[i]+1/(2beta0)*(s*r0*g0-r0*g1+s*dotalpha0*g1-2*dotalpha0*g2)*v0[i]
+  pxps[i]  = -k/r0*g1*x0[i]+(r0*g0+eta*g1)*v0[i]
+  pxpbeta[i] = -k/(2beta0*r0)*(s*g1-2g2)*x0[i]+1/(2beta0)*(s*r0*g0-r0*g1+s*eta*g1-2*eta*g2)*v0[i]
   prvpr0[i] = k*g1/r0^2*x0[i]+g0*v0[i]
   prvpa0[i] = g1*v0[i]
   prvpk[i] = -g1/r0*x0[i]
-  prvps[i] = -k*g0/r0*x0[i]+(-beta0*r0*g1+dotalpha0*g0)*v0[i]
-  prvpbeta[i] = -k/(2beta0*r0)*(s*g0-g1)*x0[i]+1/(2beta0)*(-s*r0*beta0*g1+dotalpha0*s*g0-dotalpha0*g1)*v0[i]
+  prvps[i] = -k*g0/r0*x0[i]+(-beta0*r0*g1+eta*g0)*v0[i]
+  prvpbeta[i] = -k/(2beta0*r0)*(s*g0-g1)*x0[i]+1/(2beta0)*(-s*r0*beta0*g1+eta*s*g0-eta*g1)*v0[i]
 end
 prpr0 = g0
 prpa0 = g1
 prpk  = g2
-prps = (k-beta0*r0)*g1+dotalpha0*g0
-prpbeta = 1/(2beta0)*(s*(k-beta0*r0)*g1+dotalpha0*s*g0-dotalpha0*g1-2k*g2)
+prps = (k-beta0*r0)*g1+eta*g0
+prpbeta = 1/(2beta0)*(s*(k-beta0*r0)*g1+eta*s*g0-eta*g1-2k*g2)
 for i=1:3
   dxdr0[i] = pxps[i]*dsdr0 + pxpbeta[i]*dbetadr0 + pxpr0[i]
   dxda0[i] = pxps[i]*dsda0 + pxpa0[i]

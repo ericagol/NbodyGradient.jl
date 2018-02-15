@@ -8,7 +8,7 @@ function kepler_init(time::T,mass::T,elements::Array{T,1}) where {T <: Real}
 # Elements are given by: period, t0, e*cos(omega), e*sin(omega), Inclination, Omega
 period = elements[1]
 # Compute the semi-major axis in AU (or other units specified by GNEWT):
-semi = (GNEWT*mass*period^2/4/pi^2)^third
+semi = cbrt(GNEWT*mass*period^2/4/pi^2)
 # Convert to eccentricity & longitude of periastron:
 ecc=sqrt(elements[3]^2+elements[4]^2)
 omega = atan2(elements[4],elements[3])
@@ -70,7 +70,7 @@ period = elements[1]
 n = 2pi/period
 t0 = elements[2]
 # Compute the semi-major axis in AU (or other units specified by GNEWT):
-semi = (GNEWT*mass*period^2/4/pi^2)^third
+semi = cbrt(GNEWT*mass*period^2/4/pi^2)
 dsemidp = 2third*semi/period
 dsemidm = third*semi/mass
 # Convert to eccentricity & longitude of periastron:

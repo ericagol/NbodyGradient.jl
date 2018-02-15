@@ -1,5 +1,25 @@
 # Wisdom & Hernandez version of Kepler solver, but with quartic convergence.
 
+function cubic1(a::T, b::T, c::T) where {T <: Real}
+a3 = a*third
+Q = a3^2 - b*third
+R = a3^3 + 0.5*(-a3*b + c)
+if R^2 < Q^3
+ println("Error in cubic solver")
+ return zero(typeof(a))
+else
+ A = -sign(R)*cbrt(fabs(R) + sqrt(R*R - Q*Q*Q))
+ if A == 0.0
+   B = 0.0
+  else
+   B = Q/A
+ end
+ x1 = A + B - a3
+ return x1
+end
+return
+end
+
 function calc_ds_opt(y::T,yp::T,ypp::T,yppp::T) where {T <: Real}
 # Computes quartic Newton's update to equation y=0 using first through 3rd derivatives.
 # Uses techniques outlined in Murray & Dermott for Kepler solver.
@@ -29,8 +49,8 @@ sqb = sqrt(signb*beta0)
 y = zero; yp = one
 iter = 0
 ds = Inf
-fac1 = k-r0*beta0
-fac2 = r0*dr0dt
+zeta = k-r0*beta0
+eta = dot(x0,v0)
 KEPLER_TOL = sqrt(eps(h))
 while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
   xx = sqb*s
@@ -41,12 +61,12 @@ while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
   end
   sx *= sqb
 # Third derivative:
-  yppp = fac1*cx - signb*fac2*sx
+  yppp = zeta*cx - signb*eta*sx
 # First derivative:
   yp = (-yppp+ k)*beta0inv
 # Second derivative:
-  ypp = signb*fac1*beta0inv*sx + fac2*cx
-  y  = (-ypp + fac2 +k*s)*beta0inv - h  # eqn 35
+  ypp = signb*zeta*beta0inv*sx + eta*cx
+  y  = (-ypp + eta +k*s)*beta0inv - h  # eqn 35
 # Now, compute fourth-order estimate:
   ds = calc_ds_opt(y,yp,ypp,yppp)
   s += ds
@@ -63,7 +83,7 @@ end
 g1bs = 2.*sx*cx/sqb
 g2bs = 2.*signb*sx^2*beta0inv
 f = one - k*r0inv*g2bs # eqn (25)
-g = r0*g1bs + fac2*g2bs # eqn (27)
+g = r0*g1bs + eta*g2bs # eqn (27)
 for j=1:3
 # Position is components 2-4 of state:
   state[1+j] = x0[j]*f+v0[j]*g

@@ -30,21 +30,28 @@ rstar = 1e12
 dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
 @time dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
 # Now, try calling with kicks between planets rather than -drift+Kepler:
-pair_input = ones(Bool,n,n)
+pair_input = zeros(Bool,n,n)
 # We want Keplerian between star & planets, and impulses between
 # planets.  Impulse is indicated with 'true', -drift+Kepler with 'false':
-for i=2:n
-  pair_input[1,i] = false
-  # We don't need to define this, but let's anyways:
-  pair_input[i,1] = false
-end
-@time dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar;pair=pair_input)
+#for i=2:n
+#  pair_input[1,i] = false
+#  # We don't need to define this, but let's anyways:
+#  pair_input[i,1] = false
+#end
+# Now, only include Kepler solver for adjacent planets:
+#for i=2:n-1
+#  pair_input[i,i+1] = false
+#  pair_input[i+1,i] = false
+#end
 
 # Now call with smaller timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
+dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0,rstar)
+println("Timing error -drift+Kepler: ",maximum(abs.(tt2-tt1))*24.*3600.)
+@time dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar;pair=pair_input)
 dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0,rstar;pair=pair_input)
-println("Timing error: ",maximum(abs.(tt2-tt1))*24.*3600.)
+println("Timing error kickfast:      ",maximum(abs.(tt2-tt1))*24.*3600.)
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtdq0 = zeros(n,maximum(ntt),7,n)
