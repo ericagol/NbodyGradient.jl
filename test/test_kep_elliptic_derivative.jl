@@ -21,7 +21,6 @@ r0 = sqrt(x0[1]*x0[1]+x0[2]*x0[2]+x0[3]*x0[3])
 vcirc = sqrt(k/r0)
 # Define initial velocity at apastron:
 v0 = [.9*vcirc,0.01*vcirc,0.01*vcirc]  # The eccentricity is about ~2(1-v0/vcirc).
-dr0dt = (x0[1]*v0[1]+x0[2]*v0[2]+x0[3]*v0[3])/r0
 h = 100.0 # 18-day timesteps
 hbig = big(h)
 
@@ -44,20 +43,18 @@ for jj=1:3
 end
 # Save beta:
 xsave[8,1]=r0
-xsave[9,1]=dr0dt
 beta0 = 2.0*k/r0-dot(v0,v0)
 xsave[10,1]=beta0
 jacobian=zeros(Float64,7,7)
-iter = kep_elliptic!(x0,v0,r0,dr0dt,k,h,beta0,s0,state,jacobian)
+iter = kep_elliptic!(x0,v0,r0,k,h,beta0,s0,state,jacobian)
 #println("Initial conditions: ",x0,v0)
 
 # Now, do finite differences at higher precision:
 kbig = big(k); s0big = big(0.0);  statebig = big.(state)
 x0big = big.(x0); v0big = big.(v0)
 r0big = sqrt(x0big[1]*x0big[1]+x0big[2]*x0big[2]+x0big[3]*x0big[3])
-dr0dtbig = (x0big[1]*v0big[1]+x0big[2]*v0big[2]+x0big[3]*v0big[3])/r0big
 beta0big = 2*kbig/r0big-dot(v0big,v0big)
-iter = kep_elliptic!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,statebig)
+iter = kep_elliptic!(x0big,v0big,r0big,kbig,hbig,beta0big,s0big,statebig)
 #println("Final state: ",statebig[2:7])
 
 #read(STDIN,Char)
@@ -78,9 +75,8 @@ for j=1:3
   end
   # Recompute quantities:
   r0big = sqrt(x0big[1]*x0big[1]+x0big[2]*x0big[2]+x0big[3]*x0big[3])
-  dr0dtbig = (x0big[1]*v0big[1]+x0big[2]*v0big[2]+x0big[3]*v0big[3])/r0big
   beta0big = 2*kbig/r0big-dot(v0big,v0big)
-  iter = kep_elliptic!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,state_diffbig)
+  iter = kep_elliptic!(x0big,v0big,r0big,kbig,hbig,beta0big,s0big,state_diffbig)
   x0big = copy(x0save)
   for i=1:3
     jac_num[  i,  j] = (state_diffbig[1+i]-statebig[1+i])/dq
@@ -95,9 +91,8 @@ for j=1:3
     v0big[j] = dq
   end
   r0big = sqrt(x0big[1]*x0big[1]+x0big[2]*x0big[2]+x0big[3]*x0big[3])
-  dr0dtbig = (x0big[1]*v0big[1]+x0big[2]*v0big[2]+x0big[3]*v0big[3])/r0big
   beta0big = 2*kbig/r0big-dot(v0big,v0big)
-  iter = kep_elliptic!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,state_diffbig)
+  iter = kep_elliptic!(x0big,v0big,r0big,kbig,hbig,beta0big,s0big,state_diffbig)
   v0big = copy(v0save)
   for i=1:3
     jac_num[  i,3+j] = (state_diffbig[1+i]-statebig[1+i])/dq
@@ -108,9 +103,8 @@ for j=1:3
   dq = kbig*dlnq
   kbig += dq
   r0big = sqrt(x0big[1]*x0big[1]+x0big[2]*x0big[2]+x0big[3]*x0big[3])
-  dr0dtbig = (x0big[1]*v0big[1]+x0big[2]*v0big[2]+x0big[3]*v0big[3])/r0big
   beta0big = 2*kbig/r0big-dot(v0big,v0big)
-  iter = kep_elliptic!(x0big,v0big,r0big,dr0dtbig,kbig,hbig,beta0big,s0big,state_diffbig)
+  iter = kep_elliptic!(x0big,v0big,r0big,kbig,hbig,beta0big,s0big,state_diffbig)
   for i=1:3
     jac_num[  i,7] = (state_diffbig[1+i]-statebig[1+i])/dq
     jac_num[3+i,7] = (state_diffbig[4+i]-statebig[4+i])/dq

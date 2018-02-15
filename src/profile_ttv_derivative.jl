@@ -4,7 +4,7 @@ n = 8
 include("ttv.jl")
 t0 = 7257.93115525
 #h  = 0.12
-h  = 0.05
+h  = 0.075
 tmax = 600.0
 #tmax = 80.0
 
@@ -58,7 +58,7 @@ dtdq0 = zeros(n,maximum(ntt),7,n)
 dtdelements0 = zeros(n,maximum(ntt),7,n)
 
 dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar;pair=pair_input)
-@time dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar;pair=pair_input)
+@time dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
 
 Profile.clear()
 Profile.init(10^7,0.01)

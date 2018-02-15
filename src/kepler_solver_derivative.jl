@@ -5,10 +5,10 @@ a3 = a*third
 Q = a3^2 - b*third
 R = a3^3 + 0.5*(-a3*b + c)
 if R^2 < Q^3
- println("Error in cubic solver")
- return zero(typeof(a))
+# println("Error in cubic solver ",R^2," ",Q^3)
+ return -c/b
 else
- A = -sign(R)*cbrt(fabs(R) + sqrt(R*R - Q*Q*Q))
+ A = -sign(R)*cbrt(abs(R) + sqrt(R*R - Q*Q*Q))
  if A == 0.0
    B = 0.0
   else
@@ -45,7 +45,7 @@ eta = dot(x0,v0)
 if s0 == zero
   # Use cubic estimate:
   if zeta != zero
-    s = cubic(3eta/zeta,6r0/zeta,-6h/zeta)
+    s = cubic1(3eta/zeta,6r0/zeta,-6h/zeta)
   else
     s = h*r0inv
   end

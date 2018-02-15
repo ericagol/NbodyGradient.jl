@@ -16,7 +16,6 @@ r0 = sqrt(x0[1]*x0[1]+x0[2]*x0[2]+x0[3]*x0[3])
 vcirc = sqrt(k/r0)
 # Define initial velocity at apastron:
 v0 = [1.5*vcirc,0.0,0.0]  # The eccentricity is about ~2(1-v0/vcirc).
-dr0dt = (x0[1]*v0[1]+x0[2]*v0[2]+x0[3]*v0[3])/r0
 h = 18.0 # 18-day timesteps
 
 s0::Float64 = 0.0
@@ -39,13 +38,12 @@ for j=1:3
 end
 # Save beta:
 xsave[8,1]=r0
-xsave[9,1]=dr0dt
 beta0 = 2.0*k/r0-dot(v0,v0)
 xsave[10,1]=beta0
 #@inbounds for i=2:nsteps
 for i=2:nsteps
-#  iter = kep_hyperbolic!(x0,v0,r0,dr0dt,k,h,beta0,s0,state)
-  iter = kep_ell_hyp!(x0,v0,r0,dr0dt,k,h,beta0,s0,state)
+#  iter = kep_hyperbolic!(x0,v0,r0,k,h,beta0,s0,state)
+  iter = kep_ell_hyp!(x0,v0,r0,k,h,beta0,s0,state)
   s = state[11]
   ds = state[12]
   if iter > 2
@@ -72,7 +70,6 @@ for i=2:nsteps
     v0[j]=state[4+j]
   end
   r0=state[8]
-  dr0dt=state[9]
   beta0=state[10]
 #  println(i,x,v)
 end
