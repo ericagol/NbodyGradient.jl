@@ -12,11 +12,9 @@ for k=1:3
   v0[k]=state0[k+4]
 end
   if drift_first
-    x0 -= h*v0
-  end
-  r0 = sqrt(x0[1]*x0[1]+x0[2]*x0[2]+x0[3]*x0[3])
-  if drift_first
-    x0 += h*v0
+    r0 = norm(x0-h*v0)
+  else
+    r0 = norm(x0)
   end
   beta0 = 2*gm/r0-(v0[1]*v0[1]+v0[2]*v0[2]+v0[3]*v0[3])
   s0=state0[11]
@@ -33,7 +31,11 @@ for k=1:3
   x0[k]=state0[k+1]
   v0[k]=state0[k+4]
 end
-  r0 = sqrt(x0[1]*x0[1]+x0[2]*x0[2]+x0[3]*x0[3])
+  if drift_first
+    r0 = norm(x0-h*v0)
+  else
+    r0 = norm(x0)
+  end
   beta0 = 2*gm/r0-(v0[1]*v0[1]+v0[2]*v0[2]+v0[3]*v0[3])
   s0=state0[11]
   iter = kep_drift_ell_hyp!(x0,v0,r0,gm,h,beta0,s0,state,jacobian,drift_first)
