@@ -42,13 +42,25 @@ signb = sign(beta0)
 sqb = sqrt(signb*beta0)
 zeta = k-r0*beta0
 eta = dot(x0,v0)
+sguess = 0.0
 if s0 == zero
   # Use cubic estimate:
   if zeta != zero
-    s = cubic1(3eta/zeta,6r0/zeta,-6h/zeta)
+    sguess = cubic1(3eta/zeta,6r0/zeta,-6h/zeta)
   else
-    s = h*r0inv
+    if eta != zero
+      reta = r0/eta
+      disc = reta^2+8h/eta
+      if disc > zero
+        s=-reta+sqrt(disc)
+      else
+       sguess = h*r0inv
+      end
+    else
+      sguess = h*r0inv
+    end
   end
+  s = copy(sguess)
 else
   s = copy(s0)
 end
@@ -77,6 +89,7 @@ while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
   s += ds
   iter +=1
 end
+#println("sguess: ",sguess," s: ",s," s-sguess: ",s-sguess," ds: ",ds," iter: ",iter)
 # Since we updated s, need to recompute:
 xx = 0.5*sqb*s
 if beta0 > 0

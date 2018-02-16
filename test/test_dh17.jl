@@ -16,8 +16,8 @@ tmax = 600.0
 dlnq = big(1e-12)
 
 #nstep = 8000
-#nstep = 500
-nstep = 1
+nstep = 500
+#nstep = 1
 
 elements = readdlm("elements.txt",',')
 # Increase mass of inner planets:
@@ -58,11 +58,11 @@ v0[2,3] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 xtest = copy(x0); vtest=copy(v0)
 xbig = big.(x0); vbig = big.(v0)
 # Take a single step (so that we aren't at initial coordinates):
-dh17!(x0,v0,h,m,n,pair)
+@time for i=1:nstep; dh17!(x0,v0,h,m,n,pair); end
 # Take a step with big precision:
 ah18!(xbig,vbig,big(h),big.(m),n,pair)
 # Take a single AH18 step:
-ah18!(xtest,vtest,h,m,n,pair)
+@time for i=1:nstep; ah18!(xtest,vtest,h,m,n,pair);end
 
 # Now, copy these to compute Jacobian (so that I don't step
 # x0 & v0 forward in time):

@@ -623,11 +623,13 @@ indj = (j-1)*7
 for k=1:NDIM
   x[k,i] += h*v[k,i]
   x[k,j] += h*v[k,j]
-  # Now for Jacobian:
-  for m=1:7*nbody
-    jac_step[indi+k,m] += h*jac_step[indi+3+k,m]
-    jac_step[indj+k,m] += h*jac_step[indj+3+k,m]
-  end    
+end
+# Now for Jacobian:
+for m=1:7*nbody, k=1:NDIM
+  jac_step[indi+k,m] += h*jac_step[indi+3+k,m]
+end
+for m=1:7*nbody, k=1:NDIM
+  jac_step[indj+k,m] += h*jac_step[indj+3+k,m]
 end
 return
 end
@@ -832,10 +834,10 @@ indi = 0
   indi = (i-1)*7
   for j=1:NDIM
     x[j,i] += h*v[j,i]
-    # Now for Jacobian:
-    for k=1:7*n
-      jac_step[indi+j,k] += h*jac_step[indi+3+j,k]
-    end    
+  end
+  # Now for Jacobian:
+  for k=1:7*n, j=1:NDIM
+    jac_step[indi+j,k] += h*jac_step[indi+3+j,k]
   end
 end
 return
