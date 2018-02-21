@@ -33,7 +33,11 @@ y = zero; yp = one
 iter = 0
 ds = Inf
 zeta = k-r0*beta0
-eta = dot(x0,v0)
+if drift_first
+  eta = dot(x0-h*v0,v0)
+else
+  eta = dot(x0,v0)
+end
 KEPLER_TOL = sqrt(eps(h))
 while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
   xx = sqb*s
@@ -82,26 +86,16 @@ dfdt = -k*g1bs*rinv*r0inv
 if drift_first
   # Drift backwards before Kepler step: (1/22/2018)
   fm1 = -k*r0inv*g2bs
-#  fm1 = f-1.0
-#  gmh = -k*g3bs
-#  gmh = g-h*f
   gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+eta*g2bs^2+k*g3bs*g2bs)
-#   gmh = -k*g3bs+h*k*r0inv*g2bs
 else
   # Drift backwards after Kepler step: (1/24/2018)
-  # (Note: these functions need to be recomputed to prevent roundoff error. [ ])
-#  fm1 = -k*rinv*(g0bs*g2bs-g1bs^2+k*r0inv*(g2bs^2-g1bs^2*g3bs^2))
-  fm1 = f-1.0-h*dfdt
-#  fm1 =  k*rinv*(g2bs-k*r0inv*H1_series(s,beta0))
-#  gmh = k*rinv*(r0*(g1bs*g2bs-g0bs*g3bs)+eta*(g2bs^2-g1bs*g3bs))
+  fm1 =  k*rinv*(g2bs-k*r0inv*H1_series(s,beta0))
   # This is g-h*dgdt
-  gmh = g-h*(1.0-k*rinv*g2bs)
-#  gmh = k*rinv*(r0*H2_series(s,beta0)+eta*H1_series(s,beta0))
+  gmh = k*rinv*(r0*H2_series(s,beta0)+eta*H1_series(s,beta0))
 end
 # Compute velocity component functions:
 if drift_first
-  dgdtm1 = -k*rinv*g2bs - h*dfdt
-#  dgdtm1 = k*r0inv*rinv*(r0*g0bs*g2bs+eta*g1bs*g2bs+k*g1bs*g3bs)
+  dgdtm1 = k*r0inv*rinv*(r0*g0bs*g2bs+eta*g1bs*g2bs+k*g1bs*g3bs)
 else
   dgdtm1 = -k*rinv*g2bs
 end
@@ -111,6 +105,84 @@ for j=1:3
   state[4+j] = dfdt*x0[j]+dgdtm1*v0[j]    # velocity v_ij(t+h)-v_ij(t)
 end  
 return s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,g3bs,r,rinv,ds,iter
+end
+
+function jac_delxv(h::T,s::T,k::T,beta0::T,x0::Array{T,1},v0::Array{T,1},drift_first::Bool) where {T <: Real}
+# Using autodiff, computes Jacobian of delx, delv with respect to h, s, k, x0 and v0.
+
+# Autodiff requires a single-vector input, so create an array to hold the independent variables:
+  input = zeros(typeof(h),10)
+  input[1]=h; input[2]=s; input[3]=k; input[4]=bet0
+  input[5:7]=x0; input[8:10]=v0
+
+# Create a closure so that function knows value of drift_first:
+
+  function delx_delv(input) # input = h,s,k,beta0,x0,v0,drift_first
+  # Compute delx and delv from h, s, k, beta0, x0 and v0:
+  h = input[1]; s = input[2]; k = input[3]; beta0=input[4]
+  x0 = input[5:7]; v0 = input[8:10]
+  # Set up array for delx and delv:
+  delxv = zeros(typeof(h),6)
+  # Compute square root of beta0:
+  sqb = sqrt(abs(beta0))
+  beta0inv=inv(beta0)
+  if drift_first
+    r0 = norm(x0-h*v0)
+    eta = dot(x0-h*v0,v0)
+  else
+    eta = dot(x0,v0)
+    r0 = norm(x0)
+  end
+  # Since we updated s, need to recompute:
+  xx = 0.5*sqb*s
+  if beta0 > 0
+    sx = sin(xx); cx = cos(xx)
+  else
+    cx = cosh(xx); sx = exp(xx)-cx
+  end
+  # Now, compute final values.  Compute Wisdom/Hernandez G_i^\beta(s) functions:
+  g1bs = 2.*sx*cx/sqb
+  g2bs = 2.*signb*sx^2*beta0inv
+  g0bs = 1.0-beta0*g2bs
+  g3bs = g3_series(s,beta0)
+  # Compute Gauss' Kepler functions:
+  f = one - k/r0*g2bs # eqn (25)
+  g = r0*g1bs + eta*g2bs # eqn (27)
+  if drift_first
+    r = norm(f*(x0-h*v0)+g*v0)
+  else
+    r = norm(f*x0+g*v0)
+  end
+  rinv = inv(r)
+  dfdt = -k*g1bs*rinv*r0inv
+  if drift_first
+    # Drift backwards before Kepler step: (1/22/2018)
+    fm1 = -k*r0inv*g2bs
+    gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+eta*g2bs^2+k*g3bs*g2bs)
+  else
+    # Drift backwards after Kepler step: (1/24/2018)
+    fm1 =  k*rinv*(g2bs-k*r0inv*H1_series(s,beta0))
+    # This is g-h*dgdt
+    gmh = k*rinv*(r0*H2_series(s,beta0)+eta*H1_series(s,beta0))
+  end
+  # Compute velocity component functions:
+  if drift_first
+    dgdtm1 = k*r0inv*rinv*(r0*g0bs*g2bs+eta*g1bs*g2bs+k*g1bs*g3bs)
+  else
+    dgdtm1 = -k*rinv*g2bs
+  end
+  for j=1:3
+  # Compute difference vectors (finish - start) of step:
+    delxv[  j] = fm1*x0[j]+gmh*v0[j]        # position x_ij(t+h)-x_ij(t) - h*v_ij(t) or -h*v_ij(t+h)
+    delxv[3+j] = dfdt*x0[j]+dgdtm1*v0[j]    # velocity v_ij(t+h)-v_ij(t)
+  end
+  return delxv
+  end
+
+# Use autodiff to compute Jacobian:
+delxv_jac = ForwardDiff.jacobian(delx_delv,input)
+# Return Jacobian:
+return  delxv_jac
 end
 
 function kep_drift_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,k::T,h::T,
@@ -183,7 +255,11 @@ function compute_jacobian_kep_drift!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},bet
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 g0 = one-beta0*g2
 g3 = (s-g1)/beta0
-eta = dot(x0,v0) 
+if drift_first
+  eta = dot(x0-h*v0,v0) 
+else
+  eta = dot(x0,v0) 
+end
 absv0 = sqrt(dot(v0,v0))
 dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-eta*s*g1)/(2beta0*r)
 dsdr0 = -(2k/r0^2*dsdbeta+g1/r)

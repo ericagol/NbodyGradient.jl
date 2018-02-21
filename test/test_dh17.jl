@@ -13,7 +13,7 @@ t0 = 7257.93115525
 h  = 0.05
 hbig = big(h)
 tmax = 600.0
-dlnq = big(1e-12)
+dlnq = big(1e-20)
 
 #nstep = 8000
 nstep = 500
@@ -29,14 +29,14 @@ x0=zeros(3,n)
 v0=zeros(3,n)
 
 # Define which pairs will have impulse rather than -drift+Kepler:
-pair = ones(Bool,n,n)
+pair = zeros(Bool,n,n)
 # We want Keplerian between star & planets, and impulses between
 # planets.  Impulse is indicated with 'true', -drift+Kepler with 'false':
-for i=2:n
-  pair[1,i] = false
-  # We don't need to define this, but let's anyways:
-  pair[i,1] = false
-end
+#for i=2:n
+#  pair[1,i] = false
+#  # We don't need to define this, but let's anyways:
+#  pair[i,1] = false
+#end
 
 # Initialize with identity matrix:
 jac_step = eye(Float64,7*n)
@@ -63,6 +63,7 @@ xbig = big.(x0); vbig = big.(v0)
 ah18!(xbig,vbig,big(h),big.(m),n,pair)
 # Take a single AH18 step:
 @time for i=1:nstep; ah18!(xtest,vtest,h,m,n,pair);end
+println("AH18 vs. DH17 x/v difference: ",x0-xtest,v0-vtest)
 
 # Now, copy these to compute Jacobian (so that I don't step
 # x0 & v0 forward in time):
@@ -97,13 +98,13 @@ end
 #println("Comparing jac_step and jac_big: ",jac_step./convert(Array{Float64,2},jac_big))
 
 # Test that both versions of dh17 give the same answer:
-xtest = copy(x0)
-vtest = copy(v0)
-m = copy(m0)
-for istep=1:nstep
-  dh17!(xtest,vtest,h,m,n,pair)
-end
-println("x/v difference: ",x-xtest,v-vtest)
+#xtest = copy(x0)
+#vtest = copy(v0)
+#m = copy(m0)
+#for istep=1:nstep
+#  dh17!(xtest,vtest,h,m,n,pair)
+#end
+#println("x/v difference: ",x-xtest,v-vtest)
 
 # Now compute numerical derivatives:
 jac_step_num = zeros(BigFloat,7*n,7*n)
