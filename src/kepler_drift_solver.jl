@@ -1,5 +1,7 @@
 # Wisdom & Hernandez version of Kepler solver, but with quartic convergence.
 
+using ForwardDiff
+
 include("g3.jl")
 
 #function calc_ds_opt(y::T,yp::T,ypp::T,yppp::T) where {T <: Real}
@@ -107,23 +109,23 @@ end
 return s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,g3bs,r,rinv,ds,iter
 end
 
-function jac_delxv(h::T,s::T,k::T,beta0::T,x0::Array{T,1},v0::Array{T,1},drift_first::Bool) where {T <: Real}
-# Using autodiff, computes Jacobian of delx, delv with respect to h, s, k, x0 and v0.
+function jac_delxv(x0::Array{T,1},v0::Array{T,1},k::T,s::T,beta0::T,h::T,drift_first::Bool) where {T <: Real}
+# Using autodiff, computes Jacobian of delx & delv with respect to x0, v0, k, s, beta0 & h.
 
 # Autodiff requires a single-vector input, so create an array to hold the independent variables:
   input = zeros(typeof(h),10)
-  input[1]=h; input[2]=s; input[3]=k; input[4]=bet0
-  input[5:7]=x0; input[8:10]=v0
+  input[1:3]=x0; input[4:6]=v0; input[7]=k; input[8]=s; input[9]=beta0; input[10]=h
 
-# Create a closure so that function knows value of drift_first:
+# Create a closure so that the function knows value of drift_first:
 
-  function delx_delv(input) # input = h,s,k,beta0,x0,v0,drift_first
+  function delx_delv(input) # input = x0,v0,k,s,beta0,h,drift_first
   # Compute delx and delv from h, s, k, beta0, x0 and v0:
-  h = input[1]; s = input[2]; k = input[3]; beta0=input[4]
-  x0 = input[5:7]; v0 = input[8:10]
-  # Set up array for delx and delv:
+  x0 = input[1:3]; v0 = input[4:6]; k = input[7]
+  s = input[8]; beta0=input[9]; h = input[10]
+  # Set up a single output array for delx and delv:
   delxv = zeros(typeof(h),6)
   # Compute square root of beta0:
+  signb = sign(beta0)
   sqb = sqrt(abs(beta0))
   beta0inv=inv(beta0)
   if drift_first
@@ -133,6 +135,7 @@ function jac_delxv(h::T,s::T,k::T,beta0::T,x0::Array{T,1},v0::Array{T,1},drift_f
     eta = dot(x0,v0)
     r0 = norm(x0)
   end
+  r0inv = inv(r0)
   # Since we updated s, need to recompute:
   xx = 0.5*sqb*s
   if beta0 > 0
@@ -146,7 +149,7 @@ function jac_delxv(h::T,s::T,k::T,beta0::T,x0::Array{T,1},v0::Array{T,1},drift_f
   g0bs = 1.0-beta0*g2bs
   g3bs = g3_series(s,beta0)
   # Compute Gauss' Kepler functions:
-  f = one - k/r0*g2bs # eqn (25)
+  f = 1.0 - k*r0inv*g2bs # eqn (25)
   g = r0*g1bs + eta*g2bs # eqn (27)
   if drift_first
     r = norm(f*(x0-h*v0)+g*v0)
@@ -227,8 +230,10 @@ if beta0 > zero || beta0 < zero
     s0,state,drift_first)
 # Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
 # with respect to initial state variable q0[j], where q = {x,v} & q0 = {x0,v0}.
+  delxv_jac = jac_delxv(x0,v0,k,s,beta0,h,drift_first)
+  println("computed jacobian with autodiff")
   fill!(jacobian,zero)
-  compute_jacobian_kep_drift!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,r0,r,jacobian,drift_first)
+#  compute_jacobian_kep_drift!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,r0,r,jacobian,drift_first)
 else
   println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
   r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
