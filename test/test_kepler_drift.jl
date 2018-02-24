@@ -41,7 +41,7 @@ xsave[8,1]=r0
 beta0 = 2.0*k/r0-dot(v0,v0)
 xsave[10,1]=beta0
 jacobian=zeros(Float64,7,7)
-delxv_jac = kep_drift_ell_hyp!(x0,v0,r0,k,h,beta0,s0,state,jacobian,drift_first)
+iter = kep_drift_ell_hyp!(x0,v0,r0,k,h,beta0,s0,state,jacobian,drift_first)
 
 # Now, do finite differences at higher precision:
 kbig = big(k); s0big = big(0.0);  statebig = big.(state)
@@ -49,7 +49,7 @@ x0big = big.(x0); v0big = big.(v0)
 r0big = sqrt(x0big[1]*x0big[1]+x0big[2]*x0big[2]+x0big[3]*x0big[3])
 beta0big = 2*kbig/r0big-dot(v0big,v0big)
 jacobian_big =zeros(BigFloat,7,7)
-delxv_jac = kep_drift_ell_hyp!(x0big,v0big,r0big,kbig,hbig,beta0big,s0big,statebig,jacobian_big,drift_first)
+iter = kep_drift_ell_hyp!(x0big,v0big,r0big,kbig,hbig,beta0big,s0big,statebig,jacobian_big,drift_first)
 jac_frac = jacobian./convert(Array{Float64,2},jacobian_big)-1.0
 println("Fractional Jacobian difference: ",maxabs(jac_frac[.~isnan.(jac_frac)]))
 
@@ -106,7 +106,7 @@ for j=1:3
 end
 println("Maximum jac_big-jac_num: ",maxabs(convert(Array{Float64,2},jacobian_big-jac_num)))
 #println(convert(Array{Float64,2},jacobian_big))
-#println(convert(Array{Float64,2},jacobian_big./jac_num-1.0))
+println(convert(Array{Float64,2},jacobian_big./jac_num-1.0))
 return xsave,jac_num,jacobian
 end
 

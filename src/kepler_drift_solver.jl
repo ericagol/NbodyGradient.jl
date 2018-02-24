@@ -132,8 +132,8 @@ function jac_delxv(x0::Array{T,1},v0::Array{T,1},k::T,s::T,beta0::T,h::T,drift_f
     r0 = norm(x0-h*v0)
     eta = dot(x0-h*v0,v0)
   else
-    eta = dot(x0,v0)
     r0 = norm(x0)
+    eta = dot(x0,v0)
   end
   r0inv = inv(r0)
   # Since we updated s, need to recompute:
@@ -232,8 +232,10 @@ if beta0 > zero || beta0 < zero
 # with respect to initial state variable q0[j], where q = {x,v} & q0 = {x0,v0}.
   delxv_jac = jac_delxv(x0,v0,k,s,beta0,h,drift_first)
   println("computed jacobian with autodiff")
-  fill!(jacobian,zero)
-#  compute_jacobian_kep_drift!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,r0,r,jacobian,drift_first)
+  # Add in partial derivatives with respect to x0, v0 and k:
+  jacobian[1:6,1:7] = delxv_jac[1:6,1:7]
+# Add in s and beta0 derivatives:
+  compute_jacobian_kep_drift!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,r0,r,jacobian,delxv_jac,drift_first)
 else
   println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
   r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
@@ -330,6 +332,74 @@ for j=1:3
     jacobian[3+i,3+j] += dvdv0[i]*v0[j]/absv0 + dvda0[i]*x0[j]
   end
 end
+jacobian[7,7]=one
+return
+end
+
+function compute_jacobian_kep_drift!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},beta0::T,s::T,
+  f::T,g::T,dfdt::T,dgdtm1::T,cx::T,sx::T,g1::T,g2::T,r0::T,r::T,jacobian::Array{T,2},
+  delxv_jac::Array{T,2},drift_first::Bool) where {T <: Real}
+# This needs to be updated to incorporate backwards drifts. [ ]
+# Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
+# with respect to initial state variable q0[j], where q = {x,v,k} & q0 = {x0,v0,k}.
+# Now, compute the Jacobian: (9/18/2017 notes)
+zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
+g0 = one-beta0*g2
+g3 = (s-g1)/beta0
+if drift_first
+  eta = dot(x0-h*v0,v0) 
+else
+  eta = dot(x0,v0) 
+end
+absv0 = sqrt(dot(v0,v0))
+r0inv = inv(r0)
+dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-eta*s*g1)/(2beta0*r)
+dsdr0 = -(2k*r0inv^2*dsdbeta+g1/r)
+dsda0 = -g2/r
+dsdv0 = -2absv0*dsdbeta
+dsdk = 2*r0inv*dsdbeta-g3/r
+dbetadr0 = -2k*r0inv^2
+dbetadv0 = -2absv0
+dbetadk  = 2r0inv
+prpr0 = g0
+prpa0 = g1
+prpk  = g2
+prps = (k-beta0*r0)*g1+eta*g0
+prpbeta = 1/(2beta0)*(s*(k-beta0*r0)*g1+eta*s*g0-eta*g1-2k*g2)
+# Compute s & beta components of x0 & v0 derivatives:
+for i=1:3
+  dxdr0[i] = delxv_jac[  i,8]*dsdr0 + delxv_jac[  i,9]*dbetadr0
+  dxda0[i] = delxv_jac[  i,8]*dsda0
+  dxdv0[i] = delxv_jac[  i,8]*dsdv0 + delxv_jac[  i,9]*dbetadv0
+  dxdk[i]  = delxv_jac[  i,8]*dsdk  + delxv_jac[  i,9]*dbetadk
+  dvdr0[i] = delxv_jac[3+i,8]*dsdr0 + delxv_jac[3+i,9]*dbetadr0
+  dvda0[i] = delxv_jac[3+i,8]*dsda0
+  dvdv0[i] = delxv_jac[3+i,8]*dsdv0 + delxv_jac[3+i,9]*dbetadv0
+  dvdk[i]  = delxv_jac[3+i,8]*dsdk  + delxv_jac[3+i,9]*dbetadk
+end
+# Now, compute Jacobian:
+# Add in s & beta components of k derivative:
+for i=1:3
+  jacobian[  i,7] += dxdk[i]
+  jacobian[3+i,7] += dvdk[i]
+end
+# Add in s & beta components of x0 & v0 derivatives:
+for j=1:3
+  for i=1:3
+    if drift_first
+      jacobian[  i,  j] +=    dxdr0[i]*(x0[j]-h*v0[j])*r0inv + dxda0[i]*v0[j]
+      jacobian[  i,3+j] += -h*dxdr0[i]*(x0[j]-h*v0[j])*r0inv + dxdv0[i]*v0[j]/absv0 + dxda0[i]*(x0[j]-2*h*v0[j])
+      jacobian[3+i,  j] +=    dvdr0[i]*(x0[j]-h*v0[j])*r0inv + dvda0[i]*v0[j]
+      jacobian[3+i,3+j] += -h*dvdr0[i]*(x0[j]-h*v0[j])*r0inv + dvdv0[i]*v0[j]/absv0 + dvda0[i]*(x0[j]-2*h*v0[j])
+    else
+      jacobian[  i,  j] += dxdr0[i]*x0[j]*r0inv + dxda0[i]*v0[j]
+      jacobian[  i,3+j] += dxdv0[i]*v0[j]/absv0 + dxda0[i]*x0[j]
+      jacobian[3+i,  j] += dvdr0[i]*x0[j]*r0inv + dvda0[i]*v0[j]
+      jacobian[3+i,3+j] += dvdv0[i]*v0[j]/absv0 + dvda0[i]*x0[j]
+    end
+  end
+end
+# Mass doesn't change:
 jacobian[7,7]=one
 return
 end
