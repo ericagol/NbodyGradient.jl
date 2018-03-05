@@ -243,7 +243,7 @@ if beta0 > zero || beta0 < zero
 # Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
 # with respect to initial state variable q0[j], where q = {x,v} & q0 = {x0,v0}.
   delxv_jac = jac_delxv(x0,v0,k,s,beta0,h,drift_first)
-  println("computed jacobian with autodiff")
+#  println("computed jacobian with autodiff")
   # Add in partial derivatives with respect to x0, v0 and k:
   jacobian[1:6,1:7] = delxv_jac[1:6,1:7]
 # Add in s and beta0 derivatives:

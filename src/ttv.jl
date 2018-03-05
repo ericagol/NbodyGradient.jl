@@ -682,7 +682,7 @@ gm = GNEWT*(m[i]+m[j])
 # jac_ij should be the Jacobian for going from (x_{0,i},v_{0,i},m_i) &  (x_{0,j},v_{0,j},m_j)
 # to  (x_i,v_i,m_i) &  (x_j,v_j,m_j), a 14x14 matrix for the 3-dimensional case.
 # Fill with zeros for now:
-jac_ij = eye(typeof(h),14)
+jac_ij .= eye(typeof(h),14)
 if gm == 0
 #  Do nothing
 #  for k=1:3
@@ -699,8 +699,8 @@ else
   for k=1:3
     # Add kepler-drift differences, weighted by masses, to start of step:
     x[k,i] += mj*state[1+k]
-    x[k,j] -= mi*state[1+k]
     v[k,i] += mj*state[4+k]
+    x[k,j] -= mi*state[1+k]
     v[k,j] -= mi*state[4+k]
   end
   # Compute Jacobian:
@@ -1285,7 +1285,7 @@ for i=n-1:-1:1
   for j=n:-1:i+1
     indj=(j-1)*7
     if ~pair[i,j]  # Check to see if kicks have not been applied
-      kepler_driftij!(m,x,v,i,j,h2,jac_ij,true)
+      kepler_driftij!(m,x,v,i,j,h2,jac_ij,false)
       # Pick out indices for bodies i & j:
       # Carry out multiplication on the i/j components of matrix:
       @inbounds for k2=1:sevn, k1=1:7
