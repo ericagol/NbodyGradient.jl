@@ -188,8 +188,14 @@ delxv_jac = ForwardDiff.jacobian(delx_delv,input)
 return  delxv_jac
 end
 
-function kep_drift_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,k::T,h::T,
-  beta0::T,s0::T,state::Array{T,1},drift_first::Bool) where {T <: Real}
+function kep_drift_ell_hyp!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,
+  s0::T,state::Array{T,1},drift_first::Bool) where {T <: Real}
+if drift_first
+  r0 = norm(x0-h*v0)
+else
+  r0 = norm(x0)
+end
+beta0 = 2*k/r0-dot(v0,v0)
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 # Now, solve for s in elliptical Kepler case:
@@ -215,8 +221,14 @@ state[12] = ds
 return iter
 end
 
-function kep_drift_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,k::T,h::T,
-  beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2},drift_first::Bool) where {T <: Real}
+function kep_drift_ell_hyp!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,
+  s0::T,state::Array{T,1},jacobian::Array{T,2},drift_first::Bool) where {T <: Real}
+if drift_first
+  r0 = norm(x0-h*v0)
+else
+  r0 = norm(x0)
+end
+beta0 = 2*k/r0-dot(v0,v0)
 # Computes the Jacobian as well
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
@@ -267,7 +279,7 @@ if drift_first
 else
   eta = dot(x0,v0) 
 end
-absv0 = sqrt(dot(v0,v0))
+absv0 = norm(v0)
 dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-eta*s*g1)/(2beta0*r)
 dsdr0 = -(2k/r0^2*dsdbeta+g1/r)
 dsda0 = -g2/r
@@ -348,10 +360,12 @@ g0 = one-beta0*g2
 g3 = (s-g1)/beta0
 if drift_first
   eta = dot(x0-h*v0,v0) 
+  r0 = norm(x0-h*v0)
 else
-  eta = dot(x0,v0) 
+  eta = dot(x0,v0)
+  r0 = norm(x0)
 end
-absv0 = sqrt(dot(v0,v0))
+absv0 = norm(v0)
 r0inv = inv(r0)
 dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-eta*s*g1)/(2beta0*r)
 dsdr0 = -(2k*r0inv^2*dsdbeta+g1/r)
@@ -361,11 +375,6 @@ dsdk = 2*r0inv*dsdbeta-g3/r
 dbetadr0 = -2k*r0inv^2
 dbetadv0 = -2absv0
 dbetadk  = 2r0inv
-prpr0 = g0
-prpa0 = g1
-prpk  = g2
-prps = (k-beta0*r0)*g1+eta*g0
-prpbeta = 1/(2beta0)*(s*(k-beta0*r0)*g1+eta*s*g0-eta*g1-2k*g2)
 # Compute s & beta components of x0 & v0 derivatives:
 for i=1:3
   dxdr0[i] = delxv_jac[  i,8]*dsdr0 + delxv_jac[  i,9]*dbetadr0

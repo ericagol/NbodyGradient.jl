@@ -667,6 +667,63 @@ end
 return
 end
 
+# Carries out a Kepler step and reverse drift for bodies i & j, and computes Jacobian:
+function kepler_driftij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T,jac_ij::Array{T,2},drift_first::Bool) where {T <: Real}
+# The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
+# Initial state:
+state0 = zeros(typeof(h),12)
+# Final state (after a step):
+state = zeros(typeof(h),12)
+for k=1:NDIM
+  state0[1+k] = x[k,i] - x[k,j]
+  state0[4+k] = v[k,i] - v[k,j]
+end
+gm = GNEWT*(m[i]+m[j])
+# jac_ij should be the Jacobian for going from (x_{0,i},v_{0,i},m_i) &  (x_{0,j},v_{0,j},m_j)
+# to  (x_i,v_i,m_i) &  (x_j,v_j,m_j), a 14x14 matrix for the 3-dimensional case.
+# Fill with zeros for now:
+jac_ij = eye(typeof(h),14)
+if gm == 0
+#  Do nothing
+#  for k=1:3
+#    x[k,i] += h*v[k,i]
+#    x[k,j] += h*v[k,j]
+#  end
+else
+  jac_kepler = zeros(typeof(h),7,7)
+  # predicted value of s
+  kepler_drift_step!(gm, h, state0, state,jac_kepler,drift_first)
+  mijinv =1.0/(m[i] + m[j])
+  mi = m[i]*mijinv # Normalize the masses
+  mj = m[j]*mijinv
+  for k=1:3
+    # Add kepler-drift differences, weighted by masses, to start of step:
+    x[k,i] += mj*state[1+k]
+    x[k,j] -= mi*state[1+k]
+    v[k,i] += mj*state[4+k]
+    v[k,j] -= mi*state[4+k]
+  end
+  # Compute Jacobian:
+  for l=1:6, k=1:6
+# Compute derivatives of x_i,v_i with respect to initial conditions:
+    jac_ij[  k,  l] += mj*jac_kepler[k,l]
+    jac_ij[  k,7+l] -= mj*jac_kepler[k,l]
+# Compute derivatives of x_j,v_j with respect to initial conditions:
+    jac_ij[7+k,  l] -= mi*jac_kepler[k,l]
+    jac_ij[7+k,7+l] += mi*jac_kepler[k,l]
+  end
+  for k=1:6
+# Compute derivatives of x_i,v_i with respect to the masses:
+    jac_ij[   k, 7] = -mj*state[1+k]*mijinv + GNEWT*mj*jac_kepler[  k,7]
+    jac_ij[   k,14] =  mi*state[1+k]*mijinv + GNEWT*mj*jac_kepler[  k,7]
+# Compute derivatives of x_j,v_j with respect to the masses:
+    jac_ij[ 7+k, 7] = -mj*state[1+k]*mijinv - GNEWT*mi*jac_kepler[  k,7]
+    jac_ij[ 7+k,14] =  mi*state[1+k]*mijinv - GNEWT*mi*jac_kepler[  k,7]
+  end
+end
+return
+end
+
 # Carries out a Kepler step for bodies i & j
 #function keplerij!(m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},i::Int64,j::Int64,h::Float64)
 function keplerij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T) where {T <: Real}
@@ -1154,6 +1211,116 @@ for i=n-1:-1:1
 end
 kickfast!(x,v,h2,m,n,pair)
 drift!(x,v,h2,n)
+return
+end
+
+# Carries out the AH18 mapping & computes the Jacobian:
+function ah18!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
+zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0); half = convert(typeof(h),0.5); two = convert(typeof(h),2.0)
+h2 = half*h
+sevn = 7*n
+jac_phi = zeros(typeof(h),sevn,sevn)
+jac_kick = zeros(typeof(h),sevn,sevn)
+jac_copy = zeros(typeof(h),sevn,sevn)
+jac_ij = zeros(typeof(h),14,14)
+dqdt_ij = zeros(typeof(h),14)
+dqdt_phi = zeros(typeof(h),sevn)
+dqdt_kick = zeros(typeof(h),sevn)
+jac_tmp1 = zeros(typeof(h),14,sevn)
+jac_tmp2 = zeros(typeof(h),14,sevn)
+drift!(x,v,h2,n,jac_step)
+kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
+# Multiply Jacobian from kick step:
+@inbounds for i in eachindex(jac_step)
+  jac_copy[i] = jac_step[i]
+end
+if typeof(h) == BigFloat
+  jac_step = *(jac_kick,jac_copy)
+else
+  BLAS.gemm!('N','N',one,jac_kick,jac_copy,zero,jac_step)
+end
+indi = 0; indj = 0
+@inbounds for i=1:n-1
+  indi = (i-1)*7
+  for j=i+1:n
+    indj = (j-1)*7
+    if ~pair[i,j]  # Check to see if kicks have not been applied
+      kepler_driftij!(m,x,v,i,j,h2,jac_ij,true)
+    # Pick out indices for bodies i & j:
+      @inbounds for k2=1:sevn, k1=1:7
+        jac_tmp1[k1,k2] = jac_step[indi+k1,k2]
+      end
+      @inbounds for k2=1:sevn, k1=1:7
+        jac_tmp1[7+k1,k2] = jac_step[indj+k1,k2]
+      end
+      # Carry out multiplication on the i/j components of matrix:
+      if typeof(h) == BigFloat
+        jac_tmp2 = *(jac_ij,jac_tmp1)
+      else
+        BLAS.gemm!('N','N',one,jac_ij,jac_tmp1,zero,jac_tmp2)
+      end
+      # Copy back to the Jacobian:
+      @inbounds for k2=1:sevn, k1=1:7
+         jac_step[indi+k1,k2]=jac_tmp2[k1,k2]
+      end
+      @inbounds for k2=1:sevn, k1=1:7
+        jac_step[indj+k1,k2]=jac_tmp2[7+k1,k2]
+      end
+    end
+  end
+end
+phisalpha!(x,v,h,m,two,n,jac_phi,dqdt_phi) # 10%
+@inbounds for i in eachindex(jac_step)
+  jac_copy[i] = jac_step[i]
+end
+#  jac_step .= jac_phi*jac_step # < 1%  Perhaps use gemm?! [ ]
+if typeof(h) == BigFloat
+  jac_step = *(jac_phi,jac_copy)
+else
+  BLAS.gemm!('N','N',one,jac_phi,jac_copy,zero,jac_step)
+end
+indi=0; indj=0
+for i=n-1:-1:1
+  indi=(i-1)*7
+  for j=n:-1:i+1
+    indj=(j-1)*7
+    if ~pair[i,j]  # Check to see if kicks have not been applied
+      kepler_driftij!(m,x,v,i,j,h2,jac_ij,true)
+      # Pick out indices for bodies i & j:
+      # Carry out multiplication on the i/j components of matrix:
+      @inbounds for k2=1:sevn, k1=1:7
+        jac_tmp1[k1,k2] = jac_step[indi+k1,k2]
+      end
+      @inbounds for k2=1:sevn, k1=1:7
+        jac_tmp1[7+k1,k2] = jac_step[indj+k1,k2]
+      end
+      # Carry out multiplication on the i/j components of matrix:
+      if typeof(h) == BigFloat
+        jac_tmp2 = *(jac_ij,jac_tmp1)
+      else
+        BLAS.gemm!('N','N',one,jac_ij,jac_tmp1,zero,jac_tmp2)
+      end
+      # Copy back to the Jacobian:
+      @inbounds for k2=1:sevn, k1=1:7
+         jac_step[indi+k1,k2]=jac_tmp2[k1,k2]
+      end
+      @inbounds for k2=1:sevn, k1=1:7
+        jac_step[indj+k1,k2]=jac_tmp2[7+k1,k2]
+      end
+    end
+  end
+end
+kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
+# Multiply Jacobian from kick step:
+@inbounds for i in eachindex(jac_step)
+  jac_copy[i] = jac_step[i]
+end
+if typeof(h) == BigFloat
+  jac_step = *(jac_kick,jac_copy)
+else
+  BLAS.gemm!('N','N',one,jac_kick,jac_copy,zero,jac_step)
+end
+drift!(x,v,h2,n,jac_step)
 return
 end
 
