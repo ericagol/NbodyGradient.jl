@@ -6,6 +6,21 @@ elements = readdlm("elements_rebound.txt",',')
 
 #n = 4
 rstar = -1e12
+# Now, try calling with kicks between planets rather than -drift+Kepler:
+pair_input = ones(Bool,n,n)
+# We want Keplerian between star & planets, and impulses between
+# planets.  Impulse is indicated with 'true', -drift+Kepler with 'false':
+for i=2:n
+  pair_input[1,i] = false
+  # We don't need to define this, but let's anyways:
+  pair_input[i,1] = false
+end
+# Now, only include Kepler solver for adjacent planets:
+for i=2:n-1
+  pair_input[i,i+1] = false
+  pair_input[i+1,i] = false
+end
+
 for n=2:8
 t0 = 0.0
 h  = 0.05

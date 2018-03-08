@@ -925,7 +925,8 @@ end
 function kickfast!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},
     dqdt_kick::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
 rij = zeros(typeof(h),3)
-fill!(jac_step,zero(typeof(h)))
+#fill!(jac_step,zero(typeof(h)))
+jac_step.=eye(typeof(h),7*n)
 @inbounds for i=1:n-1
   indi = (i-1)*7
   for j=i+1:n
@@ -969,23 +970,12 @@ fill!(jac_step,zero(typeof(h)))
     end
   end
 end
-@inbounds for i=1:n
-  indi = (i-1)*7
-  for k=1:3
-  # Position remains unchanged, so Jacobian of position should be identity matrix:
-    jac_step[indi+  k,indi+  k] += 1.0
-  # Jacobian of velocity has linear dependence on initial velocity
-    jac_step[indi+3+k,indi+3+k] += 1.0
-  end
-  # Mass remains unchanged:
-  jac_step[indi+7,indi+7] += 1.0
-end
 return
 end
 
-function phisalpha!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},alpha::T,n::Int64) where {T <: Real}
+function phisalpha!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},alpha::T,n::Int64,pair::Array{Bool,2}) where {T <: Real}
 # Computes the 4th-order correction:
-#function [v] = phisalpha(x,v,h,m,alpha)
+#function [v] = phisalpha(x,v,h,m,alpha,pair)
 #n = size(m,2);
 a = zeros(typeof(h),3,n)
 rij = zeros(typeof(h),3)
@@ -995,15 +985,17 @@ zero = 0.0*alpha
 fac = zero; fac1 = zero; fac2 = zero; r1 = zero; r2 = zero; r3 = zero
 @inbounds for i=1:n-1
   for j = i+1:n
-    for k=1:3
-      rij[k] = x[k,i] - x[k,j]
-    end
-    r2 = rij[1]*rij[1]+rij[2]*rij[2]+rij[3]*rij[3]
-    r3 = r2*sqrt(r2)
-    for k=1:3
-      fac = GNEWT*rij[k]/r3
-      a[k,i] -= m[j]*fac
-      a[k,j] += m[i]*fac
+    if ~pair[i,j] # correction for Kepler pairs
+      for k=1:3
+        rij[k] = x[k,i] - x[k,j]
+      end
+      r2 = rij[1]*rij[1]+rij[2]*rij[2]+rij[3]*rij[3]
+      r3 = r2*sqrt(r2)
+      for k=1:3
+        fac = GNEWT*rij[k]/r3
+        a[k,i] -= m[j]*fac
+        a[k,j] += m[i]*fac
+      end
     end
   end
 end
@@ -1011,21 +1003,23 @@ end
 # slightly to avoid reference to \tilde a_i):
 @inbounds for i=1:n-1
   for j=i+1:n
-    for k=1:3
-      aij[k] = a[k,i] - a[k,j]
-#      aij[k] = 0.0
-      rij[k] = x[k,i] - x[k,j]
-    end
-    r2 = rij[1]*rij[1]+rij[2]*rij[2]+rij[3]*rij[3]
-    r1 = sqrt(r2)
-    ardot = aij[1]*rij[1]+aij[2]*rij[2]+aij[3]*rij[3]
-    fac1 = coeff/r1^5
-    fac2 = (2*GNEWT*(m[i]+m[j])/r1 + 3*ardot)
-    for k=1:3
-#      fac = coeff/r1^5*(rij[k]*(2*GNEWT*(m[i]+m[j])/r1 + 3*ardot) - r2*aij[k])
-      fac = fac1*(rij[k]*fac2- r2*aij[k])
-      v[k,i] += m[j]*fac
-      v[k,j] -= m[i]*fac
+    if ~pair[i,j] # correction for Kepler pairs
+      for k=1:3
+        aij[k] = a[k,i] - a[k,j]
+  #      aij[k] = 0.0
+        rij[k] = x[k,i] - x[k,j]
+      end
+      r2 = rij[1]*rij[1]+rij[2]*rij[2]+rij[3]*rij[3]
+      r1 = sqrt(r2)
+      ardot = aij[1]*rij[1]+aij[2]*rij[2]+aij[3]*rij[3]
+      fac1 = coeff/r1^5
+      fac2 = (2*GNEWT*(m[i]+m[j])/r1 + 3*ardot)
+      for k=1:3
+  #      fac = coeff/r1^5*(rij[k]*(2*GNEWT*(m[i]+m[j])/r1 + 3*ardot) - r2*aij[k])
+        fac = fac1*(rij[k]*fac2- r2*aij[k])
+        v[k,i] += m[j]*fac
+        v[k,j] -= m[i]*fac
+      end
     end
   end
 end
@@ -1033,9 +1027,9 @@ return
 end
 
 function phisalpha!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},
-  alpha::T,n::Int64,jac_step::Array{T,2},dqdt_phi::Array{T,1}) where {T <: Real}
+  alpha::T,n::Int64,jac_step::Array{T,2},dqdt_phi::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
 # Computes the 4th-order correction:
-#function [v] = phisalpha(x,v,h,m,alpha)
+#function [v] = phisalpha(x,v,h,m,alpha,pair)
 #n = size(m,2);
 a = zeros(typeof(h),3,n)
 dadq = zeros(typeof(h),3,n,4,n)  # There is no velocity dependence
@@ -1044,145 +1038,332 @@ rij = zeros(typeof(h),3)
 aij = zeros(typeof(h),3)
 coeff = alpha*h^3/96*2*GNEWT
 fac = 0.0; fac1 = 0.0; fac2 = 0.0; fac3 = 0.0; r1 = 0.0; r2 = 0.0; r3 = 0.0
+#jac_step.=eye(typeof(h),7*n)
 @inbounds for i=1:n-1
   indi = (i-1)*7
   for j=i+1:n
-    indj = (j-1)*7
-    for k=1:3
-      rij[k] = x[k,i] - x[k,j]
-    end
-    r2 = rij[1]*rij[1]+rij[2]*rij[2]+rij[3]*rij[3]
-    r3 = r2*sqrt(r2)
-    for k=1:3
-      fac = GNEWT*rij[k]/r3
-      a[k,i] -= m[j]*fac
-      a[k,j] += m[i]*fac
-      # Mass derivative of acceleration vector (10/6/17 notes):
-      # Since there is no velocity dependence, this is fourth parameter.
-      # Acceleration of ith particle depends on mass of jth particle:
-      dadq[k,i,4,j] -= fac
-      dadq[k,j,4,i] += fac
-      # x derivative of acceleration vector:
-      fac *= 3.0/r2
-      # Dot product x_ij.\delta x_ij means we need to sum over components:
-      for p=1:3
-        dadq[k,i,p,i] += fac*m[j]*rij[p]
-        dadq[k,i,p,j] -= fac*m[j]*rij[p]
-        dadq[k,j,p,j] += fac*m[i]*rij[p]
-        dadq[k,j,p,i] -= fac*m[i]*rij[p]
+    if ~pair[i,j] # correction for Kepler pairs
+      indj = (j-1)*7
+      for k=1:3
+        rij[k] = x[k,i] - x[k,j]
       end
-      # Final term has no dot product, so just diagonal:
-      fac = GNEWT/r3
-      dadq[k,i,k,i] -= fac*m[j]
-      dadq[k,i,k,j] += fac*m[j]
-      dadq[k,j,k,j] -= fac*m[i]
-      dadq[k,j,k,i] += fac*m[i]
+      r2 = rij[1]*rij[1]+rij[2]*rij[2]+rij[3]*rij[3]
+      r3 = r2*sqrt(r2)
+      for k=1:3
+        fac = GNEWT*rij[k]/r3
+        a[k,i] -= m[j]*fac
+        a[k,j] += m[i]*fac
+        # Mass derivative of acceleration vector (10/6/17 notes):
+        # Since there is no velocity dependence, this is fourth parameter.
+        # Acceleration of ith particle depends on mass of jth particle:
+        dadq[k,i,4,j] -= fac
+        dadq[k,j,4,i] += fac
+        # x derivative of acceleration vector:
+        fac *= 3.0/r2
+        # Dot product x_ij.\delta x_ij means we need to sum over components:
+        for p=1:3
+          dadq[k,i,p,i] += fac*m[j]*rij[p]
+          dadq[k,i,p,j] -= fac*m[j]*rij[p]
+          dadq[k,j,p,j] += fac*m[i]*rij[p]
+          dadq[k,j,p,i] -= fac*m[i]*rij[p]
+        end
+        # Final term has no dot product, so just diagonal:
+        fac = GNEWT/r3
+        dadq[k,i,k,i] -= fac*m[j]
+        dadq[k,i,k,j] += fac*m[j]
+        dadq[k,j,k,j] -= fac*m[i]
+        dadq[k,j,k,i] += fac*m[i]
+      end
     end
   end
 end
 # Next, compute \tilde g_i acceleration vector (this is rewritten
 # slightly to avoid reference to \tilde a_i):
-fill!(jac_step,0.0)
 # Note that jac_step[(i-1)*7+k,(j-1)*7+p] is the derivative of the kth coordinate
 # of planet i with respect to the pth coordinate of planet j.
 indi = 0; indj=0; indd = 0
 @inbounds for i=1:n-1
   indi = (i-1)*7
   for j=i+1:n
-    indj = (j-1)*7
-    for k=1:3
-      aij[k] = a[k,i] - a[k,j]
-#      aij[k] = 0.0
-      rij[k] = x[k,i] - x[k,j]
-    end
-    # Compute dot product of r_ij with \delta a_ij:
-    fill!(dotdadq,0.0)
-    @inbounds for d=1:n, p=1:4, k=1:3
-      dotdadq[p,d] += rij[k]*(dadq[k,i,p,d]-dadq[k,j,p,d])
-    end
-    r2 = rij[1]*rij[1]+rij[2]*rij[2]+rij[3]*rij[3]
-    r1 = sqrt(r2)
-    ardot = aij[1]*rij[1]+aij[2]*rij[2]+aij[3]*rij[3]
-    fac1 = coeff/r1^5
-    fac2 = (2*GNEWT*(m[i]+m[j])/r1 + 3*ardot) 
-    for k=1:3
-#      fac = coeff/r1^5*(rij[k]*(2*GNEWT*(m[i]+m[j])/r1 + 3*ardot) - r2*aij[k])
-      fac = fac1*(rij[k]*fac2- r2*aij[k])
-      v[k,i] += m[j]*fac
-      v[k,j] -= m[i]*fac
-      # Compute time derivative:
-      dqdt_phi[indi+3+k] += 3.0/h*m[j]*fac
-      dqdt_phi[indj+3+k] -= 3.0/h*m[i]*fac
-      # Mass derivative (first part is easy):
-      jac_step[indi+3+k,indj+7] += fac
-      jac_step[indj+3+k,indi+7] -= fac
-      # Position derivatives:
-      fac *= 5.0/r2
-      for p=1:3
-        jac_step[indi+3+k,indi+p] -= fac*m[j]*rij[p]
-        jac_step[indi+3+k,indj+p] += fac*m[j]*rij[p]
-        jac_step[indj+3+k,indj+p] -= fac*m[i]*rij[p]
-        jac_step[indj+3+k,indi+p] += fac*m[i]*rij[p]
+    if ~pair[i,j] # correction for Kepler pairs
+      indj = (j-1)*7
+      for k=1:3
+        aij[k] = a[k,i] - a[k,j]
+  #      aij[k] = 0.0
+        rij[k] = x[k,i] - x[k,j]
       end
-      # Second mass derivative:
-      fac = 2*GNEWT*fac1*rij[k]/r1
-      jac_step[indi+3+k,indi+7] += fac*m[j]
-      jac_step[indi+3+k,indj+7] += fac*m[j]
-      jac_step[indj+3+k,indj+7] -= fac*m[i]
-      jac_step[indj+3+k,indi+7] -= fac*m[i]
-      #  (There's also a mass term in dadq [x]. See below.)
-      # Diagonal position terms:
-      fac = fac1*fac2
-      jac_step[indi+3+k,indi+k] += fac*m[j]
-      jac_step[indi+3+k,indj+k] -= fac*m[j]
-      jac_step[indj+3+k,indj+k] += fac*m[i]
-      jac_step[indj+3+k,indi+k] -= fac*m[i]
-      # Dot product \delta rij terms:
-      fac = -2*fac1*(rij[k]*GNEWT*(m[i]+m[j])/(r2*r1)+aij[k])
-      for p=1:3
-        fac3 = fac*rij[p] + fac1*3.0*rij[k]*aij[p]
-        jac_step[indi+3+k,indi+p] += m[j]*fac3
-        jac_step[indi+3+k,indj+p] -= m[j]*fac3
-        jac_step[indj+3+k,indj+p] += m[i]*fac3
-        jac_step[indj+3+k,indi+p] -= m[i]*fac3
+      # Compute dot product of r_ij with \delta a_ij:
+      fill!(dotdadq,0.0)
+      @inbounds for d=1:n, p=1:4, k=1:3
+        dotdadq[p,d] += rij[k]*(dadq[k,i,p,d]-dadq[k,j,p,d])
       end
-      # Diagonal acceleration terms:
-      fac = -fac1*r2
-      # Duoh.  For dadq, have to loop over all other parameters!
-      @inbounds for d=1:n
-        indd = (d-1)*7
+      r2 = rij[1]*rij[1]+rij[2]*rij[2]+rij[3]*rij[3]
+      r1 = sqrt(r2)
+      ardot = aij[1]*rij[1]+aij[2]*rij[2]+aij[3]*rij[3]
+      fac1 = coeff/r1^5
+      fac2 = (2*GNEWT*(m[i]+m[j])/r1 + 3*ardot) 
+      for k=1:3
+  #      fac = coeff/r1^5*(rij[k]*(2*GNEWT*(m[i]+m[j])/r1 + 3*ardot) - r2*aij[k])
+        fac = fac1*(rij[k]*fac2- r2*aij[k])
+        v[k,i] += m[j]*fac
+        v[k,j] -= m[i]*fac
+        # Compute time derivative:
+        dqdt_phi[indi+3+k] += 3.0/h*m[j]*fac
+        dqdt_phi[indj+3+k] -= 3.0/h*m[i]*fac
+        # Mass derivative (first part is easy):
+        jac_step[indi+3+k,indj+7] += fac
+        jac_step[indj+3+k,indi+7] -= fac
+        # Position derivatives:
+        fac *= 5.0/r2
         for p=1:3
-          jac_step[indi+3+k,indd+p] += fac*m[j]*(dadq[k,i,p,d]-dadq[k,j,p,d])
-          jac_step[indj+3+k,indd+p] -= fac*m[i]*(dadq[k,i,p,d]-dadq[k,j,p,d])
+          jac_step[indi+3+k,indi+p] -= fac*m[j]*rij[p]
+          jac_step[indi+3+k,indj+p] += fac*m[j]*rij[p]
+          jac_step[indj+3+k,indj+p] -= fac*m[i]*rij[p]
+          jac_step[indj+3+k,indi+p] += fac*m[i]*rij[p]
         end
-        # Don't forget mass-dependent term:
-        jac_step[indi+3+k,indd+7] += fac*m[j]*(dadq[k,i,4,d]-dadq[k,j,4,d])
-        jac_step[indj+3+k,indd+7] -= fac*m[i]*(dadq[k,i,4,d]-dadq[k,j,4,d])
-      end
-      # Now, for the final term:  (\delta a_ij . r_ij ) r_ij
-      fac = 3.*fac1*rij[k]
-      @inbounds for d=1:n
-        indd = (d-1)*7
+        # Second mass derivative:
+        fac = 2*GNEWT*fac1*rij[k]/r1
+        jac_step[indi+3+k,indi+7] += fac*m[j]
+        jac_step[indi+3+k,indj+7] += fac*m[j]
+        jac_step[indj+3+k,indj+7] -= fac*m[i]
+        jac_step[indj+3+k,indi+7] -= fac*m[i]
+        #  (There's also a mass term in dadq [x]. See below.)
+        # Diagonal position terms:
+        fac = fac1*fac2
+        jac_step[indi+3+k,indi+k] += fac*m[j]
+        jac_step[indi+3+k,indj+k] -= fac*m[j]
+        jac_step[indj+3+k,indj+k] += fac*m[i]
+        jac_step[indj+3+k,indi+k] -= fac*m[i]
+        # Dot product \delta rij terms:
+        fac = -2*fac1*(rij[k]*GNEWT*(m[i]+m[j])/(r2*r1)+aij[k])
         for p=1:3
-          jac_step[indi+3+k,indd+p] += fac*m[j]*dotdadq[p,d]
-          jac_step[indj+3+k,indd+p] -= fac*m[i]*dotdadq[p,d]
+          fac3 = fac*rij[p] + fac1*3.0*rij[k]*aij[p]
+          jac_step[indi+3+k,indi+p] += m[j]*fac3
+          jac_step[indi+3+k,indj+p] -= m[j]*fac3
+          jac_step[indj+3+k,indj+p] += m[i]*fac3
+          jac_step[indj+3+k,indi+p] -= m[i]*fac3
         end
-        jac_step[indi+3+k,indd+7] += fac*m[j]*dotdadq[4,d]
-        jac_step[indj+3+k,indd+7] -= fac*m[i]*dotdadq[4,d]
+        # Diagonal acceleration terms:
+        fac = -fac1*r2
+        # Duoh.  For dadq, have to loop over all other parameters!
+        @inbounds for d=1:n
+          indd = (d-1)*7
+          for p=1:3
+            jac_step[indi+3+k,indd+p] += fac*m[j]*(dadq[k,i,p,d]-dadq[k,j,p,d])
+            jac_step[indj+3+k,indd+p] -= fac*m[i]*(dadq[k,i,p,d]-dadq[k,j,p,d])
+          end
+          # Don't forget mass-dependent term:
+          jac_step[indi+3+k,indd+7] += fac*m[j]*(dadq[k,i,4,d]-dadq[k,j,4,d])
+          jac_step[indj+3+k,indd+7] -= fac*m[i]*(dadq[k,i,4,d]-dadq[k,j,4,d])
+        end
+        # Now, for the final term:  (\delta a_ij . r_ij ) r_ij
+        fac = 3.*fac1*rij[k]
+        @inbounds for d=1:n
+          indd = (d-1)*7
+          for p=1:3
+            jac_step[indi+3+k,indd+p] += fac*m[j]*dotdadq[p,d]
+            jac_step[indj+3+k,indd+p] -= fac*m[i]*dotdadq[p,d]
+          end
+          jac_step[indi+3+k,indd+7] += fac*m[j]*dotdadq[4,d]
+          jac_step[indj+3+k,indd+7] -= fac*m[i]*dotdadq[4,d]
+        end
       end
     end
   end
 end
-@inbounds for i=1:n
-  indi = (i-1)*7
-  for k=1:3
-  # Position remains unchanged, so Jacobian of position should be identity matrix:
-    jac_step[indi+  k,indi+  k] += 1.0
-  # Jacobian of velocity has linear dependence on initial velocity
-    jac_step[indi+3+k,indi+3+k] += 1.0
+return
+end
+
+function phic!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
+a = zeros(typeof(h),3,n)
+rij = zeros(typeof(h),3)
+aij = zeros(typeof(h),3)
+@inbounds for i=1:n-1, j = i+1:n
+  if pair[i,j] # kick group
+    r2 = 0.0
+    for k=1:3
+      rij[k] = x[k,i] - x[k,j]
+      r2 += rij[k]^2
+    end
+    r3_inv = 1.0/(r2*sqrt(r2))
+    for k=1:3
+      fac = GNEWT*rij[k]*r3_inv
+      v[k,i] -= m[j]*fac*2h/3
+      v[k,j] += m[i]*fac*2h/3
+      a[k,i] -= m[j]*fac
+      a[k,j] += m[i]*fac
+    end
   end
-  # Mass remains unchanged:
-  jac_step[indi+7,indi+7] += 1.0
+end
+coeff = h^3/36*GNEWT
+@inbounds for i=1:n-1 ,j=i+1:n
+  if pair[i,j] # kick group
+    for k=1:3
+      aij[k] = a[k,i] - a[k,j]
+      rij[k] = x[k,i] - x[k,j]
+    end
+    r2 = dot(rij,rij)
+    r5inv = 1.0/(r2^2*sqrt(r2))
+    ardot = dot(aij,rij)
+    for k=1:3
+      fac = coeff*r5inv*(rij[k]*3*ardot-r2*aij[k])
+      v[k,i] += m[j]*fac
+      v[k,j] -= m[i]*fac
+    end
+  end
+end
+end
+
+function phic!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
+a = zeros(typeof(h),3,n)
+rij = zeros(typeof(h),3)
+aij = zeros(typeof(h),3)
+dadq = zeros(typeof(h),3,n,4,n)  # There is no velocity dependence
+dotdadq = zeros(typeof(h),4,n)  # There is no velocity dependence
+jac_step.=eye(typeof(h),7*n)
+fac = 0.0; fac1 = 0.0; fac2 = 0.0; fac3 = 0.0; r1 = 0.0; r2 = 0.0; r3 = 0.0
+coeff = h^3/36*GNEWT
+@inbounds for i=1:n-1
+  indi = (i-1)*7
+  for j=i+1:n
+    if pair[i,j]
+      indj = (j-1)*7
+      for k=1:3
+        rij[k] = x[k,i] - x[k,j]
+      end
+      r2inv = inv(dot(rij,rij))
+      r3inv = r2inv*sqrt(r2inv)
+      for k=1:3
+        # Apply impulses:
+        fac = GNEWT*rij[k]*r3inv
+        facv = fac*2*h/3
+        v[k,i] -= m[j]*facv
+        v[k,j] += m[i]*facv
+        a[k,i] -= m[j]*fac
+        a[k,j] += m[i]*fac
+        # Impulse of ith particle depends on mass of jth particle:
+        jac_step[indi+3+k,indj+7] -= facv
+        # Impulse of jth particle depends on mass of ith particle:
+        jac_step[indj+3+k,indi+7] += facv
+        # x derivative of acceleration vector:
+        facv *= 3.0*r2inv
+        # Dot product x_ij.\delta x_ij means we need to sum over components:
+        for p=1:3
+          jac_step[indi+3+k,indi+p] += facv*m[j]*rij[p]
+          jac_step[indi+3+k,indj+p] -= facv*m[j]*rij[p]
+          jac_step[indj+3+k,indj+p] += facv*m[i]*rij[p]
+          jac_step[indj+3+k,indi+p] -= facv*m[i]*rij[p]
+        end
+        # Final term has no dot product, so just diagonal:
+        facv = 2h/3*GNEWT*r3inv
+        jac_step[indi+3+k,indi+k] -= facv*m[j]
+        jac_step[indi+3+k,indj+k] += facv*m[j]
+        jac_step[indj+3+k,indj+k] -= facv*m[i]
+        jac_step[indj+3+k,indi+k] += facv*m[i]
+        # Mass derivative of acceleration vector (10/6/17 notes):
+        # Since there is no velocity dependence, this is fourth parameter.
+        # Acceleration of ith particle depends on mass of jth particle:
+        dadq[k,i,4,j] -= fac
+        dadq[k,j,4,i] += fac
+        # x derivative of acceleration vector:
+        fac *= 3.0*r2inv
+        # Dot product x_ij.\delta x_ij means we need to sum over components:
+        for p=1:3
+          dadq[k,i,p,i] += fac*m[j]*rij[p]
+          dadq[k,i,p,j] -= fac*m[j]*rij[p]
+          dadq[k,j,p,j] += fac*m[i]*rij[p]
+          dadq[k,j,p,i] -= fac*m[i]*rij[p]
+        end
+        # Final term has no dot product, so just diagonal:
+        fac = GNEWT*r3inv
+        dadq[k,i,k,i] -= fac*m[j]
+        dadq[k,i,k,j] += fac*m[j]
+        dadq[k,j,k,j] -= fac*m[i]
+        dadq[k,j,k,i] += fac*m[i]
+      end
+    end
+  end
+end
+# Next, compute g_i acceleration vector.
+# Note that jac_step[(i-1)*7+k,(j-1)*7+p] is the derivative of the kth coordinate
+# of planet i with respect to the pth coordinate of planet j.
+indi = 0; indj=0; indd = 0
+@inbounds for i=1:n-1
+  indi = (i-1)*7
+  for j=i+1:n
+    if pair[i,j] # correction for Kepler pairs
+      indj = (j-1)*7
+      for k=1:3
+        aij[k] = a[k,i] - a[k,j]
+        rij[k] = x[k,i] - x[k,j]
+      end
+      # Compute dot product of r_ij with \delta a_ij:
+      fill!(dotdadq,0.0)
+      @inbounds for d=1:n, p=1:4, k=1:3
+        dotdadq[p,d] += rij[k]*(dadq[k,i,p,d]-dadq[k,j,p,d])
+      end
+      r2 = dot(rij,rij)
+      r1 = sqrt(r2)
+      ardot = dot(aij,rij)
+      fac1 = coeff/r1^5
+      fac2 = 3*ardot
+      for k=1:3
+        fac = fac1*(rij[k]*fac2- r2*aij[k])
+        v[k,i] += m[j]*fac
+        v[k,j] -= m[i]*fac
+        # Mass derivative (first part is easy):
+        jac_step[indi+3+k,indj+7] += fac
+        jac_step[indj+3+k,indi+7] -= fac
+        # Position derivatives:
+        fac *= 5.0/r2
+        for p=1:3
+          jac_step[indi+3+k,indi+p] -= fac*m[j]*rij[p]
+          jac_step[indi+3+k,indj+p] += fac*m[j]*rij[p]
+          jac_step[indj+3+k,indj+p] -= fac*m[i]*rij[p]
+          jac_step[indj+3+k,indi+p] += fac*m[i]*rij[p]
+        end
+        # Diagonal position terms:
+        fac = fac1*fac2
+        jac_step[indi+3+k,indi+k] += fac*m[j]
+        jac_step[indi+3+k,indj+k] -= fac*m[j]
+        jac_step[indj+3+k,indj+k] += fac*m[i]
+        jac_step[indj+3+k,indi+k] -= fac*m[i]
+        # Dot product \delta rij terms:
+        fac = -2*fac1*aij[k]
+        for p=1:3
+          fac3 = fac*rij[p] + fac1*3.0*rij[k]*aij[p]
+          jac_step[indi+3+k,indi+p] += m[j]*fac3
+          jac_step[indi+3+k,indj+p] -= m[j]*fac3
+          jac_step[indj+3+k,indj+p] += m[i]*fac3
+          jac_step[indj+3+k,indi+p] -= m[i]*fac3
+        end
+        # Diagonal acceleration terms:
+        fac = -fac1*r2
+        # Duoh.  For dadq, have to loop over all other parameters!
+        @inbounds for d=1:n
+          indd = (d-1)*7
+          for p=1:3
+            jac_step[indi+3+k,indd+p] += fac*m[j]*(dadq[k,i,p,d]-dadq[k,j,p,d])
+            jac_step[indj+3+k,indd+p] -= fac*m[i]*(dadq[k,i,p,d]-dadq[k,j,p,d])
+          end
+          # Don't forget mass-dependent term:
+          jac_step[indi+3+k,indd+7] += fac*m[j]*(dadq[k,i,4,d]-dadq[k,j,4,d])
+          jac_step[indj+3+k,indd+7] -= fac*m[i]*(dadq[k,i,4,d]-dadq[k,j,4,d])
+        end
+        # Now, for the final term:  (\delta a_ij . r_ij ) r_ij
+        fac = 3.*fac1*rij[k]
+        @inbounds for d=1:n
+          indd = (d-1)*7
+          for p=1:3
+            jac_step[indi+3+k,indd+p] += fac*m[j]*dotdadq[p,d]
+            jac_step[indj+3+k,indd+p] -= fac*m[i]*dotdadq[p,d]
+          end
+          jac_step[indi+3+k,indd+7] += fac*m[j]*dotdadq[4,d]
+          jac_step[indj+3+k,indd+7] -= fac*m[i]*dotdadq[4,d]
+        end
+      end
+    end
+  end
 end
 return
 end
@@ -1201,7 +1382,7 @@ kickfast!(x,v,h2,m,n,pair)
     end
   end
 end
-phisalpha!(x,v,h,m,convert(typeof(h),2),n)
+phisalpha!(x,v,h,m,convert(typeof(h),2),n,pair)
 for i=n-1:-1:1
   for j=n:-1:i+1
     if ~pair[i,j]
@@ -1269,7 +1450,7 @@ indi = 0; indj = 0
     end
   end
 end
-phisalpha!(x,v,h,m,two,n,jac_phi,dqdt_phi) # 10%
+phisalpha!(x,v,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
 @inbounds for i in eachindex(jac_step)
   jac_copy[i] = jac_step[i]
 end
@@ -1329,11 +1510,11 @@ function dh17!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Arr
 alpha = convert(typeof(h),alpha0)
 h2 = 0.5*h
 # alpha = 0. is similar in precision to alpha=0.25
+kickfast!(x,v,h/6,m,n,pair)
 if alpha != 0.0
-  phisalpha!(x,v,h,m,alpha,n)
+  phisalpha!(x,v,h,m,alpha,n,pair)
 end
 drift!(x,v,h2,n)
-kickfast!(x,v,h2,m,n,pair)
 @inbounds for i=1:n-1
   for j=i+1:n
     if ~pair[i,j]
@@ -1342,8 +1523,10 @@ kickfast!(x,v,h2,m,n,pair)
     end
   end
 end
+phic!(x,v,h,m,n,pair)
+# kick and correction for pairs which are kicked:
 if alpha != 1.0
-  phisalpha!(x,v,h,m,2.*(1.-alpha),n)
+  phisalpha!(x,v,h,m,2.*(1.-alpha),n,pair)
 end
 for i=n-1:-1:1
   for j=n:-1:i+1
@@ -1353,11 +1536,11 @@ for i=n-1:-1:1
     end
   end
 end
-kickfast!(x,v,h2,m,n,pair)
 drift!(x,v,h2,n)
 if alpha != 0.0
-  phisalpha!(x,v,h,m,alpha,n)
+  phisalpha!(x,v,h,m,alpha,n,pair)
 end
+kickfast!(x,v,h/6,m,n,pair)
 return
 end
 
@@ -1383,22 +1566,22 @@ dqdt_phi = zeros(typeof(h),sevn)
 dqdt_kick = zeros(typeof(h),sevn)
 jac_tmp1 = zeros(typeof(h),14,sevn)
 jac_tmp2 = zeros(typeof(h),14,sevn)
+kickfast!(x,v,h/6,m,n,jac_phi,dqdt_kick,pair)
 # alpha = 0. is similar in precision to alpha=0.25
 if alpha != zero
-  phisalpha!(x,v,h,m,alpha,n,jac_phi,dqdt_phi)
-  jac_step .= jac_phi*jac_step # < 1%
+  phisalpha!(x,v,h,m,alpha,n,jac_phi,dqdt_phi,pair)
+#  jac_step .= jac_phi*jac_step # < 1%
 end
-drift!(x,v,h2,n,jac_step)
-kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
-# Multiply Jacobian from kick step:
+# Multiply Jacobian from kick/phisalpha steps:
 @inbounds for i in eachindex(jac_step)
   jac_copy[i] = jac_step[i]
 end
 if typeof(h) == BigFloat
-  jac_step = *(jac_kick,jac_copy)
+  jac_step = *(jac_phi,jac_copy)
 else
-  BLAS.gemm!('N','N',one,jac_kick,jac_copy,zero,jac_step)
+  BLAS.gemm!('N','N',one,jac_phi,jac_copy,zero,jac_step)
 end
+drift!(x,v,h2,n,jac_step)
 indi = 0; indj = 0
 @inbounds for i=1:n-1
   indi = (i-1)*7
@@ -1431,18 +1614,27 @@ indi = 0; indj = 0
     end
   end
 end
+phic!(x,v,h,m,n,jac_phi,pair)
 if alpha != one
-#  phisalpha!(x,v,h,m,2.*(1.-alpha),n,jac_phi) # 10%
-  phisalpha!(x,v,h,m,two*(one-alpha),n,jac_phi,dqdt_phi) # 10%
-  @inbounds for i in eachindex(jac_step)
-    jac_copy[i] = jac_step[i]
-  end
+#  phisalpha!(x,v,h,m,2.*(1.-alpha),n,jac_phi,pair) # 10%
+  phisalpha!(x,v,h,m,two*(one-alpha),n,jac_phi,dqdt_phi,pair) # 10%
+#  @inbounds for i in eachindex(jac_step)
+#    jac_copy[i] = jac_step[i]
+#  end
 #  jac_step .= jac_phi*jac_step # < 1%  Perhaps use gemm?! [ ]
-  if typeof(h) == BigFloat
-    jac_step = *(jac_phi,jac_copy)
-  else
-    BLAS.gemm!('N','N',one,jac_phi,jac_copy,zero,jac_step)
-  end
+#  if typeof(h) == BigFloat
+#    jac_step = *(jac_phi,jac_copy)
+#  else
+#    BLAS.gemm!('N','N',one,jac_phi,jac_copy,zero,jac_step)
+#  end
+end
+@inbounds for i in eachindex(jac_step)
+  jac_copy[i] = jac_step[i]
+end
+if typeof(h) == BigFloat
+  jac_step = *(jac_phi,jac_copy)
+else
+  BLAS.gemm!('N','N',one,jac_phi,jac_copy,zero,jac_step)
 end
 indi=0; indj=0
 for i=n-1:-1:1
@@ -1477,21 +1669,21 @@ for i=n-1:-1:1
     end
   end
 end
-kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
+drift!(x,v,h2,n,jac_step)
+if alpha != zero
+#  phisalpha!(x,v,h,m,alpha,n,jac_phi)
+  phisalpha!(x,v,h,m,alpha,n,jac_phi,dqdt_phi,pair) # 10%
+#  jac_step .= jac_phi*jac_step # < 1%
+end
+kickfast!(x,v,h/6,m,n,jac_phi,dqdt_kick,pair)
 # Multiply Jacobian from kick step:
 @inbounds for i in eachindex(jac_step)
   jac_copy[i] = jac_step[i]
 end
 if typeof(h) == BigFloat
-  jac_step = *(jac_kick,jac_copy)
+  jac_step = *(jac_phi,jac_copy)
 else
-  BLAS.gemm!('N','N',one,jac_kick,jac_copy,zero,jac_step)
-end
-drift!(x,v,h2,n,jac_step)
-if alpha != zero
-#  phisalpha!(x,v,h,m,alpha,n,jac_phi)
-  phisalpha!(x,v,h,m,alpha,n,jac_phi,dqdt_phi) # 10%
-  jac_step .= jac_phi*jac_step # < 1%
+  BLAS.gemm!('N','N',one,jac_phi,jac_copy,zero,jac_step)
 end
 #println("jac_step: ",typeof(h)," ",convert(Array{Float64,2},jac_step))
 return #jac_step
@@ -1546,7 +1738,7 @@ dqdt .= dqdt_kick
     end
   end
 end
-phisalpha!(x,v,h,m,two,n,jac_phi,dqdt_phi) # 10%
+phisalpha!(x,v,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
 # Add in time derivative with respect to prior parameters:
 #BLAS.gemm!('N','N',one,jac_phi,dqdt,one,dqdt_phi)
 dqdt_phi .+= *(jac_phi,dqdt)
