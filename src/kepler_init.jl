@@ -22,7 +22,11 @@ tp=(elements[2]+period*sqrt1mecc2/2.0/pi*(ecc*sin(f1)/(1.0+ecc*cos(f1))
 n = 2pi/period
 m=n*(time-tp)
 # Kepler solver:
-f=kepler(m,ecc)
+if ecc > 0.0
+  f = kepler(m,ecc)
+else
+  f = m
+end
 ecosfp1 = 1.0+ecc*cos(f)
 fdot = n*ecosfp1^2/sqrt1mecc2^3
 # Compute the radial distance:

@@ -36,7 +36,7 @@ pair = zeros(Bool,n,n)
 #end
 println("pair: ",pair)
 
-jac_step = zeros(7*n,7*n)
+jac_step = eye(7*n)
 
 for k=1:n
   m[k] = elements[k,1]

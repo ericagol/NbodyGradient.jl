@@ -1708,8 +1708,8 @@ drift!(x,v,h2,n)
 for i=1:n, k=1:3
   dqdt[(i-1)*7+k] = half*v[k,i] + h2*dqdt[(i-1)*7+3+k]
 end
-kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
-dqdt_kick *= half  # Since step is h/2
+kickfast!(x,v,h/6,m,n,jac_kick,dqdt_kick,pair)
+dqdt_kick /= 6 # Since step is h/2
 dqdt_kick .+= *(jac_kick,dqdt)
 # Copy result to dqdt:
 dqdt .= dqdt_kick
@@ -1771,8 +1771,8 @@ for i=n-1:-1:1
   end
 end
 fill!(dqdt_kick,zero)
-kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
-dqdt_kick *= half  # Since step is h/2
+kickfast!(x,v,h/6,m,n,jac_kick,dqdt_kick,pair)
+dqdt_kick /= 6 # Since step is h/2
 dqdt_kick .+= *(jac_kick,dqdt)
 # Copy result to dqdt:
 dqdt .= dqdt_kick
@@ -1793,6 +1793,7 @@ dt = 1.0
 iter = 0
 r3 = 0.0
 gdot = 0.0
+gsky = 0.0
 x = copy(x1)
 v = copy(v1)
 while abs(dt) > TRANSIT_TOL && iter < 20

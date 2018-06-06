@@ -154,7 +154,7 @@ for i=1:7, j=1:3, k=1:7, l=1:3
     end
   end
 end
-println("jac_step: ",jac_step," jac_step-jac_step_num: ",jac_step-jac_step_num)
+#println("jac_step: ",jac_step," jac_step-jac_step_num: ",jac_step-jac_step_num)
 
 println("Maximum jac_step kickfast error: ",jacmax)
 dqdt_num = convert(Array{Float64,1},dqdt_num)
