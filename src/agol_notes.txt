@@ -307,8 +307,8 @@ Next steps:
 
 1).  Concatenate multiple steps, and test these. [x]
 2).  Write transit time derivative, and test. [x]
-3).  Write initial condition derivative, and test. [ ]
-4).  Profile code & see if there are ways to speed it up. [ ]
+3).  Write initial condition derivative, and test. [x]
+4).  Profile code & see if there are ways to speed it up. [x]
 
 Implemented transit-time derivatives;  now need to test if this works.
 
@@ -362,7 +362,7 @@ Things to do:
 1).  Generalize for inclined planets. [x] (I generalized kepler_init).
  1b). Check that initial t0 & P gives correct ephemeris in 2-body (Kepler) case. [ ]
 2).  Generalize for arbitrary mobile diagram.  [ ]
-3).  Compare with rebound. [ ]
+3).  Compare with rebound. [x]
 4).  Check coordinates. [ ]
 5).  Finish derivatives of initial conditions. [x]
 6).  Allow output of derivatives of positions/velocities at arbitrary time steps
@@ -374,7 +374,7 @@ for RV, astrometry, etc. [ ]
 
 11/14/2017
 Found that using BLAS.gemm! and careful copying of matrices reduces time
-for 8-body case by another ~60%.  Now the derivatives take only a factor of 
+for 8-body case by another ~60%.  Now the derivatives take only a factor of
 ~8 times longer to evaluate in the 8-body case (which is for 56 free parameters!).
 So, this is ~14x faster than evaluating 2-side numerical derivatives, and
 much more accurate as well (in the 8-body case;  appears to scale with nbody).
