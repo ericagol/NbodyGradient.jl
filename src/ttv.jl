@@ -14,6 +14,7 @@ include("kepler_step.jl")
 include("kepler_drift_step.jl")
 include("init_nbody.jl")
 
+# These "constants" pre-allocate memory for matrices used in the derivative computation (to save time with allocation and garbage collection):
 const pxpr0 = zeros(Float64,3);const  pxpa0=zeros(Float64,3);const  pxpk=zeros(Float64,3);const  pxps=zeros(Float64,3);const  pxpbeta=zeros(Float64,3)
 const dxdr0 = zeros(Float64,3);const  dxda0=zeros(Float64,3);const  dxdk=zeros(Float64,3);const  dxdv0 =zeros(Float64,3)
 const prvpr0 = zeros(Float64,3);const  prvpa0=zeros(Float64,3);const  prvpk=zeros(Float64,3);const  prvps=zeros(Float64,3);const  prvpbeta=zeros(Float64,3)
@@ -1709,7 +1710,7 @@ for i=1:n, k=1:3
   dqdt[(i-1)*7+k] = half*v[k,i] + h2*dqdt[(i-1)*7+3+k]
 end
 kickfast!(x,v,h/6,m,n,jac_kick,dqdt_kick,pair)
-dqdt_kick /= 6 # Since step is h/2
+dqdt_kick /= 6 # Since step is h/6
 dqdt_kick .+= *(jac_kick,dqdt)
 # Copy result to dqdt:
 dqdt .= dqdt_kick
@@ -1772,7 +1773,7 @@ for i=n-1:-1:1
 end
 fill!(dqdt_kick,zero)
 kickfast!(x,v,h/6,m,n,jac_kick,dqdt_kick,pair)
-dqdt_kick /= 6 # Since step is h/2
+dqdt_kick /= 6 # Since step is h/6
 dqdt_kick .+= *(jac_kick,dqdt)
 # Copy result to dqdt:
 dqdt .= dqdt_kick
