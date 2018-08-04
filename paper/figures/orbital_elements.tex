@@ -1,0 +1,25 @@
+\documentclass{standalone}
+\usepackage{tikz}
+
+\begin{document}
+\begin{tikzpicture}
+
+\draw[thick,->] (0,0) -- (2,0) node[below]{$x$};
+\draw[thick,->] (0,0) -- (0,-2) node[left]{$y$};
+\draw[] (0.2,0) -- (0.2,-0.2) -- (0.,-0.2);
+\draw[thick,->] (0,0) -- (1.0,1.4) node[right]{$z$};
+%\draw[->] (0,0) -- (2.2,0.5) node[right]{$(x,y,z)$};
+\draw (0,0) -- (2.2,0.6) node[right,scale=0.5]{pericenter};
+\draw[->] (0,0) -- (1.1,0.70) node[above,scale=0.5]{${\bf r}_{K,i}$};
+\fill (1.1,0.70) circle (0.035);
+\draw (.55,.15) arc (15:28:0.57) node[right,scale=0.4]{$f$} arc (28:32:0.57);
+\draw (.5,0.0) arc (0:7:0.57) node[right,scale=0.4]{$\omega$} arc (7:14:0.57);
+%\draw (1.75,0.0) arc (0:10:0.5) node[right,scale=0.4] {$I$} arc (10:20:0.5);
+\draw[->] (1.41,0.0) -- (1.41,-0.4) node[below,right,scale=0.4] {${\hat y}$};
+\draw (1.41,-.15) arc (-90:-115:0.4) node[left,below,scale=0.4] {$I$} arc (-115:-121:0.4);
+%\draw[->] (2.2,0.5) -- (2.1,0.8) node[left]{$(\dot x,\dot y,\dot z)$};
+\draw[dotted,rotate=15] (-0.5,0.) ellipse (2.75 and .5);
+\draw (-1.7,0) -- (0,0);
+\end{tikzpicture}
+
+\end{document}

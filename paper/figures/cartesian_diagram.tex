@@ -1,0 +1,17 @@
+\documentclass{standalone}
+\usepackage{tikz}
+
+\begin{document}
+\begin{tikzpicture}
+
+\draw[thick,->] (0,0) -- (2,0) node[below]{$x$};
+\draw[thick,->] (0,0) -- (0,-2) node[left]{$y$};
+\draw[] (0.2,0) -- (0.2,-0.2) -- (0.,-0.2);
+\draw[thick,->] (0,0) -- (1.0,1.4) node[right]{$z$};
+\draw[thick,dashed,->] (0,0) -- (-2.,-2.8) node[below]{to observer at (0,0,-D)};
+\draw[->] (0,0) -- (2.2,0.5) node[right]{$(x,y,z)$};
+\draw[->] (2.2,0.5) -- (2.1,0.8) node[left]{$(\dot x,\dot y,\dot z)$};
+\node[draw] at (1,-1) {Sky plane};
+\end{tikzpicture}
+
+\end{document}
