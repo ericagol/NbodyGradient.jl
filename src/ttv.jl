@@ -2,24 +2,28 @@
 # system with BH15 integrator.  Please cite Hernandez & Bertschinger (2015)
 # if using this in a paper.
 
-const YEAR  = 365.242
-const GNEWT = 39.4845/YEAR^2
-const NDIM  = 3
+if ~isdefined(:YEAR)
+  const YEAR  = 365.242
+  const GNEWT = 39.4845/YEAR^2
+  const NDIM  = 3
 #const TRANSIT_TOL = 1e-8
-const TRANSIT_TOL = 10.*sqrt(eps(1.0))
+  const TRANSIT_TOL = 10.*sqrt(eps(1.0))
 #const TRANSIT_TOL = 10.*eps(1.0)
-const third = 1./3.
-const alpha0 = 0.0
+  const third = 1./3.
+  const alpha0 = 0.0
+end
 include("kepler_step.jl")
 include("kepler_drift_step.jl")
 include("init_nbody.jl")
 
 # These "constants" pre-allocate memory for matrices used in the derivative computation (to save time with allocation and garbage collection):
-const pxpr0 = zeros(Float64,3);const  pxpa0=zeros(Float64,3);const  pxpk=zeros(Float64,3);const  pxps=zeros(Float64,3);const  pxpbeta=zeros(Float64,3)
-const dxdr0 = zeros(Float64,3);const  dxda0=zeros(Float64,3);const  dxdk=zeros(Float64,3);const  dxdv0 =zeros(Float64,3)
-const prvpr0 = zeros(Float64,3);const  prvpa0=zeros(Float64,3);const  prvpk=zeros(Float64,3);const  prvps=zeros(Float64,3);const  prvpbeta=zeros(Float64,3)
-const drvdr0 = zeros(Float64,3);const  drvda0=zeros(Float64,3);const  drvdk=zeros(Float64,3);const  drvdv0=zeros(Float64,3)
-const vtmp = zeros(Float64,3);const  dvdr0 = zeros(Float64,3);const  dvda0=zeros(Float64,3);const  dvdv0=zeros(Float64,3);const  dvdk=zeros(Float64,3)
+if ~isdefined(:pxpr0)
+  const pxpr0 = zeros(Float64,3);const  pxpa0=zeros(Float64,3);const  pxpk=zeros(Float64,3);const  pxps=zeros(Float64,3);const  pxpbeta=zeros(Float64,3)
+  const dxdr0 = zeros(Float64,3);const  dxda0=zeros(Float64,3);const  dxdk=zeros(Float64,3);const  dxdv0 =zeros(Float64,3)
+  const prvpr0 = zeros(Float64,3);const  prvpa0=zeros(Float64,3);const  prvpk=zeros(Float64,3);const  prvps=zeros(Float64,3);const  prvpbeta=zeros(Float64,3)
+  const drvdr0 = zeros(Float64,3);const  drvda0=zeros(Float64,3);const  drvdk=zeros(Float64,3);const  drvdv0=zeros(Float64,3)
+  const vtmp = zeros(Float64,3);const  dvdr0 = zeros(Float64,3);const  dvda0=zeros(Float64,3);const  dvdv0=zeros(Float64,3);const  dvdk=zeros(Float64,3)
+end
 
 # Computes TTVs as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
 #function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dlnq::Float64,iq::Int64,jq::Int64)
