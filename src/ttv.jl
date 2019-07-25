@@ -1829,7 +1829,7 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   iter +=1
 end
 if iter >= 20
-  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
+#  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
 end
 # Note: this is the time elapsed *after* the beginning of the timestep:
 return tt::typeof(h)
@@ -1875,7 +1875,7 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   iter +=1
 end
 if iter >= 20
-  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
+#  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
 end
 # Compute time derivatives:
 x = copy(x1)
@@ -1949,7 +1949,7 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   iter +=1
 end
 if iter >= 20
-  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
+#  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
 end
 # Note: this is the time elapsed *after* the beginning of the timestep:
 return tt::typeof(h)
@@ -1988,7 +1988,7 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   iter +=1
 end
 if iter >= 20
-  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
+#  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
 end
 # Compute time derivatives:
 x = copy(x1); v = copy(v1)

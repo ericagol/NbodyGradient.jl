@@ -18,11 +18,11 @@ m =zeros(n)
 x0=zeros(3,n)
 v0=zeros(3,n)
 # Define which pairs will have impulse rather than -drift+Kepler:
-pair = ones(Bool,n,n)
+pair = ones(Bool,n,n)  # This does impulses
 # We want Keplerian between star & planets, and impulses between
 # planets.  Impulse is indicated with 'true', -drift+Kepler with 'false':
 for i=2:n
-  pair[1,i] = false
+  pair[1,i] = false  # This does a Kepler + drift
   # We don't need to define this, but let's anyways:
   pair[i,1] = false
 end

@@ -205,7 +205,7 @@ if beta0 > zero || beta0 < zero
    s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,g3bs,r,rinv,ds,iter = solve_kepler_drift!(h,k,x0,v0,beta0,r0,
     s0,state,drift_first)
 else
-  println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
+#  println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
   r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
 end
 state[8]= r
@@ -249,7 +249,7 @@ if beta0 > zero || beta0 < zero
 # Add in s and beta0 derivatives:
   compute_jacobian_kep_drift!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdtm1,cx,sx,g1bs,g2bs,r0,r,jacobian,delxv_jac,drift_first)
 else
-  println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
+#  println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
   r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
 end
 # recompute beta:

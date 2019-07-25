@@ -1,0 +1,64 @@
+Overview
+--------
+
+universal.c is a fast, accurate Kepler solver in universal variables
+that does not use the Stumpff series.  It takes as input a "Kepler
+constant," a time step, and state pointers to the initial state and
+the advanced state.
+
+universal.c is intended to be used as part of an N-body integrator
+such as those based on the Wisdom-Holman method and its variations.
+See Wisdom and Holman (1991) Astron.J. 102, 1528.  See also
+Hernandez and Bertschinger (2015) MNRAS, 452, 1934.
+
+Publication
+-----------
+
+universal.c is described in Wisdom and Hernandez (2015) MNRAS, in
+press.
+
+Compilation
+-----------
+
+To make the object file (universal.o) just type "make all" in the
+directory with the sources.
+
+The main files universal.h and universal.c are packaged in UNIVERSAL
+with two sample programs that use them:  
+
+(1) The first is called simple.c.  It take a single step using the
+Kepler stepper.  After "make all" just type:
+./simple
+to see the results.  
+
+(2) The program "test-universal.c" produces the data for the top panel
+in Fig.3 in Wisdom and Hernandez (2015).  After "make all" just type:
+./test-universal > universal.dat
+The figure may be produced from this data by executing gnuplot:
+gnuplot universal.gnuplot 
+
+Acknowledgements
+----------------
+
+When you use this code or parts of this code for results that are
+presented in a scientific publication, please send us a copy of your
+paper so we can keep track of publications that made use of this work.
+
+If you use universal.c please cite Wisdom and Hernandez (2015).
+
+License
+-------
+UNIVERSAL (and the programs packaged with it) is free software: you
+can redistribute it and/or modify it under the terms of the GNU
+General Public License as published by the Free Software Foundation,
+either version 3 of the License, or (at your option) any later
+version.
+
+UNIVERSAL is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with UNIVERSAL.  If not, see <http://www.gnu.org/licenses/>.
+
