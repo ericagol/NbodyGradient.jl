@@ -1,13 +1,18 @@
 rebound = readdlm("rebound_times.txt",',')
 nbodygrad = readdlm("nbodygradient_times.txt",',')
+nbodygrad_pair = readdlm("nbodygradient_times_pair.txt",',')
 
 using PyPlot
 
 clf()
 semilogy(nbodygrad[:,1],nbodygrad[:,2],label="NbodyGrad, no gradient",linestyle="dashed",c="b",linewidth=2)
 semilogy(nbodygrad[:,1],nbodygrad[:,2],".",c="b",markersize=15)
+semilogy(nbodygrad_pair[:,1],nbodygrad_pair[:,2],label="NbodyGrad, no gradient, adjacent Kepler",linestyle="dashed",c="g",linewidth=2)
+semilogy(nbodygrad_pair[:,1],nbodygrad_pair[:,2],".",c="g",markersize=15)
 semilogy(nbodygrad[:,1],nbodygrad[:,3],label="NbodyGrad, gradient",c="b",linewidth=2)
 semilogy(nbodygrad[:,1],nbodygrad[:,3],".",c="b",markersize=15)
+semilogy(nbodygrad_pair[:,1],nbodygrad_pair[:,3],label="NbodyGrad, gradient, adjacent Kepler",c="g",linewidth=2)
+semilogy(nbodygrad_pair[:,1],nbodygrad_pair[:,3],".",c="g",markersize=15)
 semilogy(rebound[:,1],rebound[:,2],label="Rebound, no gradient",linestyle="dashed",c="r",linewidth=2)
 semilogy(rebound[:,1],rebound[:,2],".",c="r",markersize=15)
 semilogy(rebound[:,1],rebound[:,3],label="Rebound, gradient",c="r",linewidth=2)

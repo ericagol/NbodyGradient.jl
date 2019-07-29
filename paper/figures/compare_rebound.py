@@ -47,6 +47,15 @@ def evaluate(order=0,N=0, nplanet = 0, integrator="ias15"):
             if i>=49:
                 pi = 7
                 shifti = -49
+            if i>=56:
+                pi = 8
+                shifti = -56
+            if i>=63:
+                pi = 9
+                shifti = -63
+            if i>=70:
+                pi = 10
+                shifti = -70
             var_d = sim.add_variation()
             var_d.vary(pi,vs[i+shifti])
             var.append(var_d)
@@ -72,7 +81,7 @@ def evaluateWithN(order,N,integrator="ias15",nplanet = 0):
         pass
     return _e
 
-for i in range(7):
+for i in range(10):
   Nmax = (i+1)*7+1
   repeat = 1
   t = Timer(evaluateWithN(0,0,i+1))
