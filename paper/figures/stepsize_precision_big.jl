@@ -1,3 +1,4 @@
+
 include("../../src/ttv.jl")
 include("/Users/ericagol/Computer/Julia/regress.jl")
 
@@ -8,8 +9,8 @@ using PyPlot
 #n = 8
 n = 3
 n_body = n
-#t0 = 7257.93115525
-t0 =  0.0
+t0 = 7257.93115525
+#t0 =  0.0
 #t0 =  randn()
 #h  = 0.12
 h  = 0.07
@@ -17,7 +18,7 @@ h  = 0.07
 #tmax = 800.0
 #tmax = 600.0
 #tmax = 800.0
-tmax = 2000.0
+tmax = 1000.0
 
 # Read in initial conditions:
 elements = readdlm("elements.txt",',')
@@ -41,11 +42,18 @@ count = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
 rstar = 1e12
-dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
-tt_save[1,:,:]=tt1
+elements_big = convert(Array{BigFloat,2},elements)
+hbig = big(h)
+t0big = big(t0)
+tmaxbig = big(tmax)
+tt1big = big.(tt1)
+rstarbig = big(rstar)
+dqbig = ttv_elements!(n,t0big,hbig,tmaxbig,elements_big,tt1big,count,big(0.0),0,0,rstarbig)
+tt_save[1,:,:]=convert(Array{Float64,2},tt1big)
+#dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
+#tt_save[1,:,:]=tt1
 # Now call with 1/10 the timestep:
 #dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt1,count,0.0,0,0,rstar)
-
 
 mask = zeros(Bool, size(dtdq0))
 for jq=1:n_body
@@ -62,68 +70,55 @@ for jq=1:n_body
   end
 end
 
-# Create BigFloat versions of the variables:
-elements_big = convert(Array{BigFloat,2},elements)
-hbig = big(h)
-t0big = big(t0)
-tmaxbig = big(tmax)
-tt1big = big.(tt1)
-rstarbig = big(rstar)
-
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtdelements0 = zeros(n,maximum(ntt),7,n)
 #dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
 dtdq2 = zeros(n,maximum(ntt),7,n)
 dtdelements2 = zeros(n,maximum(ntt),7,n)
 #dtdelements2 = ttv_elements!(n,t0,h/2.,tmax,elements,tt1,count,dtdq2,rstar)
-dq = ttv_elements!(n,t0,h/2.,tmax,elements,tt1,count,0.0,0,0,rstar)
-tt_save[2,:,:]=tt1
+dqbig = ttv_elements!(n,t0big,hbig/2,tmaxbig,elements_big,tt1big,count,big(0.0),0,0,rstarbig)
+tt_save[2,:,:]=convert(Array{Float64,2},tt1big)
+#dq = ttv_elements!(n,t0,h/2.,tmax,elements,tt1,count,0.0,0,0,rstar)
+#tt_save[2,:,:]=tt1
 dtdq4 = zeros(n,maximum(ntt),7,n)
 dtdelements4 = zeros(n,maximum(ntt),7,n)
 #dtdelements4 = ttv_elements!(n,t0,h/4.,tmax,elements,tt1,count,dtdq4,rstar)
-dq = ttv_elements!(n,t0,h/4.,tmax,elements,tt1,count,0.0,0,0,rstar)
-tt_save[3,:,:]=tt1
+dqbig = ttv_elements!(n,t0big,hbig/4,tmaxbig,elements_big,tt1big,count,big(0.0),0,0,rstarbig)
+tt_save[3,:,:]=convert(Array{Float64,2},tt1big)
+#dq = ttv_elements!(n,t0,h/4.,tmax,elements,tt1,count,0.0,0,0,rstar)
+#tt_save[3,:,:]=tt1
 dtdq8 = zeros(n,maximum(ntt),7,n)
 dtdelements8 = zeros(n,maximum(ntt),7,n)
 #dtdelements8 = ttv_elements!(n,t0,h/8.,tmax,elements,tt1,count,dtdq8,rstar)
 #dq = ttv_elements!(n,t0,h/8.,tmax,elements,tt1,count,0.0,0,0,rstar)
-#dq = ttv_elements!(n,t0,h/8.,tmax,elements,tt1,count,0.0,0,0,rstar)
-#dq = ttv_elements!(n,t0,h*16/127,tmax,elements,tt1,count,0.0,0,0,rstar)
-#dq = ttv_elements!(n,t0,h/7.75,tmax,elements,tt1,count,0.0,0,0,rstar)
 #tt_save[4,:,:]=tt1
 dqbig = ttv_elements!(n,t0big,hbig/8,tmaxbig,elements_big,tt1big,count,big(0.0),0,0,rstarbig)
 tt_save[4,:,:]=convert(Array{Float64,2},tt1big)
-
 dtdq16 = zeros(n,maximum(ntt),7,n)
 dtdelements16 = zeros(n,maximum(ntt),7,n)
 #dtdelements16 = ttv_elements!(n,t0,h/16.,tmax,elements,tt1,count,dtdq16,rstar)
 #dq = ttv_elements!(n,t0,h/16.,tmax,elements,tt1,count,0.0,0,0,rstar)
-dq = ttv_elements!(n,t0,h/16.,tmax,elements,tt1,count,0.0,0,0,rstar)
-#dq = ttv_elements!(n,t0,h*19/303,tmax,elements,tt1,count,0.0,0,0,rstar)
-tt_save[5,:,:]=tt1
-# Compute the h/16 case in BigFloat precision:
-#dqbig = ttv_elements!(n,t0big,hbig/16,tmaxbig,elements_big,tt1big,count,big(0.0),0,0,rstarbig)
-#tt_save[5,:,:]=convert(Array{Float64,2},tt1big)
-
+#tt_save[5,:,:]=tt1
+dqbig = ttv_elements!(n,t0big,hbig/16,tmaxbig,elements_big,tt1big,count,big(0.0),0,0,rstarbig)
+tt_save[5,:,:]=convert(Array{Float64,2},tt1big)
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements0-dtdelements2)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements2-dtdelements4)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements4-dtdelements8)))
-#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements0[mask])-asinh.(dtdelements2[mask]))))
-#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq0)-asinh.(dtdq2))))
-#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements2[mask])-asinh.(dtdelements4[mask]))))
-#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq2)-asinh.(dtdq4))))
-#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements4[mask])-asinh.(dtdelements8[mask]))))
-#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq4)-asinh.(dtdq8))))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements0[mask])-asinh.(dtdelements2[mask]))))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq0)-asinh.(dtdq2))))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements2[mask])-asinh.(dtdelements4[mask]))))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq2)-asinh.(dtdq4))))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements4[mask])-asinh.(dtdelements8[mask]))))
+println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq4)-asinh.(dtdq8))))
 
 # Make a plot of transit time errors versus stepsize:
 ntrans = sum(count)
 clf()
-sigt = zeros(n-1,4)
+sigt = zeros(n-1,5)
 tab = 0
-#h_list = [h,h/2.,h/4.,h/8.]
-h_list = [h,h/2.,h/4.,h/8]
-hlabel = ["h-h/16","h/2-h/16","h/4-h/16","h/8-h/16"]
-ch = ["black","red","green","blue"]
+h_list = [h,h/2.,h/4.,h/8.,h/8]
+hlabel = ["h-h/16","h/2-h/16","h/4-h/16","h/8-h/16","h/16-big(h/16)"]
+ch = ["black","red","green","blue","orange"]
 for i=2:n
   for j=1:4
     tti1 = tt_save[j,i,1:count[i]]
@@ -146,12 +141,11 @@ read(STDIN,Char)
 # Make a plot of timing errors versus stepsize:
 ntrans = sum(count)
 clf()
-sigt = zeros(n-1,4)
+sigt = zeros(n-1,5)
 tab = 0
-#h_list = [h,h/2.,h/4.,h/8.]
-h_list = [h,h/2.,h/4.,h/8]
-hlabel = ["h-h/16","h/2-h/16","h/4-h/16","h/8-h/16"]
-ch = ["black","red","green","blue"]
+h_list = [h,h/2.,h/4.,h/8.,h/8]
+hlabel = ["h-h/16","h/2-h/16","h/4-h/16","h/8-h/16","h/16-big(h/16)"]
+ch = ["black","red","green","blue","orange"]
 for i=2:n
   fn = zeros(Float64,2,count[i])
   sig = ones(count[i])
@@ -187,4 +181,4 @@ legend(loc = "upper left")
 ylabel("RMS timing error [sec]")
 xlabel("Step size [day]")
 
-PyPlot.savefig("timing_error_vs_h.pdf",bbox_inches="tight")
+PyPlot.savefig("timing_error_vs_h_big.pdf",bbox_inches="tight")

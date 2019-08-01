@@ -69,7 +69,8 @@ y = zero; yp = one
 iter = 0
 ds = Inf
 KEPLER_TOL = sqrt(eps(h))
-while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
+ITMAX = 20
+while iter == 0 || (abs(ds) > KEPLER_TOL && iter < ITMAX)
   xx = sqb*s
   if beta0 > 0
     sx = sin(xx); cx = cos(xx)
@@ -88,6 +89,9 @@ while iter == 0 || (abs(ds) > KEPLER_TOL && iter < 10)
   ds = calc_ds_opt(y,yp,ypp,yppp)
   s += ds
   iter +=1
+end
+if iter == ITMAX
+  println("Reached max iterations in solve_kepler: ",s0," ",s," ",ds)
 end
 #println("sguess: ",sguess," s: ",s," s-sguess: ",s-sguess," ds: ",ds," iter: ",iter)
 # Since we updated s, need to recompute:
@@ -128,7 +132,7 @@ if beta0 > zero || beta0 < zero
    s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r,rinv,ds,iter = solve_kepler!(h,k,x0,v0,beta0,r0,
     s0,state)
 else
-#  println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
+  println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
   r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
 end
 state[8]= r
@@ -161,7 +165,7 @@ if beta0 > zero || beta0 < zero
   fill!(jacobian,zero)
   compute_jacobian!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r0,r,jacobian)
 else
-#  println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
+  println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
   r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
 end
 # recompute beta:

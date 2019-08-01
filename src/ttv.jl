@@ -7,7 +7,7 @@ if ~isdefined(:YEAR)
   const GNEWT = 39.4845/YEAR^2
   const NDIM  = 3
 #const TRANSIT_TOL = 1e-8
-  const TRANSIT_TOL = 10.*sqrt(eps(1.0))
+#  const TRANSIT_TOL = 10.*sqrt(eps(1.0))
 #const TRANSIT_TOL = 10.*eps(1.0)
   const third = 1./3.
   const alpha0 = 0.0
@@ -67,6 +67,9 @@ if iq == 7 && dlnq != 0.0
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
 x,v = init_nbody(elements,t0,n)
+#elements_big=big.(elements); t0big = big(t0)
+#xbig,vbig = init_nbody(elements_big,t0big,n)
+#x = convert(Array{Float64,2},xbig); v = convert(Array{Float64,2},vbig)
 # Perturb the initial condition by an amount dlnq (if it is non-zero):
 if dlnq != 0.0 && iq > 0 && iq < 7
   if iq < 4
@@ -542,6 +545,9 @@ while t < t0+tmax && param_real
   # Carry out a phi^2 mapping step:
 #  phi2!(x,v,h,m,n)
   dh17!(x,v,h,m,n,pair)
+  #xbig = big.(x); vbig = big.(v); hbig = big(h); mbig = big.(m)
+  #dh17!(xbig,vbig,hbig,mbig,n,pair)
+  #x = convert(Array{Float64,2},xbig); v = convert(Array{Float64,2},vbig)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody:
@@ -560,6 +566,9 @@ while t < t0+tmax && param_real
         xtransit .= xprior
         vtransit .= vprior
         dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,pair)
+        #hbig = big(h); dt0big=big(dt0); mbig=big.(m); xtbig = big.(xtransit); vtbig = big.(vtransit)
+        #dtbig = findtransit2!(1,i,n,hbig,dt0big,mbig,xtbig,vtbig,pair)
+        #dt = convert(Float64,dtbig)
 #        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,pair)
         tt[i,count[i]]=t+dt
       end
@@ -1528,8 +1537,8 @@ drift!(x,v,h2,n)
     end
   end
 end
-phic!(x,v,h,m,n,pair)
 # kick and correction for pairs which are kicked:
+phic!(x,v,h,m,n,pair)
 if alpha != 1.0
   phisalpha!(x,v,h,m,2.*(1.-alpha),n,pair)
 end
@@ -1619,6 +1628,7 @@ indi = 0; indj = 0
     end
   end
 end
+# kick and correction for pairs which are kicked:
 phic!(x,v,h,m,n,jac_phi,pair)
 if alpha != one
 #  phisalpha!(x,v,h,m,2.*(1.-alpha),n,jac_phi,pair) # 10%
@@ -1801,6 +1811,7 @@ gdot = 0.0
 gsky = 0.0
 x = copy(x1)
 v = copy(v1)
+TRANSIT_TOL = 10*sqrt(eps(one(typeof(h))))
 while abs(dt) > TRANSIT_TOL && iter < 20
   x .= x1
   v .= v1
@@ -1829,7 +1840,7 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   iter +=1
 end
 if iter >= 20
-#  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
+  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
 end
 # Note: this is the time elapsed *after* the beginning of the timestep:
 return tt::typeof(h)
@@ -1847,6 +1858,7 @@ gdot = 0.0
 gsky = 0.0
 x = copy(x1)
 v = copy(v1)
+TRANSIT_TOL = 10*sqrt(eps(one(typeof(h))))
 while abs(dt) > TRANSIT_TOL && iter < 20
   x .= x1
   v .= v1
@@ -1875,7 +1887,7 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   iter +=1
 end
 if iter >= 20
-#  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
+  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
 end
 # Compute time derivatives:
 x = copy(x1)
@@ -1931,6 +1943,7 @@ gsky = 0.0
 x = copy(x1)
 v = copy(v1)
 dqdt = zeros(typeof(h),7*n)
+TRANSIT_TOL = 10*sqrt(eps(one(typeof(h))))
 while abs(dt) > TRANSIT_TOL && iter < 20
   x .= x1
   v .= v1
@@ -1949,7 +1962,7 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   iter +=1
 end
 if iter >= 20
-#  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
+  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
 end
 # Note: this is the time elapsed *after* the beginning of the timestep:
 return tt::typeof(h)
@@ -1970,6 +1983,7 @@ gsky = 0.0
 x = copy(x1)
 v = copy(v1)
 dqdt = zeros(Float64,7*n)
+TRANSIT_TOL = 10*sqrt(eps(one(typeof(h))))
 while abs(dt) > TRANSIT_TOL && iter < 20
   x .= x1
   v .= v1
@@ -1988,7 +2002,7 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   iter +=1
 end
 if iter >= 20
-#  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
+  println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
 end
 # Compute time derivatives:
 x = copy(x1); v = copy(v1)

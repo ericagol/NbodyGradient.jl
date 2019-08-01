@@ -3,7 +3,7 @@ include("../../src/ttv.jl")
 include("/Users/ericagol/Computer/Julia/regress.jl")
 
 # Turn of fastkicks:
-nopair = true
+nopair = false
 
 elements = readdlm("elements_rebound.txt",',')
 
@@ -44,7 +44,7 @@ tt = zeros(n,maximum(ntt))
 count1 = zeros(Int64,n)
 count = zeros(Int64,n)
 # Call the ttv function, without gradient:
-rstar = 1e12
+rstar = -1e12
 if nopair
   ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
 else
