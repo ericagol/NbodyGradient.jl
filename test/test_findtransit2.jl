@@ -1,3 +1,4 @@
+
 #include("../src/ttv.jl")
 #include("/Users/ericagol/Computer/Julia/regress.jl")
 
@@ -8,7 +9,7 @@
 #KEPLER_TOL  = 1e-15
 #TRANSIT_TOL = 1e-15
 
-@testset "findtransit2" begin
+#@testset "findtransit2" begin
 
 #n = 8
 n = 3
@@ -38,7 +39,7 @@ count = zeros(Int64,n)
 # beginning of each step):
 dtdq0 = zeros(n,maximum(ntt),7,n)
 dtdq0_num = zeros(BigFloat,n,maximum(ntt),7,n)
-dlnq = big(1e-15)
+dlnq = big(1e-10)
 # Make radius of star large:
 rstar = 1e12
 dtdelements_num = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,dtdq0_num,dlnq,rstar)
@@ -56,4 +57,4 @@ println("Max diff     dtdq0 : ",maximum((dtdq0_num[mask]-dtdq0[mask])))
 @test isapprox(asinh.(dtdq0[mask]),asinh.(convert(Array{Float64,4},dtdq0_num)[mask]);norm=maxabs)
 #unit = ones(dtdq0[mask])
 #@test isapprox(dtdq0[mask]./convert(Array{Float64,4},dtdq0_num)[mask],unit;norm=maxabs)
-end
+#end
