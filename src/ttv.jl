@@ -265,8 +265,8 @@ while t < (t0+tmax) && param_real
       if count[i] <= ntt_max
         dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
-        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
-#        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
+#        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
+        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
         tt[i,count[i]]=t+dt
         # Save for posterity:
         for k=1:7, p=1:n
@@ -337,8 +337,8 @@ while t < t0+tmax && param_real
       if count[i] <= ntt_max
         dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
-        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
-#        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
+#        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
+        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
         tt[i,count[i]]=t+dt
         # Save for posterity:
         for k=1:7, p=1:n
@@ -409,8 +409,8 @@ while t < t0+tmax && param_real
       if count[i] <= ntt_max
         dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
-        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
-#      dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
+#        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
+      dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
         tt[i,count[i]]=t+dt
         # Save for posterity:
         for k=1:7, p=1:n
@@ -489,38 +489,38 @@ while t < t0+tmax && param_real
 #        dt0 = big(-gsave[i]*h/(gi-gsave[i]))  # Starting estimate
         dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
 #        xtransit .= big.(xprior); vtransit .= big.(vprior)
-        xtransit .= xprior; vtransit .= vprior
-        jac_transit = eye(jac_step)
-        dt,gdot = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # Just computing derivative since prior timestep, so start with identity matrix
+#        xtransit .= xprior; vtransit .= vprior
+#        jac_transit = eye(jac_step)
+#        dt,gdot = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # Just computing derivative since prior timestep, so start with identity matrix
 #       dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # Just computing derivative since prior timestep, so start with identity matrix
 #        jac_transit = eye(BigFloat,7*n)
 #        hbig = big(h)
 #        dtbig = findtransit2!(1,i,n,hbig,dt0,big.(m),xtransit,vtransit,jac_transit,dtdqbig,pair) # Just computing derivative since prior timestep, so start with identity matrix
 #        dtdq = convert(Array{Float64,2},dtdqbig)
 #        dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
-#        # Now, recompute with findtransit3:
-#        xtransit .= xprior; vtransit .= vprior
-#        jac_transit = eye(jac_step)
-#        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq3,pair) # Just computing derivative since prior timestep, so start with identity matrix
+        # Now, recompute with findtransit3:
+        xtransit .= xprior; vtransit .= vprior
+        jac_transit = eye(jac_step)
+        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq3,pair) # Just computing derivative since prior timestep, so start with identity matrix
         # Save for posterity:
         tt[i,count[i]]=t+dt
         for k=1:7, p=1:n
-          dtdq0[i,count[i],k,p] = dtdq[k,p]
-#          dtdq0[i,count[i],k,p] = dtdq3[k,p]
+#          dtdq0[i,count[i],k,p] = dtdq[k,p]
+          dtdq0[i,count[i],k,p] = dtdq3[k,p]
           # Compute numerical approximation of dtdq:
           dt_plus = big(dt)  # Starting estimate
 #          dt_plus = dtbig  # Starting estimate
           xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m)
           if k < 4; dq = dlnq*xtransit_plus[k,p]; xtransit_plus[k,p] += dq; elseif k < 7; dq =vtransit_plus[k-3,p]*dlnq; vtransit_plus[k-3,p] += dq; else; dq  = m_plus[p]*dlnq; m_plus[p] += dq; end
-          dt_plus = findtransit2!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,pair) # 20%
-#          dt_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,pair) # 20%
+#          dt_plus = findtransit2!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,pair) # 20%
+          dt_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,pair) # 20%
           dt_minus= big(dt)  # Starting estimate
 #          dt_minus= dtbig  # Starting estimate
           xtransit_minus .= big.(xprior); vtransit_minus .= big.(vprior); m_minus .= big.(m)
           if k < 4; dq = dlnq*xtransit_minus[k,p];xtransit_minus[k,p] -= dq; elseif k < 7; dq =vtransit_minus[k-3,p]*dlnq; vtransit_minus[k-3,p] -= dq; else; dq  = m_minus[p]*dlnq; m_minus[p] -= dq; end
           hbig = big(h)
-          dt_minus= findtransit2!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,pair) # 20%
-#          dt_minus= findtransit3!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,pair) # 20%
+#          dt_minus= findtransit2!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,pair) # 20%
+          dt_minus= findtransit3!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,pair) # 20%
           # Compute finite-different derivative:
           dtdq0_num[i,count[i],k,p] = (dt_plus-dt_minus)/(2dq)
           if abs(dtdq0_num[i,count[i],k,p] - dtdq0[i,count[i],k,p]) > 1e-10
@@ -608,11 +608,11 @@ while t < t0+tmax && param_real
         dt0 = -gsave[i]*h/(gi-gsave[i])
         xtransit .= xprior
         vtransit .= vprior
-        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,pair)
+#        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,pair)
         #hbig = big(h); dt0big=big(dt0); mbig=big.(m); xtbig = big.(xtransit); vtbig = big.(vtransit)
         #dtbig = findtransit2!(1,i,n,hbig,dt0big,mbig,xtbig,vtbig,pair)
         #dt = convert(Float64,dtbig)
-#        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,pair)
+        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,pair)
         tt[i,count[i]]=t+dt
       end
 #      tt[i,count[i]]=t+findtransit2!(1,i,n,h,gi,gsave[i],m,xprior,vprior,pair)
@@ -1507,6 +1507,8 @@ indi = 0; indj = 0
     end
   end
 end
+# Need to set jac_phi to identity before calling this. [ ]
+jac_phi = eye(typeof(h),sevn)
 phisalpha!(x,v,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
 @inbounds for i in eachindex(jac_step)
   jac_copy[i] = jac_step[i]
@@ -1761,22 +1763,30 @@ dqdt_phi = zeros(typeof(h),sevn)
 dqdt_kick = zeros(typeof(h),sevn)
 dqdt_tmp1 = zeros(typeof(h),14)
 fill!(dqdt,zero)
+# dqdt_save is for debugging:
+#dqdt_save = copy(dqdt)
 drift!(x,v,h2,n)
 # Compute time derivative of drift step:
 for i=1:n, k=1:3
   dqdt[(i-1)*7+k] = half*v[k,i] + h2*dqdt[(i-1)*7+3+k]
 end
+#println("dqdt 1: ",dqdt-dqdt_save)
+#dqdt_save .= dqdt
 kickfast!(x,v,h/6,m,n,jac_kick,dqdt_kick,pair)
 dqdt_kick /= 6 # Since step is h/6
 dqdt_kick .+= *(jac_kick,dqdt)
 # Copy result to dqdt:
 dqdt .= dqdt_kick
+#println("dqdt 2: ",dqdt-dqdt_save)
+# dqdt_save .= dqdt
 @inbounds for i=1:n-1
   indi = (i-1)*7
   for j=i+1:n
     indj = (j-1)*7
     if ~pair[i,j]  # Check to see if kicks have not been applied
       driftij!(x,v,i,j,-h2,dqdt,-half)
+#      println("dqdt 3: i: ",i," j: ",j," diff: ",dqdt-dqdt_save)
+#      dqdt_save .= dqdt
       keplerij!(m,x,v,i,j,h2,jac_ij,dqdt_ij) # 21%
       # Copy current time derivatives for multiplication purposes:
       @inbounds for k1=1:7
@@ -1793,15 +1803,23 @@ dqdt .= dqdt_kick
         dqdt[indi+k1] = dqdt_ij[  k1]
         dqdt[indj+k1] = dqdt_ij[7+k1]
       end
+#      println("dqdt 4: i: ",i," j: ",j," diff: ",dqdt-dqdt_save)
+#      dqdt_save .= dqdt
     end
   end
 end
+# Looks like we are missing phic here: [ ]  
+# Since I haven't added dqdt to phic yet, for now, set jac_phi equal to identity matrix
+# (since this is commented out within phisalpha):
+jac_phi .= eye(typeof(h),sevn)
 phisalpha!(x,v,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
 # Add in time derivative with respect to prior parameters:
 #BLAS.gemm!('N','N',one,jac_phi,dqdt,one,dqdt_phi)
 dqdt_phi .+= *(jac_phi,dqdt)
 # Copy result to dqdt:
 dqdt .= dqdt_phi
+#println("dqdt 5: ",dqdt-dqdt_save)
+#dqdt_save .= dqdt
 indi=0; indj=0
 for i=n-1:-1:1
   indi=(i-1)*7
@@ -1824,7 +1842,11 @@ for i=n-1:-1:1
         dqdt[indi+k1] = dqdt_ij[  k1]
         dqdt[indj+k1] = dqdt_ij[7+k1]
       end
+#      println("dqdt 6: i: ",i," j: ",j," diff: ",dqdt-dqdt_save)
+#      dqdt_save .= dqdt
       driftij!(x,v,i,j,-h2,dqdt,-half)
+#      println("dqdt 7: ",dqdt-dqdt_save)
+#      dqdt_save .= dqdt
     end
   end
 end
@@ -1832,6 +1854,8 @@ fill!(dqdt_kick,zero)
 kickfast!(x,v,h/6,m,n,jac_kick,dqdt_kick,pair)
 dqdt_kick /= 6 # Since step is h/6
 dqdt_kick .+= *(jac_kick,dqdt)
+#println("dqdt 8: ",dqdt-dqdt_save)
+#dqdt_save .= dqdt
 # Copy result to dqdt:
 dqdt .= dqdt_kick
 drift!(x,v,h2,n)
@@ -1839,6 +1863,7 @@ drift!(x,v,h2,n)
 for i=1:n, k=1:3
   dqdt[(i-1)*7+k] += half*v[k,i] + h2*dqdt[(i-1)*7+3+k]
 end
+#println("dqdt 9: ",dqdt-dqdt_save)
 return
 end
 
