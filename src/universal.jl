@@ -1,6 +1,6 @@
-# written by Jack Wisdom in June and July, 2015
-#   David M. Hernandez helped test and improve it
-# Translated to Julia by Eric Agol August 2018
+# Written by Jack Wisdom in June and July, 2015.
+# David M. Hernandez helped test and improve it.
+# Translated to Julia by Eric Agol August 2018.
 
 #include "universal.h"
 
@@ -169,25 +169,24 @@ double sign(double x)
   }
 }
 
-double cubic1(double a, double b, double c)
+function cubic1(a::T, b::T, c::T) where{T <: Real}
 {
   double Q, R;
   double theta, A, B, x1;
   
   Q = (a*a - 3.0*b)/9.0;
   R = (2.0*a*a*a - 9.0*a*b + 27.0*c)/54.0;
-  if(R*R < Q*Q*Q) {
+  if(R*R < Q*Q*Q)
     theta = acos(R/sqrt(Q*Q*Q));
 
-    printf("three cubic roots %.16le %.16le %.16le\n", 
+    println("three cubic roots %.16le %.16le %.16le\n", 
 	   -2.0*sqrt(Q)*cos(theta/3.0) - a/3.0,
 	   -2.0*sqrt(Q)*cos((theta + 2.0*M_PI)/3.0) - a/3.0,
 	   -2.0*sqrt(Q)*cos((theta - 2.0*M_PI)/3.0) - a/3.0);
-    exit(-1);
+    exit(-1)
 
-    return(x1);
-
-  } else {
+    return x1
+  else
     A = -sign(R)*pow(fabs(R) + sqrt(R*R - Q*Q*Q), 1./3.);
     if(A == 0.0) {
       B = 0.0;
@@ -197,8 +196,8 @@ double cubic1(double a, double b, double c)
     x1 = (A + B) - a/3.0;
 
     return(x1);
-  }
-}
+  end
+end
 
 
 int solve_universal_parabolic(double kc, double r0, double beta, double b, double eta, double zeta, double h, 
@@ -475,27 +474,23 @@ void kepler_step_depth(double kc, double dt, double beta, double b,
   }
 }
 
-double new_guess(double r0, double eta, double zeta, double dt)
-{
-  double s;
-  double reta, disc;
-
-  if(zeta != 0.0) {
-    s = cubic1(3.0*eta/zeta, 6.0*r0/zeta, -6.0*dt/zeta);
-  } else if(eta != 0.0) {
-    reta = r0/eta;
-    disc = reta*reta + 8.0*dt/eta;
-    if(disc >= 0.0) {
-      s = -reta + sqrt(disc);
-    } else {
-      s = dt/r0;
-    }
-  } else {
-    s = dt/r0;
-  }
-  
-  return(s);       
-}
+function new_guess(r0::T, eta::T, zeta::T, dt::T) where {T <: Real}
+  nil = zero(T)
+  if (zeta != zro) 
+    s = cubic1(3eta/zeta, 6r0/zeta, -6dt/zeta)
+  elseif (eta != nil)
+    reta = r0/eta
+    disc = reta*reta + 8dt/eta
+    if (disc >= nil) 
+      s = -reta + sqrt(disc)
+    else
+      s = dt/r0
+    end
+  else 
+    s = dt/r0
+  end
+  return s
+end
 
 int kepler_step_internal(double kc, double dt, double beta, double b,
 			 State *s0, State *s, 
