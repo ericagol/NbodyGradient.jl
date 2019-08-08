@@ -1,3 +1,6 @@
+# This computes the scaling of the TTVs with the mass-ratios
+# of the planets to the star, "epsilon", as well as the stepsize, h.
+# 
 
 include("../../src/ttv.jl")
 include("/Users/ericagol/Computer/Julia/regress.jl")

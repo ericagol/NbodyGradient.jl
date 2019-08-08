@@ -624,7 +624,7 @@ while t < t0+tmax && param_real
   vprior .=v
   if mod(istep,iout) == 0 && iout > 0
     # Write to file:
-    writedlm(file_handle,[t;reshape(x,3n);reshape(v,3n)]') # Transpose to write each line
+    writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
   end
   # Increment time by the time step:
   t += h
