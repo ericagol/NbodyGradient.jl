@@ -250,7 +250,8 @@ ntt_max = size(tt)[2]
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m))
 while t < (t0+tmax) && param_real
   # Carry out a dh17 mapping step:
-  dh17!(x,v,h,m,n,jac_step,pair)
+  ah18!(x,v,h,m,n,jac_step,pair)
+  #dh17!(x,v,h,m,n,jac_step,pair)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody (note that this could be modified to see if
@@ -326,7 +327,8 @@ ntt_max = size(tt)[2]
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
 while t < t0+tmax && param_real
   # Carry out a dh17 mapping step:
-  dh17!(x,v,h,m,n,jac_step,pair)
+  ah18!(x,v,h,m,n,jac_step,pair)
+  #dh17!(x,v,h,m,n,jac_step,pair)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody (note that this could be modified to see if
@@ -402,7 +404,8 @@ ntt_max = size(tt)[2]
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
 while t < t0+tmax && param_real
   # Carry out a dh17 mapping step:
-  dh17!(x,v,h,m,n,jac_step,pair)
+  ah18!(x,v,h,m,n,jac_step,pair)
+  #dh17!(x,v,h,m,n,jac_step,pair)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody (note that this could be modified to see if
@@ -485,7 +488,8 @@ ntt_max = size(tt)[2]
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
 while t < t0+tmax && param_real
   # Carry out a dh17 mapping step:
-  dh17!(x,v,h,m,n,jac_step,pair)
+  ah18!(x,v,h,m,n,jac_step,pair)
+  #dh17!(x,v,h,m,n,jac_step,pair)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody (note that this could be modified to see if
@@ -541,12 +545,14 @@ while t < t0+tmax && param_real
             # Compute gdot_num:
             dt_minus = big(dt)*(1-dlnq)  # Starting estimate
             xtransit_minus .= big.(xprior); vtransit_minus .= big.(vprior); m_minus .= big.(m)
-            dh17!(xtransit_minus,vtransit_minus,dt_minus,m_minus,n,pair)
+            ah18!(xtransit_minus,vtransit_minus,dt_minus,m_minus,n,pair)
+            #dh17!(xtransit_minus,vtransit_minus,dt_minus,m_minus,n,pair)
             # Compute time offset:
             gsky_minus = g!(i,1,xtransit_minus,vtransit_minus)
             dt_plus = big(dt)*(1+dlnq)  # Starting estimate
             xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m)
-            dh17!(xtransit_plus,vtransit_plus,dt_plus,m_plus,n,pair)
+            ah18!(xtransit_plus,vtransit_plus,dt_plus,m_plus,n,pair)
+            #dh17!(xtransit_plus,vtransit_plus,dt_plus,m_plus,n,pair)
             # Compute time offset:
             gsky_plus = g!(i,1,xtransit_plus,vtransit_plus)
             gdot_num = convert(Float64,(gsky_plus-gsky_minus)/(2dlnq*big(dt)))
@@ -605,7 +611,8 @@ end
 while t < t0+tmax && param_real
   # Carry out a phi^2 mapping step:
 #  phi2!(x,v,h,m,n)
-  dh17!(x,v,h,m,n,pair)
+  ah18!(x,v,h,m,n,pair)
+  #dh17!(x,v,h,m,n,pair)
   #xbig = big.(x); vbig = big.(v); hbig = big(h); mbig = big.(m)
   #dh17!(xbig,vbig,hbig,mbig,n,pair)
   #x = convert(Array{Float64,2},xbig); v = convert(Array{Float64,2},vbig)
