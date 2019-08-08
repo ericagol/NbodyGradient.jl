@@ -224,6 +224,8 @@ xtransit = copy(x)
 vtransit = copy(v)
 # Set the time to the initial time:
 t = t0
+# Define error estimate based on Kahan (1965):
+s2 = zero(T)
 # Set step counter to zero:
 istep = 0
 # Jacobian for each step (7- 6 elements+mass, n_planets, 7 - 6 elements+mass, n planets):
@@ -280,8 +282,10 @@ while t < (t0+tmax) && param_real
   xprior .= x
   vprior .= v
   jac_prior .= jac_step
-  # Increment time by the time step:
-  t += h
+  # Increment time by the time step using compensated summation:
+  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  t = tmp
+  # t += h <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
 end
@@ -296,6 +300,8 @@ xtransit = copy(x)
 vtransit = copy(v)
 # Set the time to the initial time:
 t = t0
+# Define error estimate based on Kahan (1965):
+s2 = 0.0
 # Set step counter to zero:
 istep = 0
 # Jacobian for each step (7- 6 elements+mass, n_planets, 7 - 6 elements+mass, n planets):
@@ -352,8 +358,10 @@ while t < t0+tmax && param_real
   xprior .= x
   vprior .= v
   jac_prior .= jac_step
-  # Increment time by the time step:
-  t += h
+  # Increment time by the time step using compensated summation:
+  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  t = tmp
+  # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
 end
@@ -368,6 +376,8 @@ xtransit = copy(x)
 vtransit = copy(v)
 # Set the time to the initial time:
 t = t0
+# Define error estimate based on Kahan (1965):
+s2 = 0.0
 # Set step counter to zero:
 istep = 0
 # Jacobian for each step (7- 6 elements+mass, n_planets, 7 - 6 elements+mass, n planets):
@@ -424,8 +434,10 @@ while t < t0+tmax && param_real
   xprior .= x
   vprior .= v
   jac_prior .= jac_step
-  # Increment time by the time step:
-  t += h
+  # Increment time by the time step using compensated summation:
+  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  t = tmp
+  # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
 end
@@ -447,6 +459,8 @@ if h == 0
 end
 # Set the time to the initial time:
 t = t0
+# Define error estimate based on Kahan (1965):
+s2 = 0.0
 # Set step counter to zero:
 istep = 0
 # Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
@@ -552,8 +566,10 @@ while t < t0+tmax && param_real
   xprior .= x
   vprior .= v
   jac_prior .= jac_step
-  # Increment time by the time step:
-  t += h
+  # Increment time by the time step using compensated summation:
+  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  t = tmp
+  # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
 end
@@ -569,6 +585,8 @@ xtransit = copy(x)
 vtransit = copy(v)
 # Set the time to the initial time:
 t = t0
+# Define error estimate based on Kahan (1965):
+s2 = zero(T)
 # Set step counter to zero:
 istep = 0
 # Jacobian for each step (7 elements+mass, n_planets, 7 elements+mass, n planets):
@@ -626,8 +644,10 @@ while t < t0+tmax && param_real
     # Write to file:
     writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
   end
-  # Increment time by the time step:
-  t += h
+  # Increment time by the time step using compensated summation:
+  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  t = tmp
+  # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
 end
