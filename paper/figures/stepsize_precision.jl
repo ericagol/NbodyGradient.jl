@@ -16,7 +16,8 @@ n_body = n
 #t0 =  -200.0
 # Wow, t0 = 3000.0 makes things *really* bad! Between h0/2 & h0/4, we lost the first transit of the inner planet!
 # I'm looking at how kink in TTVs scales with t0 - it seems fairly stable.
- t0 =  4000.0  
+# t0 =  4000.0  
+ t0 =  3000.0  
 #t0 =  randn()
 #h  = 0.12
 h  = 0.07
