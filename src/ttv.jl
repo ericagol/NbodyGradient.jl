@@ -1466,6 +1466,7 @@ kickfast!(x,v,h2,m,n,pair)
     end
   end
 end
+# Missing phic here [ ]
 phisalpha!(x,v,h,m,convert(typeof(h),2),n,pair)
 for i=n-1:-1:1
   for j=n:-1:i+1
