@@ -16,6 +16,19 @@ include("kepler_step.jl")
 include("kepler_drift_step.jl")
 include("init_nbody.jl")
 
+function comp_sum(sum_value::T,sum_error::T,addend::T) where {T <: Real}
+#  Function for compensated summation using the Kahan (1965) algorithm.
+#  sum_value:  current value of the sum
+#  sum_error:  truncation/rounding error accumulated from prior steps in sum
+#  addend:     new value to be added to the sum
+sum_error += addend
+tmp = sum_value + sum_error
+sum_error = (sum_value - tmp) + sum_error
+sum_value = tmp
+return sum_value::T,sum_error::T
+end
+
+
 # These "constants" pre-allocate memory for matrices used in the derivative computation (to save time with allocation and garbage collection):
 if ~isdefined(:pxpr0)
   const pxpr0 = zeros(Float64,3);const  pxpa0=zeros(Float64,3);const  pxpk=zeros(Float64,3);const  pxps=zeros(Float64,3);const  pxpbeta=zeros(Float64,3)
@@ -284,8 +297,9 @@ while t < (t0+tmax) && param_real
   vprior .= v
   jac_prior .= jac_step
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -361,8 +375,9 @@ while t < t0+tmax && param_real
   vprior .= v
   jac_prior .= jac_step
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -438,8 +453,9 @@ while t < t0+tmax && param_real
   vprior .= v
   jac_prior .= jac_step
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -573,8 +589,9 @@ while t < t0+tmax && param_real
   vprior .= v
   jac_prior .= jac_step
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -652,8 +669,9 @@ while t < t0+tmax && param_real
     writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
   end
   # Increment time by the time step using compensated summation:
-  s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  t = tmp
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
