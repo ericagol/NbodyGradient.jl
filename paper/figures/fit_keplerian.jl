@@ -1,4 +1,12 @@
 
+
+# Run ttv computations:
+#include("stepsize_precision.jl")
+
+# Now run "high-resolution" simulations:
+#dq = ttv_elements!(n,t0,h/16.,tmax,elements,tt1,count,0.0,0,0,rstar;fout="test_output_highres.txt",iout=1)
+#dqbig = ttv_elements!(n,t0big,hbig/16,tmaxbig,elements_big,tt1big,count,big(0.0),0,0,rstarbig;fout="test_output_highres_big.txt",iout=1)
+
 # Fits a 2D Keplerian to a set of data
 using PyPlot
 using Optim
@@ -88,10 +96,22 @@ end
 
 
 xmod, ymod , res = fit_keplerian(tobs,xobs,yobs,elements_best)
+
+# Now fit big-float data:
+data_hr_big  = readdlm("test_output_highres_big.txt")
+tobs_big = data_hr_big[:,1]; xobs_big  = data_hr_big[:,5]-data_hr_big[:,2]; yobs_big = -(data_hr_big[:,7]-data_hr_big[:,4])
+elements_best_big = copy(res.minimizer)
+xmod_big, ymod_big , res_big = fit_keplerian(tobs_big,xobs_big,yobs_big,elements_best_big)
+
 clf()
 #plot(tobs,xobs-xmod)
 #plot(tobs,yobs-ymod)
 
 # Plot the difference in angle between the n-body and Keplerian angles:
 dtheta = atan2(yobs.*xmod .- ymod.*xobs,xobs.*xmod+yobs.*ymod)
-plot(tobs,dtheta)
+xdot = data_hr[:,14]-data_hr[:,11]; ydot = -(data_hr[:,16]-data_hr[:,13])
+# Compute the change in theta as a function of time:
+dthetadt = (ydot.*xobs.-yobs.*xdot)./(xobs.^2.+yobs.^2)
+plot(tobs,-dtheta./dthetadt*24*3600)
+dtheta_big = atan2(yobs_big.*xmod_big .- ymod_big.*xobs_big,xobs_big.*xmod_big+yobs_big.*ymod_big)
+plot(tobs,-dtheta_big./dthetadt*24*3600)

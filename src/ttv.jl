@@ -1,3 +1,4 @@
+
 # Translation of David Hernandez's nbody.c for integrating hiercharical
 # system with BH15 integrator.  Please cite Hernandez & Bertschinger (2015)
 # if using this in a paper.
@@ -283,7 +284,8 @@ while t < (t0+tmax) && param_real
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
 #        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
         dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
-        tt[i,count[i]]=t+dt
+        #tt[i,count[i]]=t+dt
+        tt[i,count[i]],stmp = comp_sum(t,s2,dt)
         # Save for posterity:
         for k=1:7, p=1:n
           dtdq0[i,count[i],k,p] = dtdq[k,p]
@@ -361,7 +363,8 @@ while t < t0+tmax && param_real
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
 #        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
         dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
-        tt[i,count[i]]=t+dt
+        #tt[i,count[i]]=t+dt
+        tt[i,count[i]],stmp = comp_sum(t,s2,dt)
         # Save for posterity:
         for k=1:7, p=1:n
           dtdq0[i,count[i],k,p] = dtdq[k,p]
@@ -439,7 +442,8 @@ while t < t0+tmax && param_real
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior
 #        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
       dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
-        tt[i,count[i]]=t+dt
+        #tt[i,count[i]]=t+dt
+        tt[i,count[i]],stmp = comp_sum(t,s2,dt)
         # Save for posterity:
         for k=1:7, p=1:n
           dtdq0[i,count[i],k,p] = dtdq[k,p]
@@ -537,7 +541,8 @@ while t < t0+tmax && param_real
         jac_transit = eye(jac_step)
         dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq3,pair) # Just computing derivative since prior timestep, so start with identity matrix
         # Save for posterity:
-        tt[i,count[i]]=t+dt
+        #tt[i,count[i]]=t+dt
+        tt[i,count[i]],stmp = comp_sum(t,s2,dt)
         for k=1:7, p=1:n
 #          dtdq0[i,count[i],k,p] = dtdq[k,p]
           dtdq0[i,count[i],k,p] = dtdq3[k,p]
@@ -606,6 +611,7 @@ xprior = copy(x)
 vprior = copy(v)
 xtransit = copy(x)
 vtransit = copy(v)
+xerror = zeros(x); verror = zeros(v)
 # Set the time to the initial time:
 t = t0
 # Define error estimate based on Kahan (1965):
@@ -628,11 +634,11 @@ end
 while t < t0+tmax && param_real
   # Carry out a phi^2 mapping step:
 #  phi2!(x,v,h,m,n)
-  ah18!(x,v,h,m,n,pair)
-  #dh17!(x,v,h,m,n,pair)
-  #xbig = big.(x); vbig = big.(v); hbig = big(h); mbig = big.(m)
-  #dh17!(xbig,vbig,hbig,mbig,n,pair)
-  #x = convert(Array{Float64,2},xbig); v = convert(Array{Float64,2},vbig)
+  ah18!(x,v,xerror,verror,h,m,n,pair)
+#  xbig = big.(x); vbig = big.(v); hbig = big(h); mbig = big.(m)
+  #dh17!(x,v,xerror,verror,h,m,n,pair)
+#  dh17!(xbig,vbig,hbig,mbig,n,pair)
+#  x .= convert(Array{Float64,2},xbig); v .= convert(Array{Float64,2},vbig)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
   # Star is body 1; planets are 2-nbody:
@@ -655,7 +661,8 @@ while t < t0+tmax && param_real
         #dtbig = findtransit2!(1,i,n,hbig,dt0big,mbig,xtbig,vtbig,pair)
         #dt = convert(Float64,dtbig)
         dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,pair)
-        tt[i,count[i]]=t+dt
+        #tt[i,count[i]]=t+dt
+        tt[i,count[i]],stmp = comp_sum(t,s2,dt)
       end
 #      tt[i,count[i]]=t+findtransit2!(1,i,n,h,gi,gsave[i],m,xprior,vprior,pair)
     end
@@ -675,7 +682,11 @@ while t < t0+tmax && param_real
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
+#  println("xerror: ",xerror)
+#  println("verror: ",verror)
 end
+println("xerror: ",xerror)
+println("verror: ",verror)
 if fout != ""
   # Close output file:
   close(file_handle)
@@ -695,6 +706,23 @@ end
 return
 end
 
+# Advances the center of mass of a binary (any pair of bodies) with compensated summation:
+function centerm!(m::Array{T,1},mijinv::T,x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},vcm::Array{T,1},delx::Array{T,1},delv::Array{T,1},i::Int64,j::Int64,h::T) where {T <: Real}
+for k=1:NDIM
+  #x[k,i] +=  m[j]*mijinv*delx[k] + h*vcm[k]
+  x[k,i],xerror[k,i] =  comp_sum(x[k,i],xerror[k,i],m[j]*mijinv*delx[k])
+  x[k,i],xerror[k,i] =  comp_sum(x[k,i],xerror[k,i],h*vcm[k])
+  #x[k,j] += -m[i]*mijinv*delx[k] + h*vcm[k]
+  x[k,j],xerror[k,j] = comp_sum(x[k,j],xerror[k,j],-m[i]*mijinv*delx[k])
+  x[k,j],xerror[k,j] = comp_sum(x[k,j],xerror[k,j],h*vcm[k])
+  #v[k,i] +=  m[j]*mijinv*delv[k]
+  v[k,i],verror[k,i] =  comp_sum(v[k,i],verror[k,i],m[j]*mijinv*delv[k])
+  #v[k,j] += -m[i]*mijinv*delv[k]
+  v[k,j],verror[k,j] = comp_sum(v[k,j],verror[k,j],-m[i]*mijinv*delv[k])
+end
+return
+end
+
 # Drifts bodies i & j
 #function driftij!(x::Array{Float64,2},v::Array{Float64,2},i::Int64,j::Int64,h::Float64)
 function driftij!(x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T) where {T <: Real}
@@ -705,6 +733,19 @@ end
 return
 end
 
+# Drifts bodies i & j with compensated summation:
+#function driftij!(x::Array{Float64,2},v::Array{Float64,2},i::Int64,j::Int64,h::Float64)
+function driftij!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},i::Int64,j::Int64,h::T) where {T <: Real}
+for k=1:NDIM
+  #x[k,i] += h*v[k,i]
+  x[k,i],xerror[k,i] = comp_sum(x[k,i],xerror[k,i],h*v[k,i])
+  #x[k,j] += h*v[k,j]
+  x[k,j],xerror[k,j] = comp_sum(x[k,j],xerror[k,j],h*v[k,j])
+end
+return
+end
+
+# Drifts bodies i & j with computation of dqdt:
 function driftij!(x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T,dqdt::Array{T,1},fac::T) where {T <: Real}
 indi = (i-1)*7
 indj = (j-1)*7
@@ -764,6 +805,43 @@ else
     x[k,j] -= m[i]*mijinv*state[1+k]
     v[k,i] += m[j]*mijinv*state[4+k]
     v[k,j] -= m[i]*mijinv*state[4+k]
+  end
+end
+return
+end
+
+# Carries out a Kepler step and reverse drift for bodies i & j with compensated summation:
+function kepler_driftij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},i::Int64,j::Int64,h::T,drift_first::Bool) where {T <: Real}
+# The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
+# Initial state:
+state0 = zeros(typeof(h),12)
+# Final state (after a step):
+state = zeros(typeof(h),12)
+for k=1:NDIM
+  state0[1+k] = x[k,i] - x[k,j]
+  state0[4+k] = v[k,i] - v[k,j]
+end
+gm = GNEWT*(m[i]+m[j])
+if gm == 0
+#  Do nothing
+#  for k=1:3
+#    x[k,i] += h*v[k,i]
+#    x[k,j] += h*v[k,j]
+#  end
+else
+  # predicted value of s
+  kepler_drift_step!(gm, h, state0, state,drift_first)
+  mijinv =1.0/(m[i] + m[j])
+  for k=1:3
+    # Add kepler-drift differences, weighted by masses, to start of step:
+    #x[k,i] += m[j]*mijinv*state[1+k]
+    x[k,i],xerror[k,i] = comp_sum(x[k,i],xerror[k,i], m[j]*mijinv*state[1+k])
+    #x[k,j] -= m[i]*mijinv*state[1+k]
+    x[k,j],xerror[k,j] = comp_sum(x[k,j],xerror[k,j],-m[i]*mijinv*state[1+k])
+    #v[k,i] += m[j]*mijinv*state[4+k]
+    v[k,i],verror[k,i] = comp_sum(v[k,i],verror[k,i], m[j]*mijinv*state[4+k])
+    #v[k,j] -= m[i]*mijinv*state[4+k]
+    v[k,j],verror[k,j] = comp_sum(v[k,j],verror[k,j],-m[i]*mijinv*state[4+k])
   end
 end
 return
@@ -866,7 +944,48 @@ end
 return
 end
 
-# Carries out a Kepler step for bodies i & j
+# Carries out a Kepler step for bodies i & j with compensated summation:
+function keplerij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},i::Int64,j::Int64,h::T) where {T <: Real}
+# The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
+# Initial state:
+state0 = zeros(typeof(h),12)
+# Final state (after a step):
+state = zeros(typeof(h),12)
+delx = zeros(typeof(h),NDIM)
+delv = zeros(typeof(h),NDIM)
+#println("Masses: ",i," ",j)
+for k=1:NDIM
+  state0[1+k     ] = x[k,i] - x[k,j]
+  state0[1+k+NDIM] = v[k,i] - v[k,j]
+end
+gm = GNEWT*(m[i]+m[j])
+if gm == 0
+  for k=1:NDIM
+    #x[k,i] += h*v[k,i]
+    x[k,i],xerror[k,i] = comp_sum(x[k,i],xerror[k,i],h*v[k,i])
+    #x[k,j] += h*v[k,j]
+    x[k,j],xerror[k,j] = comp_sum(x[k,j],xerror[k,j],h*v[k,j])
+  end
+else
+  # predicted value of s
+  kepler_step!(gm, h, state0, state)
+  for k=1:NDIM
+    delx[k] = state[1+k] - state0[1+k]
+    delv[k] = state[1+NDIM+k] - state0[1+NDIM+k]
+  end
+# Advance center of mass:
+# Compute COM coords:
+  mijinv =1.0/(m[i] + m[j])
+  vcm = zeros(typeof(h),NDIM)
+  for k=1:NDIM
+    vcm[k] = (m[i]*v[k,i] + m[j]*v[k,j])*mijinv
+  end
+  centerm!(m,mijinv,x,v,xerror,verror,vcm,delx,delv,i,j,h)
+end
+return
+end
+
+# Carries out a Kepler step for bodies i & j with dqdt and Jacobian:
 function keplerij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T,jac_ij::Array{T,2},dqdt::Array{T,1}) where {T <: Real}
 # The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
 # Initial state:
@@ -986,6 +1105,16 @@ end
 return
 end
 
+# Drifts all particles with compensated summation:
+#function drift!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,n::Int64)
+function drift!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,n::Int64) where {T <: Real}
+@inbounds for i=1:n, j=1:NDIM
+  #x[j,i] += h*v[j,i]
+  x[j,i],xerror[j,i] = comp_sum(x[j,i],xerror[j,i],h*v[j,i])
+end
+return
+end
+
 # Drifts all particles:
 function drift!(x::Array{T,2},v::Array{T,2},h::T,n::Int64,jac_step::Array{T,2}) where {T <: Real}
 indi = 0
@@ -1002,6 +1131,7 @@ end
 return
 end
 
+# Computes "fast" kicks for pairs of bodies in lieu of -drift+Kepler:
 function kickfast!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
 rij = zeros(typeof(h),3)
 @inbounds for i=1:n-1
@@ -1017,6 +1147,31 @@ rij = zeros(typeof(h),3)
         fac = h*GNEWT*rij[k]*r3_inv
         v[k,i] -= m[j]*fac
         v[k,j] += m[i]*fac
+      end
+    end
+  end
+end
+return
+end
+
+# Computes "fast" kicks for pairs of bodies in lieu of -drift+Kepler with compensated summation:
+function kickfast!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
+rij = zeros(typeof(h),3)
+@inbounds for i=1:n-1
+  for j = i+1:n
+    if pair[i,j]
+      r2 = 0.0
+      for k=1:3
+        rij[k] = x[k,i] - x[k,j]
+        r2 += rij[k]^2
+      end
+      r3_inv = 1.0/(r2*sqrt(r2))
+      for k=1:3
+        fac = h*GNEWT*rij[k]*r3_inv
+        # v[k,i] -= m[j]*fac
+        v[k,i],verror[k,i] = comp_sum(v[k,i],verror[k,i],-m[j]*fac)
+        #v[k,j] += m[i]*fac
+        v[k,j],verror[k,j] = comp_sum(v[k,j],verror[k,j], m[i]*fac)
       end
     end
   end
@@ -1075,8 +1230,8 @@ end
 return
 end
 
-function phisalpha!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},alpha::T,n::Int64,pair::Array{Bool,2}) where {T <: Real}
 # Computes the 4th-order correction:
+function phisalpha!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},alpha::T,n::Int64,pair::Array{Bool,2}) where {T <: Real}
 #function [v] = phisalpha(x,v,h,m,alpha,pair)
 #n = size(m,2);
 a = zeros(typeof(h),3,n)
@@ -1121,6 +1276,61 @@ end
         fac = fac1*(rij[k]*fac2- r2*aij[k])
         v[k,i] += m[j]*fac
         v[k,j] -= m[i]*fac
+      end
+    end
+  end
+end
+return
+end
+
+# Computes the 4th-order correction with compensated summation:
+function phisalpha!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},alpha::T,n::Int64,pair::Array{Bool,2}) where {T <: Real}
+#function [v] = phisalpha(x,v,h,m,alpha,pair)
+#n = size(m,2);
+a = zeros(typeof(h),3,n)
+rij = zeros(typeof(h),3)
+aij = zeros(typeof(h),3)
+coeff = alpha*h^3/96*2*GNEWT
+zero = 0.0*alpha
+fac = zero; fac1 = zero; fac2 = zero; r1 = zero; r2 = zero; r3 = zero
+@inbounds for i=1:n-1
+  for j = i+1:n
+    if ~pair[i,j] # correction for Kepler pairs
+      for k=1:3
+        rij[k] = x[k,i] - x[k,j]
+      end
+      r2 = rij[1]*rij[1]+rij[2]*rij[2]+rij[3]*rij[3]
+      r3 = r2*sqrt(r2)
+      for k=1:3
+        fac = GNEWT*rij[k]/r3
+        a[k,i] -= m[j]*fac
+        a[k,j] += m[i]*fac
+      end
+    end
+  end
+end
+# Next, compute \tilde g_i acceleration vector (this is rewritten
+# slightly to avoid reference to \tilde a_i):
+@inbounds for i=1:n-1
+  for j=i+1:n
+    if ~pair[i,j] # correction for Kepler pairs
+      for k=1:3
+        aij[k] = a[k,i] - a[k,j]
+  #      aij[k] = 0.0
+        rij[k] = x[k,i] - x[k,j]
+      end
+      r2 = rij[1]*rij[1]+rij[2]*rij[2]+rij[3]*rij[3]
+      r1 = sqrt(r2)
+      ardot = aij[1]*rij[1]+aij[2]*rij[2]+aij[3]*rij[3]
+      fac1 = coeff/r1^5
+      fac2 = (2*GNEWT*(m[i]+m[j])/r1 + 3*ardot)
+      for k=1:3
+  #      fac = coeff/r1^5*(rij[k]*(2*GNEWT*(m[i]+m[j])/r1 + 3*ardot) - r2*aij[k])
+        fac = fac1*(rij[k]*fac2- r2*aij[k])
+        #v[k,i] += m[j]*fac
+        v[k,i],verror[k,i] = comp_sum(v[k,i],verror[k,i], m[j]*fac)
+        #v[k,j] -= m[i]*fac
+        v[k,j],verror[k,j] = comp_sum(v[k,j],verror[k,j],-m[i]*fac)
       end
     end
   end
@@ -1276,6 +1486,7 @@ end
 return
 end
 
+# Computes correction for pairs which are kicked:
 function phic!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
 a = zeros(typeof(h),3,n)
 rij = zeros(typeof(h),3)
@@ -1314,8 +1525,56 @@ coeff = h^3/36*GNEWT
     end
   end
 end
+return
 end
 
+# Computes correction for pairs which are kicked:
+function phic!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
+a = zeros(typeof(h),3,n)
+rij = zeros(typeof(h),3)
+aij = zeros(typeof(h),3)
+@inbounds for i=1:n-1, j = i+1:n
+  if pair[i,j] # kick group
+    r2 = 0.0
+    for k=1:3
+      rij[k] = x[k,i] - x[k,j]
+      r2 += rij[k]^2
+    end
+    r3_inv = 1.0/(r2*sqrt(r2))
+    for k=1:3
+      fac = GNEWT*rij[k]*r3_inv
+      #v[k,i] -= m[j]*fac*2h/3
+      v[k,i],verror[k,i] = comp_sum(v[k,i],verror[k,i],-m[j]*fac*2h/3)
+      #v[k,j] += m[i]*fac*2h/3
+      v[k,j],verror[k,j] = comp_sum(v[k,j],verror[k,j],m[i]*fac*2h/3)
+      a[k,i] -= m[j]*fac
+      a[k,j] += m[i]*fac
+    end
+  end
+end
+coeff = h^3/36*GNEWT
+@inbounds for i=1:n-1 ,j=i+1:n
+  if pair[i,j] # kick group
+    for k=1:3
+      aij[k] = a[k,i] - a[k,j]
+      rij[k] = x[k,i] - x[k,j]
+    end
+    r2 = dot(rij,rij)
+    r5inv = 1.0/(r2^2*sqrt(r2))
+    ardot = dot(aij,rij)
+    for k=1:3
+      fac = coeff*r5inv*(rij[k]*3*ardot-r2*aij[k])
+      #v[k,i] += m[j]*fac
+      v[k,i],verror[k,i] = comp_sum(v[k,i],verror[k,i],m[j]*fac)
+      #v[k,j] -= m[i]*fac
+      v[k,j],verror[k,j] = comp_sum(v[k,j],verror[k,j],-m[i]*fac)
+    end
+  end
+end
+return
+end
+
+# Computes correction for pairs which are kicked, with Jacobian:
 function phic!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
 a = zeros(typeof(h),3,n)
 rij = zeros(typeof(h),3)
@@ -1498,6 +1757,34 @@ drift!(x,v,h2,n)
 return
 end
 
+# Carries out the AH18 mapping with compensated summation:
+function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
+# New version of solver that consolidates keplerij and driftij, and sets
+# alpha = 0:
+h2 = 0.5*h
+drift!(x,v,xerror,verror,h2,n)
+kickfast!(x,v,xerror,verror,h2,m,n,pair)
+@inbounds for i=1:n-1
+  for j=i+1:n
+    if ~pair[i,j]
+      kepler_driftij!(m,x,v,xerror,verror,i,j,h2,true)
+    end
+  end
+end
+# Missing phic here [ ]
+phisalpha!(x,v,xerror,verror,h,m,convert(typeof(h),2),n,pair)
+for i=n-1:-1:1
+  for j=n:-1:i+1
+    if ~pair[i,j]
+      kepler_driftij!(m,x,v,xerror,verror,i,j,h2,false)
+    end
+  end
+end
+kickfast!(x,v,xerror,verror,h2,m,n,pair)
+drift!(x,v,xerror,verror,h2,n)
+return
+end
+
 # Carries out the AH18 mapping & computes the Jacobian:
 function ah18!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0); half = convert(typeof(h),0.5); two = convert(typeof(h),2.0)
@@ -1553,7 +1840,8 @@ indi = 0; indj = 0
     end
   end
 end
-# Need to set jac_phi to identity before calling this. [ ]
+# Missing phic here [ ]
+# So, need to set jac_phi to identity before calling this. [ ]
 jac_phi = eye(typeof(h),sevn)
 phisalpha!(x,v,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
 @inbounds for i in eachindex(jac_step)
@@ -1646,6 +1934,76 @@ if alpha != 0.0
   phisalpha!(x,v,h,m,alpha,n,pair)
 end
 kickfast!(x,v,h/6,m,n,pair)
+return
+end
+
+# Carries out the DH17 mapping with compensated summation:
+function dh17!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
+alpha = convert(typeof(h),alpha0)
+h2 = 0.5*h
+# alpha = 0. is similar in precision to alpha=0.25
+kickfast!(x,v,xerror,verror,h/6,m,n,pair)
+if alpha != 0.0
+  phisalpha!(x,v,xerror,verror,h,m,alpha,n,pair)
+end
+#mbig = big.(m); h2big = big(h2)
+#xbig = big.(x); vbig = big.(v)
+drift!(x,v,xerror,verror,h2,n)
+#drift!(xbig,vbig,h2big,n)
+#xcompare = convert(Array{T,2},xbig); vcompare = convert(Array{T,2},vbig)
+#x .= xcompare; v .= vcompare
+#hbig = big(h)
+@inbounds for i=1:n-1
+  for j=i+1:n
+    if ~pair[i,j]
+#      xbig = big.(x); vbig = big.(v)
+      driftij!(x,v,xerror,verror,i,j,-h2)
+#      driftij!(xbig,vbig,i,j,-h2big)
+#      xcompare = convert(Array{T,2},xbig); vcompare = convert(Array{T,2},vbig)
+#      x .= xcompare; v .= vcompare
+#      xbig = big.(x); vbig = big.(v)
+#      keplerij!(mbig,xbig,vbig,i,j,h2big)
+#      xcompare = convert(Array{T,2},xbig); vcompare = convert(Array{T,2},vbig)
+      keplerij!(m,x,v,xerror,verror,i,j,h2)
+#      x .= xcompare; v .= vcompare
+    end
+  end
+end
+# kick and correction for pairs which are kicked:
+phic!(x,v,xerror,verror,h,m,n,pair)
+if alpha != 1.0
+#  xbig = big.(x); vbig = big.(v)
+  phisalpha!(x,v,xerror,verror,h,m,2.*(1.-alpha),n,pair)
+#  phisalpha!(xbig,vbig,hbig,mbig,2*(1-big(alpha)),n,pair)
+#  xcompare = convert(Array{T,2},xbig); vcompare = convert(Array{T,2},vbig)
+#  x .= xcompare; v .= vcompare
+end
+for i=n-1:-1:1
+  for j=n:-1:i+1
+    if ~pair[i,j]
+#      xbig = big.(x); vbig = big.(v)
+#      keplerij!(mbig,xbig,vbig,i,j,h2big)
+      #x = convert(Array{T,2},xbig); v = convert(Array{T,2},vbig)
+#      xcompare = convert(Array{T,2},xbig); vcompare = convert(Array{T,2},vbig)
+      keplerij!(m,x,v,xerror,verror,i,j,h2)
+#      x .= xcompare; v .= vcompare
+#      xbig = big.(x); vbig = big.(v)
+      driftij!(x,v,xerror,verror,i,j,-h2)
+#      driftij!(xbig,vbig,i,j,-h2big)
+#      xcompare = convert(Array{T,2},xbig); vcompare = convert(Array{T,2},vbig)
+#      x .= xcompare; v .= vcompare
+    end
+  end
+end
+#xbig = big.(x); vbig = big.(v)
+drift!(x,v,xerror,verror,h2,n)
+#drift!(xbig,vbig,h2big,n)
+#xcompare = convert(Array{T,2},xbig); vcompare = convert(Array{T,2},vbig)
+#x .= xcompare; v .= vcompare
+if alpha != 0.0
+  phisalpha!(x,v,xerror,verror,h,m,alpha,n,pair)
+end
+kickfast!(x,v,xerror,verror,h/6,m,n,pair)
 return
 end
 

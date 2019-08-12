@@ -1,3 +1,4 @@
+
 include("../../src/ttv.jl")
 include("/Users/ericagol/Computer/Julia/regress.jl")
 
@@ -43,7 +44,8 @@ for i=2:n
 end
 tt  = zeros(n,maximum(ntt))
 tt1 = zeros(n,maximum(ntt))
-tt_save = zeros(5,n,maximum(ntt))
+nsub = 7 # How many times to divide the timestep (/2^(nsub-1)).
+tt_save = zeros(nsub,n,maximum(ntt))
 # Save a counter for the actual number of transit times of each planet:
 count = zeros(Int64,n)
 count1 = zeros(Int64,n)
@@ -74,6 +76,10 @@ tt_save[4,:,:]=tt1
 #dq = ttv_elements!(n,t0,h/16.,tmax,elements,tt1,count,0.0,0,0,rstar)
 dq = ttv_elements!(n,t0,h/16.,tmax,elements,tt1,count,0.0,0,0,rstar;fout="test_output_h16.txt",iout=160)
 tt_save[5,:,:]=tt1
+dq = ttv_elements!(n,t0,h/32.,tmax,elements,tt1,count,0.0,0,0,rstar;fout="test_output_h32.txt",iout=320)
+tt_save[6,:,:]=tt1
+dq = ttv_elements!(n,t0,h/64.,tmax,elements,tt1,count,0.0,0,0,rstar;fout="test_output_h64.txt",iout=640)
+tt_save[7,:,:]=tt1
 # Compute the h/16 case in BigFloat precision:
 #dqbig = ttv_elements!(n,t0big,hbig/16,tmaxbig,elements_big,tt1big,count,big(0.0),0,0,rstarbig)
 #tt_save[5,:,:]=convert(Array{Float64,2},tt1big)
@@ -82,17 +88,17 @@ tt_save[5,:,:]=tt1
 # Make a plot of transit time errors versus stepsize:
 ntrans = sum(count)
 clf()
-sigt = zeros(n-1,4)
+sigt = zeros(n-1,nsub-1)
 tab = 0
 #h_list = [h,h/2.,h/4.,h/8.]
-h_list = [h,h/2.,h/4.,h/8]
-hlabel = ["h-h/16","h/2-h/16","h/4-h/16","h/8-h/16"]
-ch = ["black","red","green","blue"]
+h_list = [h,h/2.,h/4.,h/8,h/16,h/32]
+hlabel = ["h-h/64","h/2-h/64","h/4-h/64","h/8-h/64","h/16-h/64","h/32-h/64"]
+ch = ["black","red","green","blue","orange","magenta"]
 for i=2:n
-  for j=1:4
+  for j=1:nsub-1
     tti1 = tt_save[j,i,1:count[i]]
-    tti16 = tt_save[5,i,1:count[i]]
-    diff = tti1-tti16
+    tti_max = tt_save[nsub,i,1:count[i]]
+    diff = tti1-tti_max
     sigt[i-1,j]=std(diff)
     if i == n
       plot(tti1,diff/h_list[j]^4,linestyle="dashed",c=ch[j])
@@ -110,25 +116,22 @@ read(STDIN,Char)
 # Make a plot of timing errors versus stepsize:
 ntrans = sum(count)
 clf()
-sigt = zeros(n-1,4)
+sigt = zeros(n-1,nsub-1)
 tab = 0
-#h_list = [h,h/2.,h/4.,h/8.]
-h_list = [h,h/2.,h/4.,h/8]
-hlabel = ["h-h/16","h/2-h/16","h/4-h/16","h/8-h/16"]
-ch = ["black","red","green","blue"]
 for i=2:n
   fn = zeros(Float64,2,count[i])
   sig = ones(count[i])
-  tti16 = tt_save[5,i,1:count[i]]
+  tti_max = tt_save[nsub,i,1:count[i]]
   for j=1:count[i]
     fn[1,j] = 1.0
-    fn[2,j] = round(Int64,(tti16[j]-elements[i,3])/elements[i,2])
+    fn[2,j] = round(Int64,(tti_max[j]-elements[i,3])/elements[i,2])
   end
-  for j=1:4
+  for j=1:nsub-1
     tti1 = tt_save[j,i,1:count[i]]
-    coeff,cov = regress(fn,tti1-tti16,sig)
-    diff = tti1-tti16-coeff[1]-coeff[2]*fn[2,:]
+    coeff,cov = regress(fn,tti1-tti_max,sig)
+    diff = tti1-tti_max-coeff[1]-coeff[2]*fn[2,:]
     sigt[i-1,j]=std(diff)
+#    print("planet: ",i-1," stepsize: ",j," sig: ",sigt[i-1,j])
     if i == n
       plot(tti1,diff/h_list[j]^4,linestyle="dashed",c=ch[j])
     else
@@ -136,32 +139,34 @@ for i=2:n
     end
   end
 end
+ylabel("TTV difference / h^4")
+xlabel("Transit time")
 legend(loc="lower left")
 
-read(STDIN,Char)
-clf()
-
-
-# Make a plot of some TTVs:
-loglog(h_list,sigt[1,:]*24.*3600.,".",markersize=15,label="Inner planet")
-loglog(h_list,sigt[1,1]*24.*3600.*(h_list/h[1]).^4,label=L"$\propto h^4$")
-loglog(h_list,sigt[2,:]*24.*3600.,".",markersize=15,label="Outer planet")
-loglog(h_list,sigt[2,1]*24.*3600.*(h_list/h[1]).^4,label=L"$\propto h^4$")
-legend(loc = "upper left")
-ylabel("RMS timing error [sec]")
-xlabel("Step size [day]")
-
-PyPlot.savefig("timing_error_vs_h.pdf",bbox_inches="tight")
-read(STDIN,Char)
-
-clf()
-# Plot differences across phase space positions:
-data1 = readdlm("test_output_h.txt");
-data2 = readdlm("test_output_h2.txt");
-data4 = readdlm("test_output_h4.txt");
-data8 = readdlm("test_output_h8.txt");
-data16 = readdlm("test_output_h16.txt");
-
-for i=8:16
-  plot(data1[:,1],data2[:, i]-data8[:,i],".")
-end
+ read(STDIN,Char)
+ clf()
+ 
+ 
+ # Make a plot of some TTVs:
+ loglog(h_list,sigt[1,:]*24.*3600.,".",markersize=15,label="Inner planet")
+ loglog(h_list,sigt[1,1]*24.*3600.*(h_list/h[1]).^4,label=L"$\propto h^4$")
+ loglog(h_list,sigt[2,:]*24.*3600.,".",markersize=15,label="Outer planet")
+ loglog(h_list,sigt[2,1]*24.*3600.*(h_list/h[1]).^4,label=L"$\propto h^4$")
+ legend(loc = "upper left")
+ ylabel("RMS TTV error [sec]")
+ xlabel("Step size [day]")
+ 
+ PyPlot.savefig("timing_error_vs_h.pdf",bbox_inches="tight")
+# read(STDIN,Char)
+# 
+# clf()
+# # Plot differences across phase space positions:
+# data1 = readdlm("test_output_h.txt");
+# data2 = readdlm("test_output_h2.txt");
+# data4 = readdlm("test_output_h4.txt");
+# data8 = readdlm("test_output_h8.txt");
+# data16 = readdlm("test_output_h16.txt");
+# 
+# for i=8:16
+#   plot(data1[:,1],data2[:, i]-data8[:,i],".")
+# end
