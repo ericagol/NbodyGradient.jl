@@ -52,11 +52,13 @@ v0[2,3] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 xbig = big.(x0); vbig = big.(v0)
 xtest = copy(x0); vtest=copy(v0)
 # Take a single step (so that we aren't at initial coordinates):
-@time for i=1:nstep; ah18!(x0,v0,h,m,n,pair); end
+xerror = zeros(x0); verror = zeros(v0)
+@time for i=1:nstep; ah18!(x0,v0,xerror,verror,h,m,n,pair); end
 # Take a step with big precision:
 ah18!(xbig,vbig,big(h),big.(m),n,pair)
-# Take a single AH18 step:
-@time for i=1:nstep; dh17!(xtest,vtest,h,m,n,pair);end
+# Take a single DH17 step:
+xerror = zeros(x0); verror = zeros(v0)
+@time for i=1:nstep; dh17!(xtest,vtest,xerror,verror,h,m,n,pair);end
 println("AH18 vs. DH17 x/v difference: ",x0-xtest,v0-vtest)
 
 # Now, copy these to compute Jacobian (so that I don't step
@@ -67,9 +69,10 @@ m = copy(m0)
 xbig = big.(x0)
 vbig = big.(v0)
 mbig = big.(m0)
+xerror = zeros(x0); verror = zeros(v0)
 # Compute jacobian exactly over nstep steps:
 for istep=1:nstep
-  ah18!(x,v,h,m,n,jac_step,pair)
+  ah18!(x,v,xerror,verror,h,m,n,jac_step,pair)
 end
 #println(typeof(h)," ",jac_step)
 #read(STDIN,Char)
@@ -236,7 +239,8 @@ dqdt_num = zeros(BigFloat,7*n)
 x = copy(x0)
 v = copy(v0)
 m = copy(m0)
-ah18!(x,v,h,m,n,dqdt,pair)
+xerror = zeros(x0); verror = zeros(v0)
+ah18!(x,v,xerror,verror,h,m,n,dqdt,pair)
 xm= big.(x0)
 vm= big.(v0)
 mm= big.(m0)

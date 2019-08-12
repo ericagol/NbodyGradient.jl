@@ -61,7 +61,8 @@ dh17!(x0,v0,h,m,n,pair)
 x = copy(x0); v = copy(v0); m = copy(m0)
 # Compute jacobian exactly:
 dqdt_phi = zeros(7*n)
-phisalpha!(x,v,h,m,alpha,n,jac_step,dqdt_phi,pair)
+xerror = zeros(x0); verror = zeros(v0)
+phisalpha!(x,v,xerror,verror,h,m,alpha,n,jac_step,dqdt_phi,pair)
 
 
 # Now compute numerical derivatives, using BigFloat to avoid
