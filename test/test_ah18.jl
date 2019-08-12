@@ -4,7 +4,7 @@
 
 # Next, try computing three-body Keplerian Jacobian:
 
-#@testset "ah18" begin
+@testset "ah18" begin
 
 
 #n = 8
@@ -50,10 +50,14 @@ v0[2,1] = 5e-1*sqrt(v0[1,1]^2+v0[3,1]^2)
 v0[2,2] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 v0[2,3] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 xbig = big.(x0); vbig = big.(v0)
+xtest = copy(x0); vtest=copy(v0)
 # Take a single step (so that we aren't at initial coordinates):
 @time for i=1:nstep; ah18!(x0,v0,h,m,n,pair); end
 # Take a step with big precision:
 ah18!(xbig,vbig,big(h),big.(m),n,pair)
+# Take a single AH18 step:
+@time for i=1:nstep; dh17!(xtest,vtest,h,m,n,pair);end
+println("AH18 vs. DH17 x/v difference: ",x0-xtest,v0-vtest)
 
 # Now, copy these to compute Jacobian (so that I don't step
 # x0 & v0 forward in time):
@@ -227,33 +231,33 @@ println("Maximum diff asinh(jac_step):   ",maximum(abs.(asinh.(jac_step)-asinh.(
 
 # Compute dqdt:
 
-#dqdt = zeros(7*n)
-#dqdt_num = zeros(BigFloat,7*n)
-#x = copy(x0)
-#v = copy(v0)
-#m = copy(m0)
-#ah18!(x,v,h,m,n,dqdt,pair)
-#xm= big.(x0)
-#vm= big.(v0)
-#mm= big.(m0)
-#dq = hbig*dlnq
-#hbig -= dq
-#ah18!(xm,vm,hbig,mm,n,pair)
-#xp= big.(x0)
-#vp= big.(v0)
-#mp= big.(m0)
-#hbig += 2dq
-#ah18!(xp,vp,hbig,mp,n,pair)
-#for i=1:n, k=1:3
-#  dqdt_num[(i-1)*7+  k] = .5*(xp[k,i]-xm[k,i])/dq
-#  dqdt_num[(i-1)*7+3+k] = .5*(vp[k,i]-vm[k,i])/dq
-#end
-#dqdt_num = convert(Array{Float64,1},dqdt_num)
-##println("dqdt: ",dqdt," ",dqdt_num," diff: ",dqdt-dqdt_num)
-#println("dqdt-dqdt_num: ",maxabs(dqdt-convert(Array{Float64,1},dqdt_num)))
+dqdt = zeros(7*n)
+dqdt_num = zeros(BigFloat,7*n)
+x = copy(x0)
+v = copy(v0)
+m = copy(m0)
+ah18!(x,v,h,m,n,dqdt,pair)
+xm= big.(x0)
+vm= big.(v0)
+mm= big.(m0)
+dq = hbig*dlnq
+hbig -= dq
+ah18!(xm,vm,hbig,mm,n,pair)
+xp= big.(x0)
+vp= big.(v0)
+mp= big.(m0)
+hbig += 2dq
+ah18!(xp,vp,hbig,mp,n,pair)
+for i=1:n, k=1:3
+  dqdt_num[(i-1)*7+  k] = .5*(xp[k,i]-xm[k,i])/dq
+  dqdt_num[(i-1)*7+3+k] = .5*(vp[k,i]-vm[k,i])/dq
+end
+dqdt_num = convert(Array{Float64,1},dqdt_num)
+#println("dqdt: ",dqdt," ",dqdt_num," diff: ",dqdt-dqdt_num)
+println("dqdt-dqdt_num: ",maxabs(dqdt-convert(Array{Float64,1},dqdt_num)))
 
 #@test isapprox(jac_step,jac_step_num)
 #@test isapprox(jac_step,jac_step_num;norm=maxabs)
 @test isapprox(asinh.(jac_step),asinh.(jac_step_num);norm=maxabs)
 #@test isapprox(dqdt,dqdt_num;norm=maxabs)
-#end
+end

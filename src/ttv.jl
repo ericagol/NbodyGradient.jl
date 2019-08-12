@@ -577,7 +577,7 @@ while t < t0+tmax && param_real
             # Compute time offset:
             gsky_plus = g!(i,1,xtransit_plus,vtransit_plus)
             gdot_num = convert(Float64,(gsky_plus-gsky_minus)/(2dlnq*big(dt)))
-            println("i: ",i," count: ",count[i]," k: ",k," p: ",p," dt: ",dt," dq: ",dq," dtdq0: ",dtdq0[i,count[i],k,p]," dtdq0_num: ",convert(Float64,dtdq0_num[i,count[i],k,p])," ratio-1: ",dtdq0[i,count[i],k,p]/convert(Float64,dtdq0_num[i,count[i],k,p])-1.0," gdot: ",gdot," gdot_num: ",gdot_num," ratio-1: ",gdot/gdot_num-1.0)
+            println("i: ",i," count: ",count[i]," k: ",k," p: ",p," dt: ",dt," dq: ",dq," dtdq0: ",dtdq0[i,count[i],k,p]," dtdq0_num: ",convert(Float64,dtdq0_num[i,count[i],k,p])," ratio-1: ",dtdq0[i,count[i],k,p]/convert(Float64,dtdq0_num[i,count[i],k,p])-1.0," gdot_num: ",gdot_num) #," ratio-1: ",gdot/gdot_num-1.0)
             println("x0: ",xprior)
             println("v0: ",vprior)
             println("x: ",x)
@@ -685,8 +685,8 @@ while t < t0+tmax && param_real
 #  println("xerror: ",xerror)
 #  println("verror: ",verror)
 end
-println("xerror: ",xerror)
-println("verror: ",verror)
+#println("xerror: ",xerror)
+#println("verror: ",verror)
 if fout != ""
   # Close output file:
   close(file_handle)
@@ -848,7 +848,7 @@ return
 end
 
 # Carries out a Kepler step and reverse drift for bodies i & j, and computes Jacobian:
-function kepler_driftij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T,jac_ij::Array{T,2},drift_first::Bool) where {T <: Real}
+function kepler_driftij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T,jac_ij::Array{T,2},dqdt::Array{T,1},drift_first::Bool) where {T <: Real}
 # The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
 # Initial state:
 state0 = zeros(typeof(h),12)
@@ -901,6 +901,24 @@ else
     jac_ij[ 7+k,14] =  mi*state[1+k]*mijinv - GNEWT*mi*jac_kepler[  k,7]
   end
 end
+# The following lines are meant to compute dq/dt for kepler_driftij,
+# but they currently contain an error (test doesn't pass in test_ah18.jl). [ ]
+for k=1:NDIM
+  # Define relative velocity and acceleration:
+  vij = state[1+NDIM+k]
+  acc_ij = gm*state[1+k]/state[8]^3
+  # Position derivative, body i:
+  dqdt[   k] = mj*vij
+  # Velocity derivative, body i:
+  dqdt[ 3+k] = -mj*acc_ij
+  # Time derivative of mass is zero, so we skip this.
+  # Position derivative, body j:
+  dqdt[ 7+k] = - mi*vij
+  # Velocity derivative, body j:
+  dqdt[10+k] =  mi*acc_ij
+  # Time derivative of mass is zero, so we skip this.
+end
+return
 return
 end
 
@@ -1420,8 +1438,8 @@ indi = 0; indj=0; indd = 0
         v[k,i] += m[j]*fac
         v[k,j] -= m[i]*fac
         # Compute time derivative:
-        dqdt_phi[indi+3+k] += 3.0/h*m[j]*fac
-        dqdt_phi[indj+3+k] -= 3.0/h*m[i]*fac
+        dqdt_phi[indi+3+k] += 3/h*m[j]*fac
+        dqdt_phi[indj+3+k] -= 3/h*m[i]*fac
         # Mass derivative (first part is easy):
         jac_step[indi+3+k,indj+7] += fac
         jac_step[indj+3+k,indi+7] -= fac
@@ -1574,8 +1592,8 @@ end
 return
 end
 
-# Computes correction for pairs which are kicked, with Jacobian:
-function phic!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
+# Computes correction for pairs which are kicked, with Jacobian, and computes dq/dt:
+function phic!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},dqdt_phi::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
 a = zeros(typeof(h),3,n)
 rij = zeros(typeof(h),3)
 aij = zeros(typeof(h),3)
@@ -1600,6 +1618,9 @@ coeff = h^3/36*GNEWT
         facv = fac*2*h/3
         v[k,i] -= m[j]*facv
         v[k,j] += m[i]*facv
+        # Compute time derivative:
+        dqdt_phi[indi+3+k] -= 3/h*m[j]*facv
+        dqdt_phi[indj+3+k] += 3/h*m[i]*facv
         a[k,i] -= m[j]*fac
         a[k,j] += m[i]*fac
         # Impulse of ith particle depends on mass of jth particle:
@@ -1735,7 +1756,8 @@ function ah18!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Arr
 # alpha = 0:
 h2 = 0.5*h
 drift!(x,v,h2,n)
-kickfast!(x,v,h2,m,n,pair)
+#kickfast!(x,v,h2,m,n,pair)
+kickfast!(x,v,h/6,m,n,pair)
 @inbounds for i=1:n-1
   for j=i+1:n
     if ~pair[i,j]
@@ -1744,6 +1766,7 @@ kickfast!(x,v,h2,m,n,pair)
   end
 end
 # Missing phic here [ ]
+phic!(x,v,h,m,n,pair)
 phisalpha!(x,v,h,m,convert(typeof(h),2),n,pair)
 for i=n-1:-1:1
   for j=n:-1:i+1
@@ -1752,7 +1775,8 @@ for i=n-1:-1:1
     end
   end
 end
-kickfast!(x,v,h2,m,n,pair)
+#kickfast!(x,v,h2,m,n,pair)
+kickfast!(x,v,h/6,m,n,pair)
 drift!(x,v,h2,n)
 return
 end
@@ -1763,7 +1787,8 @@ function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2}
 # alpha = 0:
 h2 = 0.5*h
 drift!(x,v,xerror,verror,h2,n)
-kickfast!(x,v,xerror,verror,h2,m,n,pair)
+#kickfast!(x,v,xerror,verror,h2,m,n,pair)
+kickfast!(x,v,xerror,verror,h/6,m,n,pair)
 @inbounds for i=1:n-1
   for j=i+1:n
     if ~pair[i,j]
@@ -1772,6 +1797,7 @@ kickfast!(x,v,xerror,verror,h2,m,n,pair)
   end
 end
 # Missing phic here [ ]
+phic!(x,v,xerror,verror,h,m,n,pair)
 phisalpha!(x,v,xerror,verror,h,m,convert(typeof(h),2),n,pair)
 for i=n-1:-1:1
   for j=n:-1:i+1
@@ -1780,7 +1806,8 @@ for i=n-1:-1:1
     end
   end
 end
-kickfast!(x,v,xerror,verror,h2,m,n,pair)
+#kickfast!(x,v,xerror,verror,h2,m,n,pair)
+kickfast!(x,v,xerror,verror,h/6,m,n,pair)
 drift!(x,v,xerror,verror,h2,n)
 return
 end
@@ -1800,7 +1827,8 @@ dqdt_kick = zeros(typeof(h),sevn)
 jac_tmp1 = zeros(typeof(h),14,sevn)
 jac_tmp2 = zeros(typeof(h),14,sevn)
 drift!(x,v,h2,n,jac_step)
-kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
+#kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
+kickfast!(x,v,h/6,m,n,jac_kick,dqdt_kick,pair)
 # Multiply Jacobian from kick step:
 @inbounds for i in eachindex(jac_step)
   jac_copy[i] = jac_step[i]
@@ -1816,7 +1844,7 @@ indi = 0; indj = 0
   for j=i+1:n
     indj = (j-1)*7
     if ~pair[i,j]  # Check to see if kicks have not been applied
-      kepler_driftij!(m,x,v,i,j,h2,jac_ij,true)
+      kepler_driftij!(m,x,v,i,j,h2,jac_ij,dqdt_ij,true)
     # Pick out indices for bodies i & j:
       @inbounds for k2=1:sevn, k1=1:7
         jac_tmp1[k1,k2] = jac_step[indi+k1,k2]
@@ -1842,7 +1870,8 @@ indi = 0; indj = 0
 end
 # Missing phic here [ ]
 # So, need to set jac_phi to identity before calling this. [ ]
-jac_phi = eye(typeof(h),sevn)
+#jac_phi = eye(typeof(h),sevn)
+phic!(x,v,h,m,n,jac_phi,dqdt_phi,pair)
 phisalpha!(x,v,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
 @inbounds for i in eachindex(jac_step)
   jac_copy[i] = jac_step[i]
@@ -1859,7 +1888,7 @@ for i=n-1:-1:1
   for j=n:-1:i+1
     indj=(j-1)*7
     if ~pair[i,j]  # Check to see if kicks have not been applied
-      kepler_driftij!(m,x,v,i,j,h2,jac_ij,false)
+      kepler_driftij!(m,x,v,i,j,h2,jac_ij,dqdt_ij,false)
       # Pick out indices for bodies i & j:
       # Carry out multiplication on the i/j components of matrix:
       @inbounds for k2=1:sevn, k1=1:7
@@ -1884,7 +1913,8 @@ for i=n-1:-1:1
     end
   end
 end
-kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
+#kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
+kickfast!(x,v,h/6,m,n,jac_kick,dqdt_kick,pair)
 # Multiply Jacobian from kick step:
 @inbounds for i in eachindex(jac_step)
   jac_copy[i] = jac_step[i]
@@ -1895,6 +1925,119 @@ else
   BLAS.gemm!('N','N',one,jac_kick,jac_copy,zero,jac_step)
 end
 drift!(x,v,h2,n,jac_step)
+return
+end
+
+# Carries out the AH18 mapping & computes the derivative with respect to time step, h:
+function ah18!(x::Array{T,2},v::Array{T,2},h::T,m::Array{T,1},n::Int64,dqdt::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
+zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0); half = convert(typeof(h),0.5); two = convert(typeof(h),2.0)
+h2 = half*h
+# This routine assumes that alpha = 0.0
+sevn = 7*n
+jac_phi = zeros(typeof(h),sevn,sevn)
+jac_kick = zeros(typeof(h),sevn,sevn)
+jac_ij = zeros(typeof(h),14,14)
+dqdt_ij = zeros(typeof(h),14)
+dqdt_phi = zeros(typeof(h),sevn)
+dqdt_kick = zeros(typeof(h),sevn)
+dqdt_tmp1 = zeros(typeof(h),14)
+dqdt_tmp2 = zeros(typeof(h),14)
+fill!(dqdt,zero)
+drift!(x,v,h2,n)
+# Compute time derivative of drift step:
+for i=1:n, k=1:3
+  dqdt[(i-1)*7+k] = half*v[k,i] + h2*dqdt[(i-1)*7+3+k]
+end
+kickfast!(x,v,h/6,m,n,jac_kick,dqdt_kick,pair)
+dqdt_kick /= 6 # Since step is h/6
+dqdt_kick .+= *(jac_kick,dqdt)
+# Copy result to dqdt:
+dqdt .= dqdt_kick
+#println("dqdt 2: ",dqdt-dqdt_save)
+# dqdt_save .= dqdt
+@inbounds for i=1:n-1
+  indi = (i-1)*7
+  for j=i+1:n
+    indj = (j-1)*7
+    if ~pair[i,j]  # Check to see if kicks have not been applied
+      kepler_driftij!(m,x,v,i,j,h2,jac_ij,dqdt_ij,true)
+      # Copy current time derivatives for multiplication purposes:
+      @inbounds for k1=1:7
+        dqdt_tmp1[  k1] = dqdt[indi+k1]
+        dqdt_tmp1[7+k1] = dqdt[indj+k1]
+      end
+      # Add in partial derivatives with respect to time:
+      # Need to multiply by 1/2 since we're taking 1/2 time step:
+  #    BLAS.gemm!('N','N',one,jac_ij,dqdt_tmp1,half,dqdt_ij)
+      dqdt_ij .*= half
+      dqdt_ij .+= *(jac_ij,dqdt_tmp1)
+      # Copy back time derivatives:
+      @inbounds for k1=1:7
+        dqdt[indi+k1] = dqdt_ij[  k1]
+        dqdt[indj+k1] = dqdt_ij[7+k1]
+      end
+#      println("dqdt 4: i: ",i," j: ",j," diff: ",dqdt-dqdt_save)
+#      dqdt_save .= dqdt
+    end
+  end
+end
+# Looks like we are missing phic! here: [ ]  
+# Since I haven't added dqdt to phic yet, for now, set jac_phi equal to identity matrix
+# (since this is commented out within phisalpha):
+#jac_phi .= eye(typeof(h),sevn)
+phic!(x,v,h,m,n,jac_phi,dqdt_phi,pair)
+phisalpha!(x,v,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
+# Add in time derivative with respect to prior parameters:
+#BLAS.gemm!('N','N',one,jac_phi,dqdt,one,dqdt_phi)
+dqdt_phi .+= *(jac_phi,dqdt)
+# Copy result to dqdt:
+dqdt .= dqdt_phi
+#println("dqdt 5: ",dqdt-dqdt_save)
+#dqdt_save .= dqdt
+indi=0; indj=0
+for i=n-1:-1:1
+  indi=(i-1)*7
+  for j=n:-1:i+1
+    if ~pair[i,j]  # Check to see if kicks have not been applied
+      indj=(j-1)*7
+      kepler_driftij!(m,x,v,i,j,h2,jac_ij,dqdt_ij,false) # 23%
+      # Copy current time derivatives for multiplication purposes:
+      @inbounds for k1=1:7
+        dqdt_tmp1[  k1] = dqdt[indi+k1]
+        dqdt_tmp1[7+k1] = dqdt[indj+k1]
+      end
+      # Add in partial derivatives with respect to time:
+      # Need to multiply by 1/2 since we're taking 1/2 time step:
+      #BLAS.gemm!('N','N',one,jac_ij,dqdt_tmp1,half,dqdt_ij)
+      dqdt_ij .*= half
+      dqdt_ij .+= *(jac_ij,dqdt_tmp1)
+      # Copy back time derivatives:
+      @inbounds for k1=1:7
+        dqdt[indi+k1] = dqdt_ij[  k1]
+        dqdt[indj+k1] = dqdt_ij[7+k1]
+      end
+#      println("dqdt 6: i: ",i," j: ",j," diff: ",dqdt-dqdt_save)
+#      dqdt_save .= dqdt
+      driftij!(x,v,i,j,-h2,dqdt,-half)
+#      println("dqdt 7: ",dqdt-dqdt_save)
+#      dqdt_save .= dqdt
+    end
+  end
+end
+fill!(dqdt_kick,zero)
+kickfast!(x,v,h/6,m,n,jac_kick,dqdt_kick,pair)
+dqdt_kick /= 6 # Since step is h/6
+dqdt_kick .+= *(jac_kick,dqdt)
+#println("dqdt 8: ",dqdt-dqdt_save)
+#dqdt_save .= dqdt
+# Copy result to dqdt:
+dqdt .= dqdt_kick
+drift!(x,v,h2,n)
+# Compute time derivative of drift step:
+for i=1:n, k=1:3
+  dqdt[(i-1)*7+k] += half*v[k,i] + h2*dqdt[(i-1)*7+3+k]
+end
+#println("dqdt 9: ",dqdt-dqdt_save)
 return
 end
 
@@ -2078,7 +2221,7 @@ indi = 0; indj = 0
   end
 end
 # kick and correction for pairs which are kicked:
-phic!(x,v,h,m,n,jac_phi,pair)
+phic!(x,v,h,m,n,jac_phi,dqdt_phi,pair)
 if alpha != one
 #  phisalpha!(x,v,h,m,2.*(1.-alpha),n,jac_phi,pair) # 10%
   phisalpha!(x,v,h,m,two*(one-alpha),n,jac_phi,dqdt_phi,pair) # 10%
@@ -2212,10 +2355,11 @@ dqdt .= dqdt_kick
     end
   end
 end
-# Looks like we are missing phic here: [ ]  
+# Looks like we are missing phic! here: [ ]  
 # Since I haven't added dqdt to phic yet, for now, set jac_phi equal to identity matrix
 # (since this is commented out within phisalpha):
-jac_phi .= eye(typeof(h),sevn)
+#jac_phi .= eye(typeof(h),sevn)
+phic!(x,v,h,m,n,jac_phi,dqdt_phi,pair)
 phisalpha!(x,v,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
 # Add in time derivative with respect to prior parameters:
 #BLAS.gemm!('N','N',one,jac_phi,dqdt,one,dqdt_phi)
@@ -2449,6 +2593,7 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   # Advance planet state at start of step to estimated transit time:
 #  dh17!(x,v,tt,m,n,pair)
   dh17!(x,v,tt,m,n,dqdt,pair)
+  #ah18!(x,v,tt,m,n,dqdt,pair)
   # Compute time offset:
   gsky = g!(i,j,x,v)
 #  # Compute derivative of g with respect to time:
@@ -2490,6 +2635,7 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   # Advance planet state at start of step to estimated transit time:
 #  dh17!(x,v,tt,m,n,pair)
   dh17!(x,v,tt,m,n,dqdt,pair)
+  #ah18!(x,v,tt,m,n,dqdt,pair)
   # Compute time offset:
   gsky = g!(i,j,x,v)
 #  # Compute derivative of g with respect to time:
@@ -2508,9 +2654,11 @@ end
 x = copy(x1); v = copy(v1)
 # Compute dgdt with the updated time step.
 dh17!(x,v,tt,m,n,jac_step,pair)
+#ah18!(x,v,tt,m,n,jac_step,pair)
 # Need to reset to compute dqdt:
 x = copy(x1); v = copy(v1)
 dh17!(x,v,tt,m,n,dqdt,pair)
+#ah18!(x,v,tt,m,n,dqdt,pair)
 # Compute time offset:
 gsky = g!(i,j,x,v)
 # Compute derivative of g with respect to time:
