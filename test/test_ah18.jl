@@ -1,3 +1,4 @@
+
 # Tests the routine ah18 jacobian:
 
 #include("../src/ttv.jl")
@@ -17,7 +18,7 @@ tmax = 600.0
 dlnq = big(1e-20)
 
 #nstep = 8000
-nstep = 500
+nstep = 5000
 #nstep = 1
 
 elements = readdlm("elements.txt",',')
@@ -52,28 +53,37 @@ v0[2,3] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 xbig = big.(x0); vbig = big.(v0)
 xtest = copy(x0); vtest=copy(v0)
 # Take a single step (so that we aren't at initial coordinates):
+x = copy(x0); v = copy(v0)
 xerror = zeros(x0); verror = zeros(v0)
-@time for i=1:nstep; ah18!(x0,v0,xerror,verror,h,m,n,pair); end
+@time for i=1:nstep; ah18!(x,v,xerror,verror,h,m,n,pair); end
 # Take a step with big precision:
 ah18!(xbig,vbig,big(h),big.(m),n,pair)
 # Take a single DH17 step:
 xerror = zeros(x0); verror = zeros(v0)
 @time for i=1:nstep; dh17!(xtest,vtest,xerror,verror,h,m,n,pair);end
-println("AH18 vs. DH17 x/v difference: ",x0-xtest,v0-vtest)
+println("AH18 vs. DH17 x/v difference: ",x-xtest,v-vtest)
+# Compute x & v in BigFloat precision:
+xbig = big.(x0)
+vbig = big.(v0)
+mbig = big.(m0)
+xerr_big = zeros(xbig); verr_big = zeros(vbig)
+jac_step_big = eye(BigFloat,7*n,7*n)
+jac_err_big = zeros(BigFloat,7*n,7*n)
+@time for i=1:nstep; ah18!(xbig,vbig,xerr_big,verr_big,hbig,mbig,n,jac_step_big,jac_err_big,pair);end
+println("AH18 vs. AH18 BigFloat x/v difference: ",x-convert(Array{Float64,2},xbig),v-convert(Array{Float64,2},vbig))
 
 # Now, copy these to compute Jacobian (so that I don't step
 # x0 & v0 forward in time):
 x = copy(x0)
 v = copy(v0)
 m = copy(m0)
-xbig = big.(x0)
-vbig = big.(v0)
-mbig = big.(m0)
 xerror = zeros(x0); verror = zeros(v0); jac_error = zeros(jac_step)
 # Compute jacobian exactly over nstep steps:
 for istep=1:nstep
   ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
 end
+
+println("AH18 vs. AH18 BigFloat jac_step difference: ",jac_step-convert(Array{Float64,2},jac_step_big))
 #println(typeof(h)," ",jac_step)
 #read(STDIN,Char)
 
@@ -230,6 +240,7 @@ end
 println("Maximum fractional error: ",jac_diff," ",imax," ",jmax," ",kmax," ",lmax," ",jacmax)
 #println(jac_step./jac_step_num)
 println("Maximum error jac_step:   ",maximum(abs.(jac_step-jac_step_num)))
+println("Maximum error jac_step_big vs. jac_step_num:   ",maximum(abs.(jac_step_big-jac_step_num)))
 println("Maximum diff asinh(jac_step):   ",maximum(abs.(asinh.(jac_step)-asinh.(jac_step_num))))
 
 # Compute dqdt:

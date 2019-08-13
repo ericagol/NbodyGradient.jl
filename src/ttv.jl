@@ -1929,9 +1929,7 @@ indi = 0; indj = 0
     end
   end
 end
-# Missing phic here [ ]
-# So, need to set jac_phi to identity before calling this. [ ]
-#jac_phi = eye(typeof(h),sevn)
+# Missing phic here [x]
 phic!(x,v,xerror,verror,h,m,n,jac_phi,dqdt_phi,pair)
 phisalpha!(x,v,xerror,verror,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
 #  jac_step .= jac_phi*jac_step # < 1%  Perhaps use gemm?! [ ]
