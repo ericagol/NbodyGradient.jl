@@ -1,16 +1,17 @@
 # This code tests the function kepler_driftij!
 
-@testset "kepler_driftij" begin
+#@testset "kepler_driftij" begin
 for drift_first in [true,false]
 # Next, try computing two-body Keplerian Jacobian:
 
 n = 3
 t0 = 7257.93115525
-h  = 0.05
+#t0 = -300.0
+h  = 0.0005
 hbig  = big(h)
 tmax = 600.0
 #dlnq = 1e-8
-dlnq = 1e-20
+dlnq = big(1e-20)
 
 elements = readdlm("elements.txt",',')
 #elements[2,1] = 0.75
@@ -24,14 +25,13 @@ v0=zeros(NDIM,n)
 for k=1:n
   m[k] = elements[k,1]
 end
-
 for iter = 1:2
 
 x0,v0 = init_nbody(elements,t0,n)
  if iter == 2
    # Reduce masses to trigger hyperbolic routine:
     m[1:n] *= 1e-1
-    h = 0.05
+    h = 0.0005
     hbig = big(h)
  end
 # Tilt the orbits a bit:
@@ -41,17 +41,25 @@ v0[2,1] = 5e-1*sqrt(v0[1,1]^2+v0[3,1]^2)
 v0[2,2] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 
 jac_ij = zeros(Float64,14,14)
+dqdt_ij = zeros(Float64,14)
+
+println("Initial values: ",x0,v0)
+println("masses: ",m)
 i=1 ; j=2
 x = copy(x0) ; v=copy(v0)
+xerror = zeros(x); verror = zeros(v)
 # Predict values of s:
-kepler_driftij!(m,x,v,i,j,h,jac_ij,drift_first)
+kepler_driftij!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,drift_first)
 x0 = copy(x) ; v0 = copy(v)
+xerror = zeros(x0); verror = zeros(v0)
 xbig = big.(x) ; vbig=big.(v); mbig = big.(m)
-kepler_driftij!(m,x,v,i,j,h,jac_ij,drift_first)
+xerr_big = zeros(xbig); verr_big = zeros(vbig)
+kepler_driftij!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,drift_first)
 # Now compute Jacobian with BigFloat precision:
 jac_ij_big = zeros(BigFloat,14,14)
+dqdt_ij_big = zeros(BigFloat,14)
 KEPLER_TOL = sqrt(eps(big(1.0)))
-kepler_driftij!(mbig,xbig,vbig,i,j,hbig,jac_ij_big,drift_first)
+kepler_driftij!(mbig,xbig,vbig,xerr_big,verr_big,i,j,hbig,jac_ij_big,dqdt_ij_big,drift_first)
 #println("jac_ij: ",convert(Array{Float64,2},jac_ij_big))
 #println("jac_ij - jac_ij_big: ",convert(Array{Float64,2},jac_ij_big)-jac_ij)
 println("max(jac_ij - jac_ij_big): ",maxabs(convert(Array{Float64,2},jac_ij_big)-jac_ij))
@@ -225,21 +233,29 @@ jac_ij_num[14,14] =  1.0
 #println(jac_ij_num)
 #println(jac_ij./jac_ij_num)
 emax = 0.0; imax = 0; jmax = 0
+emax_big = big(0.0); imax_big = 0; jmax_big = 0
+jac_ij += eye(14)
+jac_ij_big += eye(BigFloat,14)
 for i=1:14, j=1:14
   if jac_ij[i,j] != 0.0
     diff = abs(convert(Float64,jac_ij_num[i,j])/jac_ij[i,j]-1.0)
     if  diff > emax
       emax = diff; imax = i; jmax = j
     end
+    diff_big = abs(convert(Float64,jac_ij_num[i,j])/jac_ij_big[i,j]-1.0)
+    if  diff_big > emax_big
+      emax_big = diff; imax_big = i; jmax_big = j
+    end
   end
 end
 println("Maximum fractional error: ",emax," ",imax," ",jmax)
+println("Maximum fractional error big: ",emax_big," ",imax_big," ",jmax_big)
 #println(jac_ij)
 #println(convert(Array{Float64,2},jac_ij_num))
-println("Maximum jac_ij error:   ",maxabs(convert(Array{Float64,2},jac_ij_num)-jac_ij))
-println("Maximum jac_ij_big-jac_ij_num:   ",maxabs(convert(Array{Float64,2},jac_ij_num-jac_ij_big)))
+println("Maximum jac_ij error:   ",maxabs(convert(Array{Float64,2},asinh.(jac_ij_num))-asinh.(jac_ij)))
+println("Maximum jac_ij_big-jac_ij_num:   ",maxabs(convert(Array{Float64,2},asinh.(jac_ij_num)-asinh.(jac_ij_big))))
 
 @test isapprox(jac_ij_num,jac_ij;norm=maxabs)
 end
 end
-end
+#end

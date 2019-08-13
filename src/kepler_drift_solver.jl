@@ -1,3 +1,4 @@
+
 # Wisdom & Hernandez version of Kepler solver, but with quartic convergence.
 
 using ForwardDiff
@@ -88,7 +89,9 @@ dfdt = -k*g1bs*rinv*r0inv
 if drift_first
   # Drift backwards before Kepler step: (1/22/2018)
   fm1 = -k*r0inv*g2bs
+  # This is given in 2/7/2018 notes, but last term doesn't have g2bs:
   gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+eta*g2bs^2+k*g3bs*g2bs)
+#  gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+eta*g2bs^2+k*g3bs)
 else
   # Drift backwards after Kepler step: (1/24/2018)
   fm1 =  k*rinv*(g2bs-k*r0inv*H1_series(s,beta0))
@@ -97,8 +100,10 @@ else
 end
 # Compute velocity component functions:
 if drift_first
+  # 2/1/18 notes:
   dgdtm1 = k*r0inv*rinv*(r0*g0bs*g2bs+eta*g1bs*g2bs+k*g1bs*g3bs)
 else
+  # 1/22/18 notes:
   dgdtm1 = -k*rinv*g2bs
 end
 for j=1:3
@@ -161,7 +166,9 @@ function jac_delxv(x0::Array{T,1},v0::Array{T,1},k::T,s::T,beta0::T,h::T,drift_f
   if drift_first
     # Drift backwards before Kepler step: (1/22/2018)
     fm1 = -k*r0inv*g2bs
+    # This is given in 2/7/2018 notes, but last term doesn't have g2bs:
     gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+eta*g2bs^2+k*g3bs*g2bs)
+#    gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+eta*g2bs^2+k*g3bs)
   else
     # Drift backwards after Kepler step: (1/24/2018)
     fm1 =  k*rinv*(g2bs-k*r0inv*H1_series(s,beta0))
