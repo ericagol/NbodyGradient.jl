@@ -40,6 +40,7 @@ pair = zeros(Bool,n,n)
 
 # Initialize with identity matrix:
 jac_step = eye(Float64,7*n)
+jac_error = zeros(jac_step)
 
 for k=1:n
   m[k] = elements[k,1]
@@ -70,12 +71,15 @@ println("AH18 vs. DH17 x/v difference: ",x0-xtest,v0-vtest)
 x = copy(x0)
 v = copy(v0)
 m = copy(m0)
+xerror = zeros(x0); verror = zeros(v0)
 xbig = big.(x0)
 vbig = big.(v0)
 mbig = big.(m0)
+xerr_big = zeros(xbig); verr_big=zeros(vbig);
+
 # Compute jacobian exactly over nstep steps:
 for istep=1:nstep
-  dh17!(x,v,h,m,n,jac_step,pair)
+  dh17!(x,v,xerror,verror,h,m,n,jac_step,pair)
 end
 #println(typeof(h)," ",jac_step)
 #read(STDIN,Char)
@@ -243,7 +247,8 @@ dqdt_num = zeros(BigFloat,7*n)
 x = copy(x0)
 v = copy(v0)
 m = copy(m0)
-dh17!(x,v,h,m,n,dqdt,pair)
+xerror = zeros(x0); verror = zeros(v0)
+dh17!(x,v,xerror,verror,h,m,n,dqdt,pair)
 xm= big.(x0)
 vm= big.(v0)
 mm= big.(m0)

@@ -29,6 +29,20 @@ sum_value = tmp
 return sum_value::T,sum_error::T
 end
 
+function comp_sum_matrix!(sum_value::Array{T,2},sum_error::Array{T,2},addend::Array{T,2}) where {T <: Real}
+#  Function for compensated summation using the Kahan (1965) algorithm.
+#  sum_value:  current value of the sum
+#  sum_error:  truncation/rounding error accumulated from prior steps in sum
+#  addend:     new value to be added to the sum
+for i in eachindex(sum_value)
+  sum_error[i] += addend[i]
+  tmp = sum_value[i] + sum_error[i]
+  sum_error[i] = (sum_value[i] - tmp) + sum_error[i]
+  sum_value[i] = tmp
+end
+return
+end
+
 
 # These "constants" pre-allocate memory for matrices used in the derivative computation (to save time with allocation and garbage collection):
 if ~isdefined(:pxpr0)
@@ -250,6 +264,8 @@ jac_transit = zeros(typeof(h),7*n,7*n)
 dtdq = zeros(typeof(h),7,n)
 # Initialize the Jacobian to the identity matrix:
 jac_step = eye(typeof(h),7*n)
+# Initialize Jacobian error array:
+jac_error = zeros(typeof(h),7*n,7*n)
 
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
@@ -265,7 +281,7 @@ ntt_max = size(tt)[2]
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m))
 while t < (t0+tmax) && param_real
   # Carry out a dh17 mapping step:
-  ah18!(x,v,xerror,verror,h,m,n,jac_step,pair)
+  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
   #dh17!(x,v,h,m,n,jac_step,pair)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
@@ -330,6 +346,8 @@ jac_transit = zeros(Float64,7*n,7*n)
 dtdq = zeros(Float64,7,n)
 # Initialize the Jacobian to the identity matrix:
 jac_step = eye(Float64,7*n)
+# Initialize Jacobian error array:
+jac_error = zeros(Float64,7*n,7*n)
 
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
@@ -345,7 +363,7 @@ ntt_max = size(tt)[2]
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
 while t < t0+tmax && param_real
   # Carry out a dh17 mapping step:
-  ah18!(x,v,xerror,verror,h,m,n,jac_step,pair)
+  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
   #dh17!(x,v,h,m,n,jac_step,pair)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
@@ -410,6 +428,7 @@ jac_transit = zeros(Float64,7*n,7*n)
 dtdq = zeros(Float64,7,n)
 # Initialize the Jacobian to the identity matrix:
 jac_step = eye(Float64,7*n)
+jac_error = zeros(Float64,7*n,7*n)
 
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
@@ -425,7 +444,7 @@ ntt_max = size(tt)[2]
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
 while t < t0+tmax && param_real
   # Carry out a dh17 mapping step:
-  ah18!(x,v,xerror,verror,h,m,n,jac_step,pair)
+  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
   #dh17!(x,v,h,m,n,jac_step,pair)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
@@ -497,6 +516,8 @@ dtdq3 = zeros(Float64,7,n)
 # Initialize the Jacobian to the identity matrix:
 jac_prior = zeros(Float64,7*n,7*n)
 jac_step = eye(Float64,7*n)
+# Initialize Jacobian error matrix
+jac_error = zeros(Float64,7*n,7*n)
 
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
@@ -512,7 +533,7 @@ ntt_max = size(tt)[2]
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
 while t < t0+tmax && param_real
   # Carry out a dh17 mapping step:
-  ah18!(x,v,xerror,verror,h,m,n,jac_step,pair)
+  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
   #dh17!(x,v,h,m,n,jac_step,pair)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
@@ -766,7 +787,7 @@ return
 end
 
 # Drifts bodies i & j and computes Jacobian:
-function driftij!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},i::Int64,j::Int64,h::T,jac_step::Array{T,2},nbody::Int64) where {T <: Real}
+function driftij!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},i::Int64,j::Int64,h::T,jac_step::Array{T,2},jac_error::Array{T,2},nbody::Int64) where {T <: Real}
 indi = (i-1)*7
 indj = (j-1)*7
 for k=1:NDIM
@@ -777,10 +798,12 @@ for k=1:NDIM
 end
 # Now for Jacobian:
 for m=1:7*nbody, k=1:NDIM
-  jac_step[indi+k,m] += h*jac_step[indi+3+k,m]
+  #jac_step[indi+k,m] += h*jac_step[indi+3+k,m]
+  jac_step[indi+k,m],jac_error[indi+k,m] = comp_sum(jac_step[indi+k,m],jac_error[indi+k,m], h*jac_step[indi+3+k,m])
 end
 for m=1:7*nbody, k=1:NDIM
-  jac_step[indj+k,m] += h*jac_step[indj+3+k,m]
+  #jac_step[indj+k,m] += h*jac_step[indj+3+k,m]
+  jac_step[indj+k,m],jac_error[indi+k,m] = comp_sum(jac_step[indj+k,m],jac_error[indi+k,m],h*jac_step[indj+3+k,m])
 end
 return
 end
@@ -872,7 +895,8 @@ gm = GNEWT*(m[i]+m[j])
 # jac_ij should be the Jacobian for going from (x_{0,i},v_{0,i},m_i) &  (x_{0,j},v_{0,j},m_j)
 # to  (x_i,v_i,m_i) &  (x_j,v_j,m_j), a 14x14 matrix for the 3-dimensional case.
 # Fill with zeros for now:
-jac_ij .= eye(typeof(h),14)
+#jac_ij .= eye(typeof(h),14)
+fill!(jac_ij,zero(h))
 if gm == 0
 #  Do nothing
 #  for k=1:3
@@ -1148,7 +1172,7 @@ return
 end
 
 # Drifts all particles:
-function drift!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,n::Int64,jac_step::Array{T,2}) where {T <: Real}
+function drift!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,n::Int64,jac_step::Array{T,2},jac_error::Array{T,2}) where {T <: Real}
 indi = 0
 @inbounds for i=1:n
   indi = (i-1)*7
@@ -1158,7 +1182,8 @@ indi = 0
   end
   # Now for Jacobian:
   for k=1:7*n, j=1:NDIM
-    jac_step[indi+j,k] += h*jac_step[indi+3+j,k]
+    #jac_step[indi+j,k] += h*jac_step[indi+3+j,k]
+    jac_step[indi+j,k],jac_error[indi+j,k] = comp_sum(jac_step[indi+j,k],jac_error[indi+j,k],h*jac_step[indi+3+j,k])
   end
 end
 return
@@ -1187,6 +1212,7 @@ end
 return
 end
 
+# Version of kickfast with compensated summation:
 # Computes "fast" kicks for pairs of bodies in lieu of -drift+Kepler with compensated summation:
 function kickfast!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
 rij = zeros(typeof(h),3)
@@ -1212,11 +1238,13 @@ end
 return
 end
 
+# Version of kickfast which computes the Jacobian with compensated summation:
 function kickfast!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},
     dqdt_kick::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
 rij = zeros(typeof(h),3)
-#fill!(jac_step,zero(typeof(h)))
-jac_step.=eye(typeof(h),7*n)
+# Getting rid of identity since we will add that back in in calling routines:
+fill!(jac_step,zero(typeof(h)))
+#jac_step.=eye(typeof(h),7*n)
 @inbounds for i=1:n-1
   indi = (i-1)*7
   for j=i+1:n
@@ -1230,9 +1258,9 @@ jac_step.=eye(typeof(h),7*n)
       for k=1:3
         fac = h*GNEWT*rij[k]*r3inv
         # Apply impulses:
-        v[k,i] -= m[j]*fac
+        #v[k,i] -= m[j]*fac
         v[k,i],verror[k,i] = comp_sum(v[k,i],verror[k,i],-m[j]*fac)
-        v[k,j] += m[i]*fac
+        #v[k,j] += m[i]*fac
         v[k,j],verror[k,j] = comp_sum(v[k,j],verror[k,j], m[i]*fac)
         # Compute time derivative:
         dqdt_kick[indi+3+k] -= m[j]*fac/h
@@ -1373,9 +1401,9 @@ end
 return
 end
 
+# Computes the 4th-order correction with Jacobian, dq/dt, and compensated summation:
 function phisalpha!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},
   alpha::T,n::Int64,jac_step::Array{T,2},dqdt_phi::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
-# Computes the 4th-order correction:
 #function [v] = phisalpha(x,v,h,m,alpha,pair)
 #n = size(m,2);
 a = zeros(typeof(h),3,n)
@@ -1619,7 +1647,9 @@ rij = zeros(typeof(h),3)
 aij = zeros(typeof(h),3)
 dadq = zeros(typeof(h),3,n,4,n)  # There is no velocity dependence
 dotdadq = zeros(typeof(h),4,n)  # There is no velocity dependence
-jac_step.=eye(typeof(h),7*n)
+# Set jac_step to zeros:
+#jac_step.=eye(typeof(h),7*n)
+fill!(jac_step,zero(typeof(h)))
 fac = 0.0; fac1 = 0.0; fac2 = 0.0; fac3 = 0.0; r1 = 0.0; r2 = 0.0; r3 = 0.0
 coeff = h^3/36*GNEWT
 @inbounds for i=1:n-1
@@ -1837,7 +1867,7 @@ return
 end
 
 # Carries out the AH18 mapping & computes the Jacobian:
-function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
+function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},jac_error::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0); half = convert(typeof(h),0.5); two = convert(typeof(h),2.0)
 h2 = half*h
 sevn = 7*n
@@ -1850,18 +1880,19 @@ dqdt_phi = zeros(typeof(h),sevn)
 dqdt_kick = zeros(typeof(h),sevn)
 jac_tmp1 = zeros(typeof(h),14,sevn)
 jac_tmp2 = zeros(typeof(h),14,sevn)
-drift!(x,v,xerror,verror,h2,n,jac_step)
+jac_err1 = zeros(typeof(h),14,sevn)
+# Edit this routine to do compensated summation for Jacobian [x]
+drift!(x,v,xerror,verror,h2,n,jac_step,jac_error)
 #kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
 kickfast!(x,v,xerror,verror,h/6,m,n,jac_kick,dqdt_kick,pair)
 # Multiply Jacobian from kick step:
-@inbounds for i in eachindex(jac_step)
-  jac_copy[i] = jac_step[i]
-end
 if typeof(h) == BigFloat
-  jac_step = *(jac_kick,jac_copy)
+  jac_copy = *(jac_kick,jac_step)
 else
-  BLAS.gemm!('N','N',one,jac_kick,jac_copy,zero,jac_step)
+  BLAS.gemm!('N','N',one,jac_kick,jac_step,zero,jac_copy)
 end
+# Add back in the identity portion of the Jacobian with compensated summation:
+comp_sum_matrix!(jac_step,jac_error,jac_copy)
 indi = 0; indj = 0
 @inbounds for i=1:n-1
   indi = (i-1)*7
@@ -1871,10 +1902,12 @@ indi = 0; indj = 0
       kepler_driftij!(m,x,v,xerror,verror,i,j,h2,jac_ij,dqdt_ij,true)
     # Pick out indices for bodies i & j:
       @inbounds for k2=1:sevn, k1=1:7
-        jac_tmp1[k1,k2] = jac_step[indi+k1,k2]
+        jac_tmp1[k1,k2] = jac_step[ indi+k1,k2]
+        jac_err1[k1,k2] = jac_error[indi+k1,k2]
       end
       @inbounds for k2=1:sevn, k1=1:7
-        jac_tmp1[7+k1,k2] = jac_step[indj+k1,k2]
+        jac_tmp1[7+k1,k2] = jac_step[ indj+k1,k2]
+        jac_err1[7+k1,k2] = jac_error[indj+k1,k2]
       end
       # Carry out multiplication on the i/j components of matrix:
       if typeof(h) == BigFloat
@@ -1882,12 +1915,16 @@ indi = 0; indj = 0
       else
         BLAS.gemm!('N','N',one,jac_ij,jac_tmp1,zero,jac_tmp2)
       end
+      # Add back in the Jacobian with compensated summation:
+      comp_sum_matrix!(jac_tmp1,jac_err1,jac_tmp2)
       # Copy back to the Jacobian:
       @inbounds for k2=1:sevn, k1=1:7
-         jac_step[indi+k1,k2]=jac_tmp2[k1,k2]
+         jac_step[ indi+k1,k2]=jac_tmp1[k1,k2]
+         jac_error[indi+k1,k2]=jac_err1[k1,k2]
       end
       @inbounds for k2=1:sevn, k1=1:7
-        jac_step[indj+k1,k2]=jac_tmp2[7+k1,k2]
+        jac_step[ indj+k1,k2]=jac_tmp1[7+k1,k2]
+        jac_error[indj+k1,k2]=jac_err1[7+k1,k2]
       end
     end
   end
@@ -1897,15 +1934,14 @@ end
 #jac_phi = eye(typeof(h),sevn)
 phic!(x,v,xerror,verror,h,m,n,jac_phi,dqdt_phi,pair)
 phisalpha!(x,v,xerror,verror,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
-@inbounds for i in eachindex(jac_step)
-  jac_copy[i] = jac_step[i]
-end
 #  jac_step .= jac_phi*jac_step # < 1%  Perhaps use gemm?! [ ]
 if typeof(h) == BigFloat
-  jac_step = *(jac_phi,jac_copy)
+  jac_copy = *(jac_phi,jac_step)
 else
-  BLAS.gemm!('N','N',one,jac_phi,jac_copy,zero,jac_step)
+  BLAS.gemm!('N','N',one,jac_phi,jac_step,zero,jac_copy)
 end
+# Add back in the identity portion of the Jacobian with compensated summation:
+comp_sum_matrix!(jac_step,jac_error,jac_copy)
 indi=0; indj=0
 for i=n-1:-1:1
   indi=(i-1)*7
@@ -1916,10 +1952,12 @@ for i=n-1:-1:1
       # Pick out indices for bodies i & j:
       # Carry out multiplication on the i/j components of matrix:
       @inbounds for k2=1:sevn, k1=1:7
-        jac_tmp1[k1,k2] = jac_step[indi+k1,k2]
+        jac_tmp1[k1,k2] = jac_step[ indi+k1,k2]
+        jac_err1[k1,k2] = jac_error[indi+k1,k2]
       end
       @inbounds for k2=1:sevn, k1=1:7
-        jac_tmp1[7+k1,k2] = jac_step[indj+k1,k2]
+        jac_tmp1[7+k1,k2] = jac_step[ indj+k1,k2]
+        jac_err1[7+k1,k2] = jac_error[indj+k1,k2]
       end
       # Carry out multiplication on the i/j components of matrix:
       if typeof(h) == BigFloat
@@ -1927,12 +1965,16 @@ for i=n-1:-1:1
       else
         BLAS.gemm!('N','N',one,jac_ij,jac_tmp1,zero,jac_tmp2)
       end
+      # Add back in the Jacobian with compensated summation:
+      comp_sum_matrix!(jac_tmp1,jac_err1,jac_tmp2)
       # Copy back to the Jacobian:
       @inbounds for k2=1:sevn, k1=1:7
-         jac_step[indi+k1,k2]=jac_tmp2[k1,k2]
+         jac_step[ indi+k1,k2]=jac_tmp1[k1,k2]
+         jac_error[indi+k1,k2]=jac_err1[k1,k2]
       end
       @inbounds for k2=1:sevn, k1=1:7
-        jac_step[indj+k1,k2]=jac_tmp2[7+k1,k2]
+        jac_step[ indj+k1,k2]=jac_tmp1[7+k1,k2]
+        jac_error[indj+k1,k2]=jac_err1[7+k1,k2]
       end
     end
   end
@@ -1940,20 +1982,21 @@ end
 #kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
 kickfast!(x,v,xerror,verror,h/6,m,n,jac_kick,dqdt_kick,pair)
 # Multiply Jacobian from kick step:
-@inbounds for i in eachindex(jac_step)
-  jac_copy[i] = jac_step[i]
-end
 if typeof(h) == BigFloat
-  jac_step = *(jac_kick,jac_copy)
+  jac_copy = *(jac_kick,jac_step)
 else
-  BLAS.gemm!('N','N',one,jac_kick,jac_copy,zero,jac_step)
+  BLAS.gemm!('N','N',one,jac_kick,jac_step,zero,jac_copy)
 end
-drift!(x,v,xerror,verror,h2,n,jac_step)
+# Add back in the identity portion of the Jacobian with compensated summation:
+comp_sum_matrix!(jac_step,jac_error,jac_copy)
+# Edit this routine to do compensated summation for Jacobian [x]
+drift!(x,v,xerror,verror,h2,n,jac_step,jac_error)
 return
 end
 
 # Carries out the AH18 mapping & computes the derivative with respect to time step, h:
 function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,dqdt::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
+# [Currently this routine is not giving the correct dqdt values. -EA 8/12/2019]
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0); half = convert(typeof(h),0.5); two = convert(typeof(h),2.0)
 h2 = half*h
 # This routine assumes that alpha = 0.0
@@ -1974,7 +2017,8 @@ for i=1:n, k=1:3
 end
 kickfast!(x,v,xerror,verror,h/6,m,n,jac_kick,dqdt_kick,pair)
 dqdt_kick /= 6 # Since step is h/6
-dqdt_kick .+= *(jac_kick,dqdt)
+# Since I removed identity from kickfast, need to add in dqdt:
+dqdt_kick .+= *(jac_kick,dqdt) + dqdt
 # Copy result to dqdt:
 dqdt .= dqdt_kick
 #println("dqdt 2: ",dqdt-dqdt_save)
@@ -2015,7 +2059,7 @@ phisalpha!(x,v,xerror,verror,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
 #BLAS.gemm!('N','N',one,jac_phi,dqdt,one,dqdt_phi)
 dqdt_phi .+= *(jac_phi,dqdt)
 # Copy result to dqdt:
-dqdt .= dqdt_phi
+dqdt .+= dqdt_phi
 #println("dqdt 5: ",dqdt-dqdt_save)
 #dqdt_save .= dqdt
 indi=0; indj=0
@@ -2042,7 +2086,6 @@ for i=n-1:-1:1
       end
 #      println("dqdt 6: i: ",i," j: ",j," diff: ",dqdt-dqdt_save)
 #      dqdt_save .= dqdt
-      driftij!(x,v,i,j,-h2,dqdt,-half)
 #      println("dqdt 7: ",dqdt-dqdt_save)
 #      dqdt_save .= dqdt
     end
@@ -2051,7 +2094,7 @@ end
 fill!(dqdt_kick,zero)
 kickfast!(x,v,xerror,verror,h/6,m,n,jac_kick,dqdt_kick,pair)
 dqdt_kick /= 6 # Since step is h/6
-dqdt_kick .+= *(jac_kick,dqdt)
+dqdt_kick .+= *(jac_kick,dqdt) + dqdt
 #println("dqdt 8: ",dqdt-dqdt_save)
 #dqdt_save .= dqdt
 # Copy result to dqdt:
@@ -2190,12 +2233,14 @@ sevn = 7*n
 jac_phi = zeros(typeof(h),sevn,sevn)
 jac_kick = zeros(typeof(h),sevn,sevn)
 jac_copy = zeros(typeof(h),sevn,sevn)
+jac_error = zeros(typeof(h),sevn,sevn)
 jac_ij = zeros(typeof(h),14,14)
 dqdt_ij = zeros(typeof(h),14)
 dqdt_phi = zeros(typeof(h),sevn)
 dqdt_kick = zeros(typeof(h),sevn)
 jac_tmp1 = zeros(typeof(h),14,sevn)
 jac_tmp2 = zeros(typeof(h),14,sevn)
+jac_err1 = zeros(typeof(h),14,sevn)
 kickfast!(x,v,xerror,verror,h/6,m,n,jac_phi,dqdt_kick,pair)
 # alpha = 0. is similar in precision to alpha=0.25
 if alpha != zero
@@ -2203,29 +2248,31 @@ if alpha != zero
 #  jac_step .= jac_phi*jac_step # < 1%
 end
 # Multiply Jacobian from kick/phisalpha steps:
-@inbounds for i in eachindex(jac_step)
-  jac_copy[i] = jac_step[i]
-end
 if typeof(h) == BigFloat
-  jac_step = *(jac_phi,jac_copy)
+  jac_copy = *(jac_phi,jac_step)
 else
-  BLAS.gemm!('N','N',one,jac_phi,jac_copy,zero,jac_step)
+  BLAS.gemm!('N','N',one,jac_phi,jac_step,zero,jac_copy)
 end
-drift!(x,v,xerror,verror,h2,n,jac_step)
+# Add back in the identity portion of the Jacobian with compensated summation:
+comp_sum_matrix!(jac_step,jac_error,jac_copy)
+# Modify drift! to account for error in Jacobian: [x]
+drift!(x,v,xerror,verror,h2,n,jac_step,jac_error)
 indi = 0; indj = 0
 @inbounds for i=1:n-1
   indi = (i-1)*7
   for j=i+1:n
     indj = (j-1)*7
     if ~pair[i,j]  # Check to see if kicks have not been applied
-      driftij!(x,v,xerror,verror,i,j,-h2,jac_step,n)
+      driftij!(x,v,xerror,verror,i,j,-h2,jac_step,jac_error,n)
       keplerij!(m,x,v,xerror,verror,i,j,h2,jac_ij,dqdt_ij) # 21%
     # Pick out indices for bodies i & j:
       @inbounds for k2=1:sevn, k1=1:7
         jac_tmp1[k1,k2] = jac_step[indi+k1,k2]
+        jac_err1[k1,k2] = jac_error[indi+k1,k2]
       end
       @inbounds for k2=1:sevn, k1=1:7
         jac_tmp1[7+k1,k2] = jac_step[indj+k1,k2]
+        jac_err1[7+k1,k2] = jac_error[indj+k1,k2]
       end
       # Carry out multiplication on the i/j components of matrix:
 #    jac_tmp2 = BLAS.gemm('N','N',jac_ij,jac_tmp1)
@@ -2234,12 +2281,16 @@ indi = 0; indj = 0
       else
         BLAS.gemm!('N','N',one,jac_ij,jac_tmp1,zero,jac_tmp2)
       end
+#      # Add back in the Jacobian with compensated summation:
+#      comp_sum_matrix!(jac_tmp1,jac_err1,jac_tmp2)
       # Copy back to the Jacobian:
       @inbounds for k2=1:sevn, k1=1:7
          jac_step[indi+k1,k2]=jac_tmp2[k1,k2]
+         jac_error[indi+k1,k2]=jac_err1[k1,k2]
       end
       @inbounds for k2=1:sevn, k1=1:7
         jac_step[indj+k1,k2]=jac_tmp2[7+k1,k2]
+        jac_error[indj+k1,k2]=jac_err1[7+k1,k2]
       end
     end
   end
@@ -2267,6 +2318,8 @@ if typeof(h) == BigFloat
 else
   BLAS.gemm!('N','N',one,jac_phi,jac_copy,zero,jac_step)
 end
+# Add back in the identity portion of the Jacobian with compensated summation:
+comp_sum_matrix!(jac_step,jac_error,jac_copy)
 indi=0; indj=0
 for i=n-1:-1:1
   indi=(i-1)*7
@@ -2278,9 +2331,11 @@ for i=n-1:-1:1
       # Carry out multiplication on the i/j components of matrix:
       @inbounds for k2=1:sevn, k1=1:7
         jac_tmp1[k1,k2] = jac_step[indi+k1,k2]
+        jac_err1[k1,k2] = jac_error[indi+k1,k2]
       end
       @inbounds for k2=1:sevn, k1=1:7
         jac_tmp1[7+k1,k2] = jac_step[indj+k1,k2]
+        jac_err1[7+k1,k2] = jac_error[indj+k1,k2]
       end
       # Carry out multiplication on the i/j components of matrix:
   #    jac_tmp2 = BLAS.gemm('N','N',jac_ij,jac_tmp1)
@@ -2289,18 +2344,22 @@ for i=n-1:-1:1
       else
         BLAS.gemm!('N','N',one,jac_ij,jac_tmp1,zero,jac_tmp2)
       end
+#      # Add back in the Jacobian with compensated summation:
+#      comp_sum_matrix!(jac_tmp1,jac_err1,jac_tmp2)
       # Copy back to the Jacobian:
       @inbounds for k2=1:sevn, k1=1:7
          jac_step[indi+k1,k2]=jac_tmp2[k1,k2]
+         jac_error[indi+k1,k2]=jac_err1[k1,k2]
       end
       @inbounds for k2=1:sevn, k1=1:7
         jac_step[indj+k1,k2]=jac_tmp2[7+k1,k2]
+        jac_error[indj+k1,k2]=jac_err1[7+k1,k2]
       end
-      driftij!(x,v,xerror,verror,i,j,-h2,jac_step,n) 
+      driftij!(x,v,xerror,verror,i,j,-h2,jac_step,jac_error,n) 
     end
   end
 end
-drift!(x,v,xerror,verror,h2,n,jac_step)
+drift!(x,v,xerror,verror,h2,n,jac_step,jac_error)
 if alpha != zero
 #  phisalpha!(x,v,h,m,alpha,n,jac_phi)
   phisalpha!(x,v,xerror,verror,h,m,alpha,n,jac_phi,dqdt_phi,pair) # 10%
@@ -2308,14 +2367,13 @@ if alpha != zero
 end
 kickfast!(x,v,xerror,verror,h/6,m,n,jac_phi,dqdt_kick,pair)
 # Multiply Jacobian from kick step:
-@inbounds for i in eachindex(jac_step)
-  jac_copy[i] = jac_step[i]
-end
 if typeof(h) == BigFloat
-  jac_step = *(jac_phi,jac_copy)
+  jac_copy = *(jac_phi,jac_step)
 else
-  BLAS.gemm!('N','N',one,jac_phi,jac_copy,zero,jac_step)
+  BLAS.gemm!('N','N',one,jac_phi,jac_step,zero,jac_copy)
 end
+# Add back in the identity portion of the Jacobian with compensated summation:
+comp_sum_matrix!(jac_step,jac_error,jac_copy)
 #println("jac_step: ",typeof(h)," ",convert(Array{Float64,2},jac_step))
 return #jac_step
 end
@@ -2347,7 +2405,7 @@ kickfast!(x,v,xerror,verror,h/6,m,n,jac_kick,dqdt_kick,pair)
 dqdt_kick /= 6 # Since step is h/6
 dqdt_kick .+= *(jac_kick,dqdt)
 # Copy result to dqdt:
-dqdt .= dqdt_kick
+dqdt .+= dqdt_kick
 #println("dqdt 2: ",dqdt-dqdt_save)
 # dqdt_save .= dqdt
 @inbounds for i=1:n-1
@@ -2389,7 +2447,7 @@ phisalpha!(x,v,xerror,verror,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
 #BLAS.gemm!('N','N',one,jac_phi,dqdt,one,dqdt_phi)
 dqdt_phi .+= *(jac_phi,dqdt)
 # Copy result to dqdt:
-dqdt .= dqdt_phi
+dqdt .+= dqdt_phi
 #println("dqdt 5: ",dqdt-dqdt_save)
 #dqdt_save .= dqdt
 indi=0; indj=0
@@ -2429,7 +2487,7 @@ dqdt_kick .+= *(jac_kick,dqdt)
 #println("dqdt 8: ",dqdt-dqdt_save)
 #dqdt_save .= dqdt
 # Copy result to dqdt:
-dqdt .= dqdt_kick
+dqdt .+= dqdt_kick
 drift!(x,v,xerror,verror,h2,n)
 # Compute time derivative of drift step:
 for i=1:n, k=1:3

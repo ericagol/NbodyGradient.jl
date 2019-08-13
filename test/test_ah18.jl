@@ -69,10 +69,10 @@ m = copy(m0)
 xbig = big.(x0)
 vbig = big.(v0)
 mbig = big.(m0)
-xerror = zeros(x0); verror = zeros(v0)
+xerror = zeros(x0); verror = zeros(v0); jac_error = zeros(jac_step)
 # Compute jacobian exactly over nstep steps:
 for istep=1:nstep
-  ah18!(x,v,xerror,verror,h,m,n,jac_step,pair)
+  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
 end
 #println(typeof(h)," ",jac_step)
 #read(STDIN,Char)

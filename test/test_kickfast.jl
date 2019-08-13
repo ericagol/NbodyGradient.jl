@@ -54,6 +54,8 @@ xerror = zeros(x0); verror = zeros(v0)
 # Compute jacobian exactly:
 dqdt_kick = zeros(7*n)
 kickfast!(x,v,xerror,verror,h,m,n,jac_step,dqdt_kick,pair)
+# Add in identity matrix:
+jac_step += eye(jac_step)
 
 # Now compute numerical derivatives, using BigFloat to avoid
 # round-off errors:
