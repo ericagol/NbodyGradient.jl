@@ -7,7 +7,7 @@ for drift_first in [true,false]
 n = 3
 t0 = 7257.93115525
 #t0 = -300.0
-h  = 0.0005
+h  = 0.0000005
 hbig  = big(h)
 tmax = 600.0
 #dlnq = 1e-8
@@ -31,7 +31,7 @@ x0,v0 = init_nbody(elements,t0,n)
  if iter == 2
    # Reduce masses to trigger hyperbolic routine:
     m[1:n] *= 1e-1
-    h = 0.0005
+    h = 0.0000005
     hbig = big(h)
  end
 # Tilt the orbits a bit:
