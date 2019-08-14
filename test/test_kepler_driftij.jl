@@ -42,6 +42,7 @@ v0[2,2] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 
 jac_ij = zeros(Float64,14,14)
 dqdt_ij = zeros(Float64,14)
+dqdt_num = zeros(BigFloat,14)
 
 println("Initial values: ",x0,v0)
 println("masses: ",m)
@@ -71,6 +72,28 @@ xsave = big.(x)
 vsave = big.(v)
 msave = big.(m)
 
+# Compute the time derivatives:
+# Initial positions, velocities & masses:
+xm = big.(x0)
+vm = big.(v0)
+mm = big.(msave)
+dq = dlnq * hbig
+hbig -= dq
+kepler_driftij!(mm,xm,vm,i,j,hbig,drift_first)
+xp = big.(x0)
+vp = big.(v0)
+hbig += 2dq
+kepler_driftij!(mm,xp,vp,i,j,hbig,drift_first)
+# Now x & v are final positions & velocities after time step
+for k=1:3
+  dqdt_num[   k] = .5*(xp[k,i]-xm[k,i])/dq
+  dqdt_num[ 3+k] = .5*(vp[k,i]-vm[k,i])/dq
+  dqdt_num[ 7+k] = .5*(xp[k,j]-xm[k,j])/dq
+  dqdt_num[10+k] = .5*(vp[k,j]-vm[k,j])/dq
+end
+hbig = big(h)
+
+# Compute position, velocity & mass derivatives:
 for jj=1:3
   # Initial positions, velocities & masses:
   xm = big.(x0)
@@ -254,8 +277,11 @@ println("Maximum fractional error big: ",emax_big," ",imax_big," ",jmax_big)
 #println(convert(Array{Float64,2},jac_ij_num))
 println("Maximum jac_ij error:   ",maxabs(convert(Array{Float64,2},asinh.(jac_ij_num))-asinh.(jac_ij)))
 println("Maximum jac_ij_big-jac_ij_num:   ",maxabs(convert(Array{Float64,2},asinh.(jac_ij_num)-asinh.(jac_ij_big))))
+println("Max dqdt error: ",maxabs(dqdt_ij-convert(Array{Float64,1},dqdt_num)))
 
 @test isapprox(jac_ij_num,jac_ij;norm=maxabs)
+#@test isapprox(dqdt_ij,convert(Array{Float64,1},dqdt_num);norm=maxabs)
+
 end
 end
 #end

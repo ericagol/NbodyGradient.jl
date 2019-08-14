@@ -943,15 +943,15 @@ end
 # but they currently contain an error (test doesn't pass in test_ah18.jl). [ ]
 for k=1:NDIM
   # Define relative velocity and acceleration:
-  vij = state[1+NDIM+k]
+  vij = state[1+NDIM+k]-state0[1+NDIM+k]
   acc_ij = gm*state[1+k]/state[8]^3
   # Position derivative, body i:
-  dqdt[   k] = mj*vij
+  dqdt[   k] =  mj*vij
   # Velocity derivative, body i:
   dqdt[ 3+k] = -mj*acc_ij
   # Time derivative of mass is zero, so we skip this.
   # Position derivative, body j:
-  dqdt[ 7+k] = - mi*vij
+  dqdt[ 7+k] = -mi*vij
   # Velocity derivative, body j:
   dqdt[10+k] =  mi*acc_ij
   # Time derivative of mass is zero, so we skip this.
