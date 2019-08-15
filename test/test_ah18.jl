@@ -18,8 +18,8 @@ tmax = 600.0
 dlnq = big(1e-20)
 
 #nstep = 8000
-#nstep = 5000
-nstep = 50
+nstep = 5000
+#nstep = 50
 #nstep = 1
 
 elements = readdlm("elements.txt",',')

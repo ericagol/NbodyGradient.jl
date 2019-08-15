@@ -89,9 +89,8 @@ dfdt = -k*g1bs*rinv*r0inv
 if drift_first
   # Drift backwards before Kepler step: (1/22/2018)
   fm1 = -k*r0inv*g2bs
-  # This is given in 2/7/2018 notes, but last term doesn't have g2bs:
+  # This is given in 2/7/2018 notes:
   gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+eta*g2bs^2+k*g3bs*g2bs)
-#  gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+eta*g2bs^2+k*g3bs)
 else
   # Drift backwards after Kepler step: (1/24/2018)
   fm1 =  k*rinv*(g2bs-k*r0inv*H1_series(s,beta0))
@@ -166,9 +165,8 @@ function jac_delxv(x0::Array{T,1},v0::Array{T,1},k::T,s::T,beta0::T,h::T,drift_f
   if drift_first
     # Drift backwards before Kepler step: (1/22/2018)
     fm1 = -k*r0inv*g2bs
-    # This is given in 2/7/2018 notes, but last term doesn't have g2bs:
+    # This is given in 2/7/2018 notes:
     gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+eta*g2bs^2+k*g3bs*g2bs)
-#    gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+eta*g2bs^2+k*g3bs)
   else
     # Drift backwards after Kepler step: (1/24/2018)
     fm1 =  k*rinv*(g2bs-k*r0inv*H1_series(s,beta0))
@@ -280,14 +278,21 @@ function compute_jacobian_kep_drift!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},bet
 # Now, compute the Jacobian: (9/18/2017 notes)
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 g0 = one-beta0*g2
-g3 = (s-g1)/beta0
+# Expand g3 as a series if s is small:
+if s < 0.1
+  g3 = g3_series(s,beta0)
+else
+  g3 = (s-g1)/beta0
+end
 if drift_first
   eta = dot(x0-h*v0,v0) 
 else
   eta = dot(x0,v0) 
 end
 absv0 = norm(v0)
-dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-eta*s*g1)/(2beta0*r)
+#dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-eta*s*g1)/(2beta0*r)
+# New expression derived on 8/14/2019:
+dsdbeta = (h+eta*g2+2*k*g3-s*r)/(2beta0*r)
 dsdr0 = -(2k/r0^2*dsdbeta+g1/r)
 dsda0 = -g2/r
 dsdv0 = -2absv0*dsdbeta
@@ -364,7 +369,12 @@ function compute_jacobian_kep_drift!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},bet
 # Now, compute the Jacobian: (9/18/2017 notes)
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 g0 = one-beta0*g2
-g3 = (s-g1)/beta0
+# Expand g3 as a series if s is small:
+if s < 0.1
+  g3 = g3_series(s,beta0)
+else
+  g3 = (s-g1)/beta0
+end
 if drift_first
   eta = dot(x0-h*v0,v0) 
   r0 = norm(x0-h*v0)
@@ -374,7 +384,9 @@ else
 end
 absv0 = norm(v0)
 r0inv = inv(r0)
-dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-eta*s*g1)/(2beta0*r)
+#dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-eta*s*g1)/(2beta0*r)
+# New expression derived on 8/14/2019:
+dsdbeta = (h+eta*g2+2*k*g3-s*r)/(2beta0*r)
 dsdr0 = -(2k*r0inv^2*dsdbeta+g1/r)
 dsda0 = -g2/r
 dsdv0 = -2absv0*dsdbeta
