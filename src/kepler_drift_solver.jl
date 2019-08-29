@@ -75,7 +75,10 @@ g2bs = 2.*signb*sx^2*beta0inv
 g0bs = 1.0-beta0*g2bs
 # This should be computed to prevent roundoff error. [ ]
 #g3bs = (1.0-g1bs)*beta0inv
-g3bs = g3_series(s,beta0)
+g3bs = g3(s*sqb,beta0)
+#if typeof(g1bs) == Float64
+#  println("g1: ",g1bs," g2: ",g2bs," g3: ",g3bs)
+#end
 # Compute Gauss' Kepler functions:
 f = one - k*r0inv*g2bs # eqn (25)
 g = r0*g1bs + eta*g2bs # eqn (27)
@@ -84,6 +87,9 @@ if drift_first
 else
   r = norm(f*x0+g*v0)
 end
+#if typeof(r) == Float64
+#  println("r: ",r)
+#end
 rinv = inv(r)
 dfdt = -k*g1bs*rinv*r0inv
 if drift_first
@@ -93,9 +99,9 @@ if drift_first
   gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+eta*g2bs^2+k*g3bs*g2bs)
 else
   # Drift backwards after Kepler step: (1/24/2018)
-  fm1 =  k*rinv*(g2bs-k*r0inv*H1_series(s,beta0))
+  fm1 =  k*rinv*(g2bs-k*r0inv*H1(s*sqb,beta0))
   # This is g-h*dgdt
-  gmh = k*rinv*(r0*H2_series(s,beta0)+eta*H1_series(s,beta0))
+  gmh = k*rinv*(r0*H2(s*sqb,beta0)+eta*H1(s*sqb,beta0))
 end
 # Compute velocity component functions:
 if drift_first
@@ -105,6 +111,9 @@ else
   # 1/22/18 notes:
   dgdtm1 = -k*rinv*g2bs
 end
+#if typeof(fm1) == Float64
+#  println("fm1: ",fm1," dfdt: ",dfdt," gmh: ",gmh," dgdt-1: ",dgdtm1)
+#end
 for j=1:3
 # Compute difference vectors (finish - start) of step:
   state[1+j] = fm1*x0[j]+gmh*v0[j]        # position x_ij(t+h)-x_ij(t) - h*v_ij(t) or -h*v_ij(t+h)
@@ -151,7 +160,7 @@ function jac_delxv(x0::Array{T,1},v0::Array{T,1},k::T,s::T,beta0::T,h::T,drift_f
   g1bs = 2.*sx*cx/sqb
   g2bs = 2.*signb*sx^2*beta0inv
   g0bs = 1.0-beta0*g2bs
-  g3bs = g3_series(s,beta0)
+  g3bs = g3(s*sqb,beta0)
   # Compute Gauss' Kepler functions:
   f = 1.0 - k*r0inv*g2bs # eqn (25)
   g = r0*g1bs + eta*g2bs # eqn (27)
@@ -169,9 +178,9 @@ function jac_delxv(x0::Array{T,1},v0::Array{T,1},k::T,s::T,beta0::T,h::T,drift_f
     gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+eta*g2bs^2+k*g3bs*g2bs)
   else
     # Drift backwards after Kepler step: (1/24/2018)
-    fm1 =  k*rinv*(g2bs-k*r0inv*H1_series(s,beta0))
+    fm1 =  k*rinv*(g2bs-k*r0inv*H1(s*sqb,beta0))
     # This is g-h*dgdt
-    gmh = k*rinv*(r0*H2_series(s,beta0)+eta*H1_series(s,beta0))
+    gmh = k*rinv*(r0*H2(s*sqb,beta0)+eta*H1(s*sqb,beta0))
   end
   # Compute velocity component functions:
   if drift_first
@@ -279,11 +288,9 @@ function compute_jacobian_kep_drift!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},bet
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 g0 = one-beta0*g2
 # Expand g3 as a series if s is small:
-if s < 0.1
-  g3 = g3_series(s,beta0)
-else
-  g3 = (s-g1)/beta0
-end
+sqb = sqrt(abs(beta0))
+g3bs = g3(s*sqb,beta0)
+#  g3bs = (s-g1)/beta0
 if drift_first
   eta = dot(x0-h*v0,v0) 
 else
@@ -292,11 +299,11 @@ end
 absv0 = norm(v0)
 #dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-eta*s*g1)/(2beta0*r)
 # New expression derived on 8/14/2019:
-dsdbeta = (h+eta*g2+2*k*g3-s*r)/(2beta0*r)
+dsdbeta = (h+eta*g2+2*k*g3bs-s*r)/(2beta0*r)
 dsdr0 = -(2k/r0^2*dsdbeta+g1/r)
 dsda0 = -g2/r
 dsdv0 = -2absv0*dsdbeta
-dsdk = 2/r0*dsdbeta-g3/r
+dsdk = 2/r0*dsdbeta-g3bs/r
 dbetadr0 = -2k/r0^2
 dbetadv0 = -2absv0
 dbetadk  = 2/r0
@@ -370,11 +377,9 @@ function compute_jacobian_kep_drift!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},bet
 zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 g0 = one-beta0*g2
 # Expand g3 as a series if s is small:
-if s < 0.1
-  g3 = g3_series(s,beta0)
-else
-  g3 = (s-g1)/beta0
-end
+sqb = sqrt(abs(beta0))
+g3bs = g3(s*sqb,beta0)
+#  g3bs = (s-g1)/beta0
 if drift_first
   eta = dot(x0-h*v0,v0) 
   r0 = norm(x0-h*v0)
@@ -386,11 +391,11 @@ absv0 = norm(v0)
 r0inv = inv(r0)
 #dsdbeta = (2h-r0*(s*g0+g1)+k/beta0*(s*g0-g1)-eta*s*g1)/(2beta0*r)
 # New expression derived on 8/14/2019:
-dsdbeta = (h+eta*g2+2*k*g3-s*r)/(2beta0*r)
+dsdbeta = (h+eta*g2+2*k*g3bs-s*r)/(2beta0*r)
 dsdr0 = -(2k*r0inv^2*dsdbeta+g1/r)
 dsda0 = -g2/r
 dsdv0 = -2absv0*dsdbeta
-dsdk = 2*r0inv*dsdbeta-g3/r
+dsdk = 2*r0inv*dsdbeta-g3bs/r
 dbetadr0 = -2k*r0inv^2
 dbetadv0 = -2absv0
 dbetadk  = 2r0inv

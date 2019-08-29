@@ -1,6 +1,6 @@
-# This code tests the function kepler_driftij!
+ # This code tests the function kepler_driftij2
 
-#@testset "kepler_driftij" begin
+@testset "kepler_driftij" begin
 for drift_first in [true,false]
 # Next, try computing two-body Keplerian Jacobian:
 
@@ -284,4 +284,4 @@ println("Max dqdt error: ",maxabs(dqdt_ij-convert(Array{Float64,1},dqdt_num)))
 
 end
 end
-#end
+end

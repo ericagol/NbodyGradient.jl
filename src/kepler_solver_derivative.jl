@@ -50,9 +50,9 @@ if s0 == zero
   else
     if eta != zero
       reta = r0/eta
-      disc = reta^2+8h/eta
+      disc = reta^2+2h/eta
       if disc > zero
-        s=-reta+sqrt(disc)
+        sguess =-reta+sqrt(disc)
       else
        sguess = h*r0inv
       end
