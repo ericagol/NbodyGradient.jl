@@ -15,6 +15,7 @@ if ~isdefined(:YEAR)
 end
 include("kepler_step.jl")
 include("kepler_drift_step.jl")
+include("kepler_drift_gamma.jl")
 include("init_nbody.jl")
 
 function comp_sum(sum_value::T,sum_error::T,addend::T) where {T <: Real}
@@ -978,7 +979,7 @@ if gm == 0
 #  end
 else
   # Compute differences in x & v over time step:
-  delxv = jac_delxv!(x0,v0,gm,h,drift_first) where {T <: Real}
+  delxv = jac_delxv_gamma!(x0,v0,gm,h,drift_first)
 #  kepler_drift_step!(gm, h, state0, state,drift_first)
   mijinv =1.0/(m[i] + m[j])
   mi = m[i]*mijinv # Normalize the masses
@@ -997,7 +998,6 @@ end
 # Carries out a Kepler step and reverse drift for bodies i & j, and computes Jacobian:
 # Uses new version of the code with gamma in favor of s, and full auto-diff of Kepler step.
 function kepler_driftij_gamma!(m::Array{T,1},x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},i::Int64,j::Int64,h::T,jac_ij::Array{T,2},dqdt::Array{T,1},drift_first::Bool) where {T <: Real}
-# The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
 # Initial state:
 x0 = zeros(typeof(h),NDIM) # x0 = positions of body i relative to j
 v0 = zeros(typeof(h),NDIM) # v0 = velocities of body i relative to j
@@ -1019,17 +1019,18 @@ if gm == 0
 #  end
 else
   # jac_kepler = zeros(typeof(h),6,8)
-  jac_kepler = jac_delxv!(x0,v0,gm,h,drift_first) where {T <: Real}
+  delxv,jac_kepler = jac_delxv_gamma!(x0,v0,gm,h,drift_first;grad=true,auto=true)
+
 #  kepler_drift_step!(gm, h, state0, state,jac_kepler,drift_first)
   mijinv =1.0/(m[i] + m[j])
   mi = m[i]*mijinv # Normalize the masses
   mj = m[j]*mijinv
   for k=1:3
     # Add kepler-drift differences, weighted by masses, to start of step:
-    x[k,i],xerror[k,i] = comp_sum(x[k,i],xerror[k,i], mj*state[1+k])
-    x[k,j],xerror[k,j] = comp_sum(x[k,j],xerror[k,j],-mi*state[1+k])
-    v[k,i],verror[k,i] = comp_sum(v[k,i],verror[k,i], mj*state[4+k])
-    v[k,j],verror[k,j] = comp_sum(v[k,j],verror[k,j],-mi*state[4+k])
+    x[k,i],xerror[k,i] = comp_sum(x[k,i],xerror[k,i], mj*delxv[k])
+    x[k,j],xerror[k,j] = comp_sum(x[k,j],xerror[k,j],-mi*delxv[k])
+    v[k,i],verror[k,i] = comp_sum(v[k,i],verror[k,i], mj*delxv[3+k])
+    v[k,j],verror[k,j] = comp_sum(v[k,j],verror[k,j],-mi*delxv[3+k])
   end
   # Compute Jacobian:
   for l=1:6, k=1:6
@@ -1042,33 +1043,30 @@ else
   end
   for k=1:6
 # Compute derivatives of x_i,v_i with respect to the masses:
-    jac_ij[   k, 7] = -mj*state[1+k]*mijinv + GNEWT*mj*jac_kepler[  k,7]
-    jac_ij[   k,14] =  mi*state[1+k]*mijinv + GNEWT*mj*jac_kepler[  k,7]
+    jac_ij[   k, 7] = -mj*delxv[k]*mijinv + GNEWT*mj*jac_kepler[  k,7]
+    jac_ij[   k,14] =  mi*delxv[k]*mijinv + GNEWT*mj*jac_kepler[  k,7]
 # Compute derivatives of x_j,v_j with respect to the masses:
-    jac_ij[ 7+k, 7] = -mj*state[1+k]*mijinv - GNEWT*mi*jac_kepler[  k,7]
-    jac_ij[ 7+k,14] =  mi*state[1+k]*mijinv - GNEWT*mi*jac_kepler[  k,7]
+    jac_ij[ 7+k, 7] = -mj*delxv[k]*mijinv - GNEWT*mi*jac_kepler[  k,7]
+    jac_ij[ 7+k,14] =  mi*delxv[k]*mijinv - GNEWT*mi*jac_kepler[  k,7]
   end
 end
 # The following lines are meant to compute dq/dt for kepler_driftij,
 # but they currently contain an error (test doesn't pass in test_ah18.jl). [ ]
 for k=1:NDIM
-  # Define relative velocity and acceleration:
-  vij = state[1+NDIM+k]-state0[1+NDIM+k]
-  acc_ij = gm*state[1+k]/state[8]^3
   # Position derivative, body i:
-  dqdt[   k] =  mj*vij
+  dqdt[   k] =  mj*jac_kepler[k,8]
   # Velocity derivative, body i:
-  dqdt[ 3+k] = -mj*acc_ij
+  dqdt[ 3+k] =  mj*jac_kepler[3+k,8]
   # Time derivative of mass is zero, so we skip this.
   # Position derivative, body j:
-  dqdt[ 7+k] = -mi*vij
+  dqdt[ 7+k] = -mi*jac_kepler[k,8]
   # Velocity derivative, body j:
-  dqdt[10+k] =  mi*acc_ij
+  dqdt[10+k] = -mi*jac_kepler[3+k,8]
   # Time derivative of mass is zero, so we skip this.
 end
 return
-return
 end
+
 # Carries out a Kepler step for bodies i & j
 #function keplerij!(m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},i::Int64,j::Int64,h::Float64)
 function keplerij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},i::Int64,j::Int64,h::T) where {T <: Real}
@@ -1955,7 +1953,8 @@ kickfast!(x,v,xerror,verror,h/6,m,n,pair)
 @inbounds for i=1:n-1
   for j=i+1:n
     if ~pair[i,j]
-      kepler_driftij!(m,x,v,xerror,verror,i,j,h2,true)
+#      kepler_driftij!(m,x,v,xerror,verror,i,j,h2,true)
+      kepler_driftij_gamma!(m,x,v,xerror,verror,i,j,h2,true)
     end
   end
 end
@@ -1965,7 +1964,8 @@ phisalpha!(x,v,xerror,verror,h,m,convert(typeof(h),2),n,pair)
 for i=n-1:-1:1
   for j=n:-1:i+1
     if ~pair[i,j]
-      kepler_driftij!(m,x,v,xerror,verror,i,j,h2,false)
+#      kepler_driftij!(m,x,v,xerror,verror,i,j,h2,false)
+      kepler_driftij_gamma!(m,x,v,xerror,verror,i,j,h2,false)
     end
   end
 end
@@ -2008,7 +2008,8 @@ indi = 0; indj = 0
   for j=i+1:n
     indj = (j-1)*7
     if ~pair[i,j]  # Check to see if kicks have not been applied
-      kepler_driftij!(m,x,v,xerror,verror,i,j,h2,jac_ij,dqdt_ij,true)
+#      kepler_driftij!(m,x,v,xerror,verror,i,j,h2,jac_ij,dqdt_ij,true)
+      kepler_driftij_gamma!(m,x,v,xerror,verror,i,j,h2,jac_ij,dqdt_ij,true)
     # Pick out indices for bodies i & j:
       @inbounds for k2=1:sevn, k1=1:7
         jac_tmp1[k1,k2] = jac_step[ indi+k1,k2]
@@ -2055,7 +2056,8 @@ for i=n-1:-1:1
   for j=n:-1:i+1
     indj=(j-1)*7
     if ~pair[i,j]  # Check to see if kicks have not been applied
-      kepler_driftij!(m,x,v,xerror,verror,i,j,h2,jac_ij,dqdt_ij,false)
+#      kepler_driftij!(m,x,v,xerror,verror,i,j,h2,jac_ij,dqdt_ij,false)
+      kepler_driftij_gamma!(m,x,v,xerror,verror,i,j,h2,jac_ij,dqdt_ij,false)
       # Pick out indices for bodies i & j:
       # Carry out multiplication on the i/j components of matrix:
       @inbounds for k2=1:sevn, k1=1:7
@@ -2135,7 +2137,8 @@ dqdt .= dqdt_kick
   for j=i+1:n
     indj = (j-1)*7
     if ~pair[i,j]  # Check to see if kicks have not been applied
-      kepler_driftij!(m,x,v,xerror,verror,i,j,h2,jac_ij,dqdt_ij,true)
+#      kepler_driftij!(m,x,v,xerror,verror,i,j,h2,jac_ij,dqdt_ij,true)
+      kepler_driftij_gamma!(m,x,v,xerror,verror,i,j,h2,jac_ij,dqdt_ij,true)
       # Copy current time derivatives for multiplication purposes:
       @inbounds for k1=1:7
         dqdt_tmp1[  k1] = dqdt[indi+k1]
@@ -2175,7 +2178,8 @@ for i=n-1:-1:1
   for j=n:-1:i+1
     if ~pair[i,j]  # Check to see if kicks have not been applied
       indj=(j-1)*7
-      kepler_driftij!(m,x,v,xerror,verror,i,j,h2,jac_ij,dqdt_ij,false) # 23%
+#      kepler_driftij!(m,x,v,xerror,verror,i,j,h2,jac_ij,dqdt_ij,false) # 23%
+      kepler_driftij_gamma!(m,x,v,xerror,verror,i,j,h2,jac_ij,dqdt_ij,false) # 23%
       # Copy current time derivatives for multiplication purposes:
       @inbounds for k1=1:7
         dqdt_tmp1[  k1] = dqdt[indi+k1]

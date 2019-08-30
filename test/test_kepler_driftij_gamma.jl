@@ -1,6 +1,7 @@
- # This code tests the function kepler_driftij2
 
-@testset "kepler_driftij" begin
+# This code tests the function kepler_driftij_gamma
+
+@testset "kepler_driftij_gamma" begin
 for drift_first in [true,false]
 # Next, try computing two-body Keplerian Jacobian:
 
@@ -50,17 +51,17 @@ i=1 ; j=2
 x = copy(x0) ; v=copy(v0)
 xerror = zeros(x); verror = zeros(v)
 # Predict values of s:
-kepler_driftij!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,drift_first)
+kepler_driftij_gamma!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,drift_first)
 x0 = copy(x) ; v0 = copy(v)
 xerror = zeros(x0); verror = zeros(v0)
 xbig = big.(x) ; vbig=big.(v); mbig = big.(m)
 xerr_big = zeros(xbig); verr_big = zeros(vbig)
-kepler_driftij!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,drift_first)
+kepler_driftij_gamma!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,drift_first)
 # Now compute Jacobian with BigFloat precision:
 jac_ij_big = zeros(BigFloat,14,14)
 dqdt_ij_big = zeros(BigFloat,14)
 KEPLER_TOL = sqrt(eps(big(1.0)))
-kepler_driftij!(mbig,xbig,vbig,xerr_big,verr_big,i,j,hbig,jac_ij_big,dqdt_ij_big,drift_first)
+kepler_driftij_gamma!(mbig,xbig,vbig,xerr_big,verr_big,i,j,hbig,jac_ij_big,dqdt_ij_big,drift_first)
 #println("jac_ij: ",convert(Array{Float64,2},jac_ij_big))
 #println("jac_ij - jac_ij_big: ",convert(Array{Float64,2},jac_ij_big)-jac_ij)
 println("max(jac_ij - jac_ij_big): ",maxabs(convert(Array{Float64,2},jac_ij_big)-jac_ij))
@@ -79,11 +80,13 @@ vm = big.(v0)
 mm = big.(msave)
 dq = dlnq * hbig
 hbig -= dq
-kepler_driftij!(mm,xm,vm,i,j,hbig,drift_first)
+xerr_big = zeros(xm); verr_big = zeros(vm)
+kepler_driftij_gamma!(mm,xm,vm,xerr_big,verr_big,i,j,hbig,drift_first)
 xp = big.(x0)
 vp = big.(v0)
 hbig += 2dq
-kepler_driftij!(mm,xp,vp,i,j,hbig,drift_first)
+xerr_big = zeros(xm); verr_big = zeros(vm)
+kepler_driftij_gamma!(mm,xp,vp,xerr_big,verr_big,i,j,hbig,drift_first)
 # Now x & v are final positions & velocities after time step
 for k=1:3
   dqdt_num[   k] = .5*(xp[k,i]-xm[k,i])/dq
@@ -106,7 +109,8 @@ for jj=1:3
     dq = dlnq
     xm[jj,i] = -dq
   end
-  kepler_driftij!(mm,xm,vm,i,j,hbig,drift_first)
+  xerr_big = zeros(xm); verr_big = zeros(vm)
+  kepler_driftij_gamma!(mm,xm,vm,xerr_big,verr_big,i,j,hbig,drift_first)
   xp = big.(x0)
   vp = big.(v0)
   if xm[jj,i] != 0.0
@@ -115,7 +119,8 @@ for jj=1:3
     dq = dlnq
     xp[jj,i] = dq
   end
-  kepler_driftij!(mm,xp,vp,i,j,hbig,drift_first)
+  xerr_big = zeros(xm); verr_big = zeros(vm)
+  kepler_driftij_gamma!(mm,xp,vp,xerr_big,verr_big,i,j,hbig,drift_first)
   # Now x & v are final positions & velocities after time step
   for k=1:3
     jac_ij_num[   k,  jj] = .5*(xp[k,i]-xm[k,i])/dq
@@ -133,7 +138,8 @@ for jj=1:3
     dq = dlnq
     vm[jj,i] = -dq
   end
-  kepler_driftij!(mm,xm,vm,i,j,hbig,drift_first)
+  xerr_big = zeros(xm); verr_big = zeros(vm)
+  kepler_driftij_gamma!(mm,xm,vm,xerr_big,verr_big,i,j,hbig,drift_first)
   xp = big.(x0)
   vp = big.(v0)
   mm  = big.(msave)
@@ -143,7 +149,8 @@ for jj=1:3
     dq = dlnq
     vp[jj,i] = dq
   end
-  kepler_driftij!(mm,xp,vp,i,j,hbig,drift_first)
+  xerr_big = zeros(xm); verr_big = zeros(vm)
+  kepler_driftij_gamma!(mm,xp,vp,xerr_big,verr_big,i,j,hbig,drift_first)
   for k=1:3
     jac_ij_num[   k,3+jj] = .5*(xp[k,i]-xm[k,i])/dq
     jac_ij_num[ 3+k,3+jj] = .5*(vp[k,i]-vm[k,i])/dq
@@ -158,13 +165,15 @@ vm= big.(v0)
 mm= big.(msave)
 dq = mm[i]*dlnq
 mm[i] -= dq
-kepler_driftij!(mm,xm,vm,i,j,hbig,drift_first)
+xerr_big = zeros(xm); verr_big = zeros(vm)
+kepler_driftij_gamma!(mm,xm,vm,xerr_big,verr_big,i,j,hbig,drift_first)
 xp= big.(x0)
 vp= big.(v0)
 mp= big.(msave)
 dq = mp[i]*dlnq
 mp[i] += dq
-kepler_driftij!(mp,xp,vp,i,j,hbig,drift_first)
+xerr_big = zeros(xm); verr_big = zeros(vm)
+kepler_driftij_gamma!(mp,xp,vp,xerr_big,verr_big,i,j,hbig,drift_first)
 for k=1:3
   jac_ij_num[   k,7] = .5*(xp[k,i]-xm[k,i])/dq
   jac_ij_num[ 3+k,7] = .5*(vp[k,i]-vm[k,i])/dq
@@ -186,7 +195,8 @@ for jj=1:3
     dq = dlnq
     xm[jj,j] = -dq
   end
-  kepler_driftij!(mm,xm,vm,i,j,hbig,drift_first)
+  xerr_big = zeros(xm); verr_big = zeros(vm)
+  kepler_driftij_gamma!(mm,xm,vm,xerr_big,verr_big,i,j,hbig,drift_first)
   xp = big.(x0)
   vp = big.(v0)
   if xp[jj,j] != 0.0
@@ -195,7 +205,8 @@ for jj=1:3
     dq = dlnq
     xp[jj,j] = dq
   end
-  kepler_driftij!(mm,xp,vp,i,j,hbig,drift_first)
+  xerr_big = zeros(xm); verr_big = zeros(vm)
+  kepler_driftij_gamma!(mm,xp,vp,xerr_big,verr_big,i,j,hbig,drift_first)
   for k=1:3
     jac_ij_num[   k,7+jj] = .5*(xp[k,i]-xm[k,i])/dq
     jac_ij_num[ 3+k,7+jj] = .5*(vp[k,i]-vm[k,i])/dq
@@ -212,7 +223,8 @@ for jj=1:3
     dq = dlnq
     vm[jj,j] = -dq
   end
-  kepler_driftij!(mm,xm,vm,i,j,hbig,drift_first)
+  xerr_big = zeros(xm); verr_big = zeros(vm)
+  kepler_driftij_gamma!(mm,xm,vm,xerr_big,verr_big,i,j,hbig,drift_first)
   xp= big.(x0)
   vp= big.(v0)
   if vp[jj,j] != 0.0
@@ -221,7 +233,8 @@ for jj=1:3
     dq = dlnq
     vp[jj,j] = dq
   end
-  kepler_driftij!(mm,xp,vp,i,j,hbig,drift_first)
+  xerr_big = zeros(xm); verr_big = zeros(vm)
+  kepler_driftij_gamma!(mm,xp,vp,xerr_big,verr_big,i,j,hbig,drift_first)
   for k=1:3
     jac_ij_num[   k,10+jj] = .5*(xp[k,i]-xm[k,i])/dq
     jac_ij_num[ 3+k,10+jj] = .5*(vp[k,i]-vm[k,i])/dq
@@ -236,13 +249,15 @@ vm = big.(v0)
 mm = big.(msave)
 dq = mm[j]*dlnq
 mm[j] -= dq
-kepler_driftij!(mm,xm,vm,i,j,hbig,drift_first)
+xerr_big = zeros(xm); verr_big = zeros(vm)
+kepler_driftij_gamma!(mm,xm,vm,xerr_big,verr_big,i,j,hbig,drift_first)
 xp = big.(x0)
 vp = big.(v0)
 mp = big.(msave)
 dq = mp[j]*dlnq
 mp[j] += dq
-kepler_driftij!(mp,xp,vp,i,j,hbig,drift_first)
+xerr_big = zeros(xm); verr_big = zeros(vm)
+kepler_driftij_gamma!(mp,xp,vp,xerr_big,verr_big,i,j,hbig,drift_first)
 for k=1:3
   jac_ij_num[   k,14] = .5*(xp[k,i]-xm[k,i])/dq
   jac_ij_num[ 3+k,14] = .5*(vp[k,i]-vm[k,i])/dq
@@ -280,7 +295,7 @@ println("Maximum jac_ij_big-jac_ij_num:   ",maxabs(convert(Array{Float64,2},asin
 println("Max dqdt error: ",maxabs(dqdt_ij-convert(Array{Float64,1},dqdt_num)))
 
 @test isapprox(jac_ij_num,jac_ij;norm=maxabs)
-#@test isapprox(dqdt_ij,convert(Array{Float64,1},dqdt_num);norm=maxabs)
+@test isapprox(dqdt_ij,convert(Array{Float64,1},dqdt_num);norm=maxabs)
 
 end
 end

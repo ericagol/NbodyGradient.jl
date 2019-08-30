@@ -54,7 +54,6 @@ println("Old-new: ",state[2:7]-delxv)
 
 # Next, compute autodiff Jacobian:
 delxv,jacobian = jac_delxv_gamma!(x0,v0,k,h,drift_first;grad=true,auto=true)
-
 # Now, do finite differences at higher precision:
 kbig = big(k)
 x0big = big.(x0); v0big = big.(v0)
