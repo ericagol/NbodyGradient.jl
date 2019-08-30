@@ -47,27 +47,27 @@ iter = kep_drift_ell_hyp!(x0,v0,k,h,s0,state,jacobian_old,drift_first)
 #println("s old: ",state[11])
 
 # Check that old and new are giving the same answer:
-delxv = jac_delxv!(x0,v0,k,h,drift_first)
+delxv = jac_delxv_gamma!(x0,v0,k,h,drift_first)
 println("state: ",state)
 println("delxv: ",delxv)
 println("Old-new: ",state[2:7]-delxv)
 
 # Next, compute autodiff Jacobian:
-jacobian = jac_delxv!(x0,v0,k,h,drift_first;grad=true,auto=true)
+delxv,jacobian = jac_delxv_gamma!(x0,v0,k,h,drift_first;grad=true,auto=true)
 
 # Now, do finite differences at higher precision:
 kbig = big(k)
 x0big = big.(x0); v0big = big.(v0)
 # Now compute big-float precision autodiff Jacobian:
-jacobian_big = jac_delxv!(x0big,v0big,kbig,hbig,drift_first;grad=true,auto=true)
+delxv_big,jacobian_big = jac_delxv_gamma!(x0big,v0big,kbig,hbig,drift_first;grad=true,auto=true)
 println("Auto diff Jacobian: ",jacobian)
 jac_frac = jacobian./convert(Array{Float64,2},jacobian_big)-1.0
 println("Fractional Jacobian difference: ",maxabs(jac_frac[.~isnan.(jac_frac)]))
 
 # Now compute finite-difference Jacobian:
-jac_num = jac_delxv!(x0big,v0big,kbig,hbig,drift_first;grad=true,auto=false,dlnq=dlnq)
+delxv,jac_num = jac_delxv_gamma!(x0big,v0big,kbig,hbig,drift_first;grad=true,auto=false,dlnq=dlnq)
 println("Finite diff Jacobian: ",convert(Array{Float64,2},jac_num))
-
+println("Dim of jacobian_big: ",size(jacobian_big)," dim of jac_num: ",size(jac_num))
 println("Maximum jac_big-jac_num: ",maxabs(convert(Array{Float64,2},jacobian_big-jac_num)))
 return xsave,jac_num,jacobian
 end

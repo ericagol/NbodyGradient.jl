@@ -2,7 +2,7 @@
 # Wisdom & Hernandez version of Kepler solver, with Rein & Tamayo convergence test.
 # Now using \gamma = \sqrt{\abs{\beta}}s rather than s now to solve Kepler's equation.
 
-using ForwardDiff
+using ForwardDiff, DiffResults
 
 include("g3.jl")
 
@@ -26,7 +26,7 @@ end
 return
 end
 
-function jac_delxv!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,drift_first::Bool;grad::Bool=false,auto::Bool=true,dlnq::T=convert(T,0.0)) where {T <: Real}
+function jac_delxv_gamma!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,drift_first::Bool;grad::Bool=false,auto::Bool=true,dlnq::T=convert(T,0.0)) where {T <: Real}
 # Using autodiff, computes Jacobian of delx & delv with respect to x0, v0, k & h.
 
 # Autodiff requires a single-vector input, so create an array to hold the independent variables:
@@ -144,7 +144,12 @@ function jac_delxv!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,drift_first::Bool;gr
 # Use autodiff to compute Jacobian:
 if grad
   if auto
-    delxv_jac = ForwardDiff.jacobian(delx_delv,input)
+#    delxv_jac = ForwardDiff.jacobian(delx_delv,input)
+    delxv = zeros(typeof(h),6)
+    out = DiffResults.JacobianResult(delxv,input)
+    ForwardDiff.jacobian!(out,delx_delv,input)
+    delxv_jac = DiffResults.jacobian(out)
+    delxv = DiffResults.value(out)
   else
 # Use finite differences to compute Jacobian:
     delxv_jac = zeros(typeof(h),6,8)
@@ -159,7 +164,7 @@ if grad
     end  
   end
 # Return Jacobian:
-  return  delxv_jac
+  return  delxv,delxv_jac
 else
   return delx_delv(input)
 end
