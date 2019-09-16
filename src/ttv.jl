@@ -1027,7 +1027,7 @@ if gm == 0
 else
   delxv = zeros(T,6)
   jac_kepler = zeros(T,6,8)
-  delxv,jac_kepler = jac_delxv_gamma!(x0,v0,gm,h,drift_first;grad=true)
+  jac_delxv_gamma!(x0,v0,gm,h,drift_first,delxv,jac_kepler,false)
 
 #  kepler_drift_step!(gm, h, state0, state,jac_kepler,drift_first)
   mijinv::T =one(T)/(m[i] + m[j])
@@ -1047,29 +1047,17 @@ else
   @inbounds for l=1:6, k=1:6
 # Compute derivatives of x_i,v_i with respect to initial conditions:
     jac_ij[  k,  l] += mj*jac_kepler[k,l]
-  end
-  @inbounds for l=1:6, k=1:6
     jac_ij[  k,7+l] -= mj*jac_kepler[k,l]
-  end
-  @inbounds for l=1:6, k=1:6
 # Compute derivatives of x_j,v_j with respect to initial conditions:
     jac_ij[7+k,  l] -= mi*jac_kepler[k,l]
-  end
-  @inbounds for l=1:6, k=1:6
     jac_ij[7+k,7+l] += mi*jac_kepler[k,l]
   end
   @inbounds for k=1:6
 # Compute derivatives of x_i,v_i with respect to the masses:
     jac_ij[   k, 7] = -mj*delxv[k]*mijinv + GNEWT*mj*jac_kepler[  k,7]
-  end
-  @inbounds for l=1:6, k=1:6
     jac_ij[   k,14] =  mi*delxv[k]*mijinv + GNEWT*mj*jac_kepler[  k,7]
-  end
-  @inbounds for k=1:6
 # Compute derivatives of x_j,v_j with respect to the masses:
     jac_ij[ 7+k, 7] = -mj*delxv[k]*mijinv - GNEWT*mi*jac_kepler[  k,7]
-  end
-  @inbounds for l=1:6, k=1:6
     jac_ij[ 7+k,14] =  mi*delxv[k]*mijinv - GNEWT*mi*jac_kepler[  k,7]
   end
 end

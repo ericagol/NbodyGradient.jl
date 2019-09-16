@@ -176,7 +176,7 @@ function jac_delxv_gamma!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,drift_first::B
   end
   if grad == true && dlnq == 0.0
     # Compute gradient analytically:
-    delxv_jac = compute_jacobian_gamma(gamma,g0bs,g1bs,g2bs,g3bs,h1,h2,dfdt,fm1,gmh,dgdtm1,r0,r,r0inv,rinv,k,h,beta0,beta0inv,eta,sqb,zeta,x0,v0,drift_first,debug)
+    compute_jacobian_gamma!(gamma,g0bs,g1bs,g2bs,g3bs,h1,h2,dfdt,fm1,gmh,dgdtm1,r0,r,r0inv,rinv,k,h,beta0,beta0inv,eta,sqb,zeta,x0,v0,delxv_jac,drift_first,debug)
   end
   return delxv::Array{T,1}
   end
@@ -221,14 +221,124 @@ else
 end
 end
 
-function compute_jacobian_gamma(gamma::T,g0::T,g1::T,g2::T,g3::T,h1::T,h2::T,dfdt::T,fm1::T,gmh::T,dgdtm1::T,r0::T,r::T,r0inv::T,rinv::T,k::T,h::T,beta::T,betainv::T,eta::T,
-  sqb::T,zeta::T,x0::Array{T,1},v0::Array{T,1},drift_first::Bool,debug::Bool) where {T <: Real}
-# Computes Jacobian:
-if debug
-  delxv_jac = zeros(T,12,8)
-else
-  delxv_jac = zeros(T,6,8)
+function jac_delxv_gamma!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,drift_first::Bool,delxv::Array{T,1},delxv_jac::Array{T,2},debug::Bool) where {T <: Real}
+# Analytically computes Jacobian of delx & delv with respect to x0, v0, k & h.
+
+  # Compute r0:
+  drift_first ?  r0 = norm(x0-h*v0) : r0 = norm(x0)
+  # And its inverse:
+  r0inv = inv(r0)
+  # Compute beta_0:
+  beta0 = 2k*r0inv-dot(v0,v0)
+  beta0inv = inv(beta0)
+  signb = sign(beta0)
+  sqb = sqrt(signb*beta0)
+  zeta = k-r0*beta0
+  gamma_guess = zero(T)
+  # Compute \eta_0 = x_0 . v_0:
+  drift_first ?  eta = dot(x0-h*v0,v0) : eta = dot(x0,v0)
+  if zeta != zero(T)
+    # Make sure we have a cubic in gamma (and don't divide by zero):
+    gamma_guess = cubic1(3eta*sqb/zeta,6r0*signb*beta0/zeta,-6h*signb*beta0*sqb/zeta)
+  else
+    # Check that we have a quadratic in gamma (and don't divide by zero):
+    if eta != zero(T)
+      reta = r0/eta
+      disc = reta^2+2h/eta
+      disc > zero(T) ?  gamma_guess = sqb*(-reta+sqrt(disc)) : gamma_guess = h*r0inv*sqb
+    else
+      gamma_guess = h*r0inv*sqb
+    end
+  end
+  gamma  = copy(gamma_guess)
+  # Make sure prior two steps differ:
+  gamma1 = 2*copy(gamma)
+  gamma2 = 3*copy(gamma)
+  iter = 0
+  ITMAX = 20
+  # Compute coefficients: (8/28/19 notes)
+  c1 = k; c2 = -zeta; c3 = -eta*sqb; c4 = sqb*(eta-h*beta0); c5 = eta*signb*sqb
+  # Solve for gamma:
+  while true 
+    gamma2 = gamma1
+    gamma1 = gamma
+    if beta0 > 0 
+      sx = sin(gamma); cx = cos(gamma) 
+    else 
+      cx = cosh(gamma); sx = exp(gamma)-cx
+    end
+    gamma -= (c1*gamma+c2*sx+c3*cx+c4)/(c2*cx+c5*sx+c1)
+    iter +=1 
+    if iter >= ITMAX || gamma == gamma2 || gamma == gamma1
+      break
+    end
+  end
+  # Set up a single output array for delx and delv:
+  fill!(delxv,zero(T))
+  # Since we updated gamma, need to recompute:
+  xx = 0.5*gamma
+  if beta0 > 0 
+    sx = sin(xx); cx = cos(xx) 
+  else
+    cx = cosh(xx); sx = exp(xx)-cx
+  end
+  # Now, compute final values.  Compute Wisdom/Hernandez G_i^\beta(s) functions:
+  g1bs = 2sx*cx/sqb
+  g2bs = 2signb*sx^2*beta0inv
+  g0bs = one(T)-beta0*g2bs
+  g3bs = g3(gamma,beta0)
+  h1 = zero(T); h2 = zero(T)
+  # Compute r from equation (35):
+  r = r0*g0bs+eta*g1bs+k*g2bs
+  rinv = inv(r)
+  dfdt = -k*g1bs*rinv*r0inv # [x]
+  if drift_first
+    # Drift backwards before Kepler step: (1/22/2018)
+    fm1 = -k*r0inv*g2bs # [x]
+    # This is given in 2/7/2018 notes: g-h*f
+#    gmh = k*r0inv*(r0*(g1bs*g2bs-g3bs)+eta*g2bs^2+k*g3bs*g2bs)  # [x]
+    gmh = k*r0inv*(h*g2bs-r0*g3bs)  # [x]
+  else
+    # Drift backwards after Kepler step: (1/24/2018)
+    # The following line is f-1-h fdot:
+    h1= H1(gamma,beta0); h2= H2(gamma,beta0)
+#    fm1 =  k*rinv*(g2bs-k*r0inv*H1(gamma,beta0))  # [x]
+    fm1 =  k*rinv*(g2bs-k*r0inv*h1)  # [x]
+    # This is g-h*dgdt
+#    gmh = k*rinv*(r0*H2(gamma,beta0)+eta*H1(gamma,beta0)) # [x]
+    gmh = k*rinv*(r0*h2+eta*h1) # [x]
+  end
+  # Compute velocity component functions:
+  if drift_first
+    # This is gdot - h fdot - 1:
+#    dgdtm1 = k*r0inv*rinv*(r0*g0bs*g2bs+eta*g1bs*g2bs+k*g1bs*g3bs) # [x]
+    dgdtm1 = k*r0inv*rinv*(h*g1bs-r0*g2bs)
+  else
+    # This is gdot - 1:
+    dgdtm1 = -k*rinv*g2bs # [x]
+  end
+  @inbounds for j=1:3
+  # Compute difference vectors (finish - start) of step:
+    delxv[  j] = fm1*x0[j]+gmh*v0[j]        # position x_ij(t+h)-x_ij(t) - h*v_ij(t) or -h*v_ij(t+h)
+  end
+  @inbounds for j=1:3
+    delxv[3+j] = dfdt*x0[j]+dgdtm1*v0[j]    # velocity v_ij(t+h)-v_ij(t)
+  end
+  if debug
+    delxv[7] = gamma
+    delxv[8] = r
+    delxv[9] = fm1
+    delxv[10] = dfdt
+    delxv[11] = gmh
+    delxv[12] = dgdtm1
+  end
+  # Compute gradient analytically:
+  compute_jacobian_gamma!(gamma,g0bs,g1bs,g2bs,g3bs,h1,h2,dfdt,fm1,gmh,dgdtm1,r0,r,r0inv,rinv,k,h,beta0,beta0inv,eta,sqb,zeta,x0,v0,delxv_jac,drift_first,debug)
 end
+
+function compute_jacobian_gamma!(gamma::T,g0::T,g1::T,g2::T,g3::T,h1::T,h2::T,dfdt::T,fm1::T,gmh::T,dgdtm1::T,r0::T,r::T,r0inv::T,rinv::T,k::T,h::T,beta::T,betainv::T,eta::T,
+  sqb::T,zeta::T,x0::Array{T,1},v0::Array{T,1},delxv_jac::Array{T,2},drift_first::Bool,debug::Bool) where {T <: Real}
+# Computes Jacobian:
 if drift_first
   # First, x0 derivatives:
   #  delxv[  j] = fm1*x0[j]+gmh*v0[j]        # position x_ij(t+h)-x_ij(t) - h*v_ij(t) or -h*v_ij(t+h)
@@ -421,5 +531,6 @@ else
     delxv_jac[12,7] = dgdotm1dk; delxv_jac[12,8] = dgdotm1dh
   end
 end
-return delxv_jac
+#return delxv_jac::Array{T,2}
+return
 end
