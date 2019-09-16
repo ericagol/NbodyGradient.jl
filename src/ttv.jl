@@ -251,7 +251,7 @@ xprior = copy(x)
 vprior = copy(v)
 xtransit = copy(x)
 vtransit = copy(v)
-xerror = zeros(x); verror=zeros(v)
+xerror = zeros(T,size(x)); verror=zeros(T,size(v))
 # Set the time to the initial time:
 t = t0
 # Define error estimate based on Kahan (1965):
@@ -334,7 +334,7 @@ xprior = copy(x)
 vprior = copy(v)
 xtransit = copy(x)
 vtransit = copy(v)
-xerror = zeros(x); verror=zeros(v)
+xerror = zeros(Float64,size(x)); verror=zeros(Float64,size(v))
 # Set the time to the initial time:
 t = t0
 # Define error estimate based on Kahan (1965):
@@ -419,7 +419,7 @@ xprior = copy(x)
 vprior = copy(v)
 xtransit = copy(x)
 vtransit = copy(v)
-xerror = zeros(x); verror = zeros(x)
+xerror = zeros(Float64,size(x)); verror = zeros(Float64,size(x))
 # Set the time to the initial time:
 t = t0
 # Define error estimate based on Kahan (1965):
@@ -506,7 +506,7 @@ vprior = copy(v)
 #vtransit = big.(v); vtransit_plus = big.(v); vtransit_minus = big.(v)
 xtransit = copy(x); xtransit_plus = big.(x); xtransit_minus = big.(x)
 vtransit = copy(v); vtransit_plus = big.(v); vtransit_minus = big.(v)
-xerror = zeros(x); verror = zeros(x)
+xerror = zeros(Float64,size(x)); verror = zeros(Float64,size(x))
 m_plus = big.(m); m_minus = big.(m); hbig = big(h); dq = big(0.0)
 if h == 0
   println("h is zero ",h)
@@ -2782,7 +2782,7 @@ gdot = zero(T)
 gsky = gdot
 x = copy(x1)
 v = copy(v1)
-xerror = zeros(T,x1); verror = zeros(T,v1)
+xerror = zeros(T,size(x1)); verror = zeros(T,size(v1))
 dqdt = zeros(T,7*n)
 #TRANSIT_TOL = 10*sqrt(eps(dt)
 TRANSIT_TOL = 10*eps(dt)
@@ -2825,7 +2825,7 @@ gdot = zero(T)
 gsky = zero(T)
 x = copy(x1)
 v = copy(v1)
-xerror = zeros(T,v1); verror = zeros(T,v1)
+xerror = zeros(T,size(x1)); verror = zeros(T,size(v1))
 dqdt = zeros(T,7*n)
 #TRANSIT_TOL = 10*sqrt(eps(dt))
 TRANSIT_TOL = 10*eps(dt)
@@ -2852,14 +2852,14 @@ if iter >= 20
 end
 # Compute time derivatives:
 x = copy(x1); v = copy(v1)
-xerror = zeros(T,x1); verror =  zeros(T,v1)
+fill!(xerror,zero(T)); fill!(verror,zero(T))
 # Compute dgdt with the updated time step.
 dh17!(x,v,xerror,verror,tt,m,n,jac_step,pair)
 #ah18!(x,v,xerror,verror,tt,m,n,jac_step,pair)
 #ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
 # Need to reset to compute dqdt:
 x = copy(x1); v = copy(v1)
-xerror = zeros(T,x1); verror =  zeros(T,v1)
+fill!(xerror,zero(T)); fill!(verror,zero(T))
 dh17!(x,v,xerror,verror,tt,m,n,dqdt,pair)
 #ah18!(x,v,xerror,verror,tt,m,n,dqdt,pair)
 # Compute time offset:
