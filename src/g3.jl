@@ -54,8 +54,8 @@ epsilon = eps(gamma)
 # Computes G_3(\beta,s) using a series tailored to the precision of s.
 #x2 = -beta*s^2
 x2 = -sign(beta)*gamma^2
-term = one(gamma)
-g3 = one(gamma)
+term = one(T)
+g3 = one(T)
 n=0
 # Terminate series when required precision reached:
 while abs(term) > epsilon*abs(g3)
@@ -79,8 +79,8 @@ function H2_series(gamma::T,beta::T) where {T <: Real}
 epsilon = eps(gamma)
 #x2 = -beta*s^2
 x2 = -sign(beta)*gamma^2
-term = one(gamma)
-h2 = one(gamma)
+term = one(T)
+h2 = one(T)
 n=0
 # Terminate series when required precision reached:
 while abs(term) > epsilon*abs(h2)
@@ -98,8 +98,8 @@ function H1_series(gamma::T,beta::T) where {T <: Real}
 epsilon = eps(gamma)
 #x2 = -beta*s^2
 x2 = -sign(beta)*gamma^2
-term = one(gamma)
-h1 = one(gamma)
+term = one(T)
+h1 = one(T)
 n=0
 # Terminate series when required precision reached:
 while abs(term) > epsilon*abs(h1)

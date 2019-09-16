@@ -47,34 +47,55 @@ iter = kep_drift_ell_hyp!(x0,v0,k,h,s0,state,jacobian_old,drift_first)
 #println("s old: ",state[11])
 
 # Check that old and new are giving the same answer:
-delxv = jac_delxv_gamma!(x0,v0,k,h,drift_first)
+delxv = jac_delxv_gamma!(x0,v0,k,h,drift_first;debug=true)
 println("state: ",state)
 println("delxv: ",delxv)
-println("Old-new: ",state[2:7]-delxv)
+println("Old-new: ",state[2:7]-delxv[1:6])
+
+# Now compute algebraic Jacobian:
+delxv,jac_alg = jac_delxv_gamma!(x0,v0,k,h,drift_first;grad=true,auto=false,debug=true)
+println("Algebraic Jacobian: ",convert(Array{Float64,2},jac_alg))
+println("gamma gradient: ",jac_alg[7,:])
+println("r gradient: ",jac_alg[8,:])
+println("fm1 gradient  alg: ",jac_alg[9,:])
+println("fdot gradient  alg: ",jac_alg[10,:])
+println("g-h gdot gradient  alg: ",jac_alg[11,:])
+println("gdot-1 gradient  alg: ",jac_alg[12,:])
 
 # Next, compute autodiff Jacobian:
-delxv,jacobian = jac_delxv_gamma!(x0,v0,k,h,drift_first;grad=true,auto=true)
+delxv,jacobian = jac_delxv_gamma!(x0,v0,k,h,drift_first;grad=true,auto=true,debug=true)
+println("Auto diff Jacobian: ",convert(Array{Float64,2},jacobian))
+println("gamma auto gradient: ",jacobian[7,:])
+println("r auto gradient: ",jacobian[8,:])
+println("fm1 gradient auto: ",jacobian[9,:])
+println("fdot gradient auto: ",jacobian[10,:])
+println("g-h gdot gradient  auto: ",jacobian[11,:])
+println("got-1 gradient auto: ",jacobian[12,:])
+
 # Now, do finite differences at higher precision:
 kbig = big(k)
 x0big = big.(x0); v0big = big.(v0)
 # Now compute big-float precision autodiff Jacobian:
-delxv_big,jacobian_big = jac_delxv_gamma!(x0big,v0big,kbig,hbig,drift_first;grad=true,auto=true)
+delxv_big,jacobian_big = jac_delxv_gamma!(x0big,v0big,kbig,hbig,drift_first;grad=true,auto=true,debug=true)
 println("Auto diff Jacobian: ",jacobian)
 jac_frac = jacobian./convert(Array{Float64,2},jacobian_big)-1.0
 println("Fractional Jacobian difference: ",maxabs(jac_frac[.~isnan.(jac_frac)]))
 
+
 # Now compute finite-difference Jacobian:
-delxv,jac_num = jac_delxv_gamma!(x0big,v0big,kbig,hbig,drift_first;grad=true,auto=false,dlnq=dlnq)
+delxv,jac_num = jac_delxv_gamma!(x0big,v0big,kbig,hbig,drift_first;grad=true,auto=false,dlnq=dlnq,debug=true)
 println("Finite diff Jacobian: ",convert(Array{Float64,2},jac_num))
 println("Dim of jacobian_big: ",size(jacobian_big)," dim of jac_num: ",size(jac_num))
 println("Maximum jac_big-jac_num: ",maxabs(convert(Array{Float64,2},jacobian_big-jac_num)))
+println("Maximum jac_big-jac_alg: ",maxabs(convert(Array{Float64,2},jacobian_big-jac_alg)))
 return xsave,jac_num,jacobian
 end
 
 # First try:
 xsave,jac_num1,jacobian=test_kepler_drift(big(1e-20),true)
 emax = 0.0; imax = 0; jmax = 0
-for i=1:6, j=1:8
+#for i=1:6, j=1:8
+for i=1:12, j=1:8
   if jacobian[i,j] != 0.0
     diff = abs(convert(Float64,jac_num1[i,j])/jacobian[i,j]-1.0)
     if  diff > emax

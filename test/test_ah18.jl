@@ -5,7 +5,7 @@
 
 # Next, try computing three-body Keplerian Jacobian:
 
-#@testset "ah18" begin
+@testset "ah18" begin
 
 
 #n = 8
@@ -269,11 +269,11 @@ for i=1:n, k=1:3
   dqdt_num[(i-1)*7+3+k] = .5*(vp[k,i]-vm[k,i])/dq
 end
 dqdt_num = convert(Array{Float64,1},dqdt_num)
-#println("dqdt: ",dqdt," ",dqdt_num," diff: ",dqdt-dqdt_num)
+println("dqdt:     ",dqdt); println("dqdt_num: ",dqdt_num); println(" diff: ",dqdt-dqdt_num)
 println("dqdt-dqdt_num: ",maxabs(dqdt-convert(Array{Float64,1},dqdt_num)))
 
 #@test isapprox(jac_step,jac_step_num)
 #@test isapprox(jac_step,jac_step_num;norm=maxabs)
 @test isapprox(asinh.(jac_step),asinh.(jac_step_num);norm=maxabs)
-#@test isapprox(dqdt,dqdt_num;norm=maxabs)
-#end
+@test isapprox(dqdt,dqdt_num;norm=maxabs)
+end
