@@ -75,7 +75,7 @@ g2bs = 2.*signb*sx^2*beta0inv
 g0bs = 1.0-beta0*g2bs
 # This should be computed to prevent roundoff error. [ ]
 #g3bs = (1.0-g1bs)*beta0inv
-g3bs = g3(s*sqb,beta0)
+g3bs = G3(s*sqb,beta0)
 #if typeof(g1bs) == Float64
 #  println("g1: ",g1bs," g2: ",g2bs," g3: ",g3bs)
 #end
@@ -160,7 +160,7 @@ function jac_delxv(x0::Array{T,1},v0::Array{T,1},k::T,s::T,beta0::T,h::T,drift_f
   g1bs = 2.*sx*cx/sqb
   g2bs = 2.*signb*sx^2*beta0inv
   g0bs = 1.0-beta0*g2bs
-  g3bs = g3(s*sqb,beta0)
+  g3bs = G3(s*sqb,beta0)
   # Compute Gauss' Kepler functions:
   f = 1.0 - k*r0inv*g2bs # eqn (25)
   g = r0*g1bs + eta*g2bs # eqn (27)
@@ -289,7 +289,7 @@ zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 g0 = one-beta0*g2
 # Expand g3 as a series if s is small:
 sqb = sqrt(abs(beta0))
-g3bs = g3(s*sqb,beta0)
+g3bs = G3(s*sqb,beta0)
 #  g3bs = (s-g1)/beta0
 if drift_first
   eta = dot(x0-h*v0,v0) 
@@ -378,7 +378,7 @@ zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 g0 = one-beta0*g2
 # Expand g3 as a series if s is small:
 sqb = sqrt(abs(beta0))
-g3bs = g3(s*sqb,beta0)
+g3bs = G3(s*sqb,beta0)
 #  g3bs = (s-g1)/beta0
 if drift_first
   eta = dot(x0-h*v0,v0) 

@@ -9,10 +9,11 @@ n = 3
 t0 = 7257.93115525
 #t0 = -300.0
 h  = 0.0000005
+#h  = 0.05
 hbig  = big(h)
 tmax = 600.0
 #dlnq = 1e-8
-dlnq = big(1e-20)
+dlnq = big(1e-40)
 
 elements = readdlm("elements.txt",',')
 #elements[2,1] = 0.75
@@ -32,7 +33,6 @@ x0,v0 = init_nbody(elements,t0,n)
  if iter == 2
    # Reduce masses to trigger hyperbolic routine:
     m[1:n] *= 1e-1
-    h = 0.0000005
     hbig = big(h)
  end
 # Tilt the orbits a bit:
@@ -287,6 +287,14 @@ for i=1:14, j=1:14
   end
 end
 println("Maximum fractional error: ",emax," ",imax," ",jmax)
+for i=1:14
+  println("jac_ij: i      ",i," ",jac_ij[i,:])
+  println("jac_ij_num: i  ",i," ",convert(Array{Float64,1},jac_ij_num[i,:]))
+  println("difference: i  ",i," ",jac_ij[i,:].-convert(Array{Float64,1},jac_ij_num[i,:]))
+  if i != 7 && i != 14
+    println("frac diff : i  ",i," ",jac_ij[i,:]./convert(Array{Float64,1},jac_ij_num[i,:])-1.0)
+  end
+end
 println("Maximum fractional error big: ",emax_big," ",imax_big," ",jmax_big)
 #println(jac_ij)
 #println(convert(Array{Float64,2},jac_ij_num))

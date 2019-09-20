@@ -1027,7 +1027,8 @@ if gm == 0
 else
   delxv = zeros(T,6)
   jac_kepler = zeros(T,6,8)
-  jac_delxv_gamma!(x0,v0,gm,h,drift_first,delxv,jac_kepler,false)
+  jac_mass = zeros(T,6)
+  jac_delxv_gamma!(x0,v0,gm,h,drift_first,delxv,jac_kepler,jac_mass,false)
 
 #  kepler_drift_step!(gm, h, state0, state,jac_kepler,drift_first)
   mijinv::T =one(T)/(m[i] + m[j])
@@ -1054,11 +1055,17 @@ else
   end
   @inbounds for k=1:6
 # Compute derivatives of x_i,v_i with respect to the masses:
-    jac_ij[   k, 7] = -mj*delxv[k]*mijinv + GNEWT*mj*jac_kepler[  k,7]
+#    println("Old dxv/dm_i: ",-mj*delxv[k]*mijinv + GNEWT*mj*jac_kepler[  k,7])
+#    jac_ij[   k, 7] = -mj*delxv[k]*mijinv + GNEWT*mj*jac_kepler[  k,7]
+#    println("New dx/dm_i: ",jac_mass[k]*m[j])
+    jac_ij[   k, 7] = jac_mass[k]*m[j]
     jac_ij[   k,14] =  mi*delxv[k]*mijinv + GNEWT*mj*jac_kepler[  k,7]
 # Compute derivatives of x_j,v_j with respect to the masses:
     jac_ij[ 7+k, 7] = -mj*delxv[k]*mijinv - GNEWT*mi*jac_kepler[  k,7]
-    jac_ij[ 7+k,14] =  mi*delxv[k]*mijinv - GNEWT*mi*jac_kepler[  k,7]
+#    println("Old dxv/dm_j: ",mi*delxv[k]*mijinv - GNEWT*mi*jac_kepler[  k,7])
+#    jac_ij[ 7+k,14] =  mi*delxv[k]*mijinv - GNEWT*mi*jac_kepler[  k,7]
+#     println("New dxv/dm_j: ",-jac_mass[k]*m[i])
+    jac_ij[ 7+k,14] = -jac_mass[k]*m[i]
   end
 end
 # The following lines are meant to compute dq/dt for kepler_driftij,

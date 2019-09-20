@@ -18,8 +18,9 @@ r0 = sqrt(x0[1]*x0[1]+x0[2]*x0[2]+x0[3]*x0[3])
 vcirc = sqrt(k/r0)
 # Define initial velocity at apastron:
 v0 = [.9*vcirc,0.01*vcirc,0.01*vcirc]  # The eccentricity is about ~2(1-v0/vcirc).
-h = 18.0 # 18-day timesteps
+#h = 18.0 # 18-day timesteps
 #h = 0.000005 # 18-day timesteps
+h = 0.05 # 18-day timesteps
 hbig = big(h)
 
 s0::Float64 = 0.0
@@ -54,37 +55,50 @@ println("Old-new: ",state[2:7]-delxv[1:6])
 
 # Now compute algebraic Jacobian:
 delxv,jac_alg = jac_delxv_gamma!(x0,v0,k,h,drift_first;grad=true,auto=false,debug=true)
-println("Algebraic Jacobian: ",convert(Array{Float64,2},jac_alg))
-println("gamma gradient: ",jac_alg[7,:])
-println("r gradient: ",jac_alg[8,:])
-println("fm1 gradient  alg: ",jac_alg[9,:])
-println("fdot gradient  alg: ",jac_alg[10,:])
-println("g-h gdot gradient  alg: ",jac_alg[11,:])
-println("gdot-1 gradient  alg: ",jac_alg[12,:])
 
 # Next, compute autodiff Jacobian:
 delxv,jacobian = jac_delxv_gamma!(x0,v0,k,h,drift_first;grad=true,auto=true,debug=true)
-println("Auto diff Jacobian: ",convert(Array{Float64,2},jacobian))
-println("gamma auto gradient: ",jacobian[7,:])
-println("r auto gradient: ",jacobian[8,:])
-println("fm1 gradient auto: ",jacobian[9,:])
-println("fdot gradient auto: ",jacobian[10,:])
-println("g-h gdot gradient  auto: ",jacobian[11,:])
-println("got-1 gradient auto: ",jacobian[12,:])
+
 
 # Now, do finite differences at higher precision:
 kbig = big(k)
 x0big = big.(x0); v0big = big.(v0)
 # Now compute big-float precision autodiff Jacobian:
 delxv_big,jacobian_big = jac_delxv_gamma!(x0big,v0big,kbig,hbig,drift_first;grad=true,auto=true,debug=true)
-println("Auto diff Jacobian: ",jacobian)
-jac_frac = jacobian./convert(Array{Float64,2},jacobian_big)-1.0
+#println("Auto diff Jacobian: ",jacobian)
+jac_frac = jac_alg./convert(Array{Float64,2},jacobian_big)-1.0
 println("Fractional Jacobian difference: ",maxabs(jac_frac[.~isnan.(jac_frac)]))
 
 
 # Now compute finite-difference Jacobian:
 delxv,jac_num = jac_delxv_gamma!(x0big,v0big,kbig,hbig,drift_first;grad=true,auto=false,dlnq=dlnq,debug=true)
-println("Finite diff Jacobian: ",convert(Array{Float64,2},jac_num))
+name = ["x01","x02","x03","v01","v02","v03","gamma","r","fm1","fdot","gmhgdot","gdotm1"]
+for i=1:12
+  println(i," ",name[i])
+  println("Fini diff Jacobian: ",convert(Array{Float64,1},jac_num[i,:]))
+  println("Algebraic Jacobian: ",convert(Array{Float64,1},jac_alg[i,:]))
+  println("Auto diff Jacobian: ",convert(Array{Float64,1},jacobian_big[i,:]))
+  println("Frac diff Jacobian: ",jac_alg[i,:]./convert(Array{Float64,1},jacobian_big[i,:])-1.0)
+end
+println("gamma alg  gradient: ",jac_alg[7,:])
+println("gamma auto gradient: ",convert(Array{Float64,1},jacobian_big[7,:]))
+println("gamma diff gradient: ",convert(Array{Float64,1},jac_num[7,:]))
+println("r alg  gradient: ",jac_alg[8,:])
+println("r auto gradient: ",convert(Array{Float64,1},jacobian_big[8,:]))
+println("r diff gradient: ",convert(Array{Float64,1},jac_num[8,:]))
+println("fm1 gradient  alg: ",jac_alg[9,:])
+println("fm1 gradient auto: ",convert(Array{Float64,1},jacobian_big[9,:]))
+println("fm1 gradient diff: ",convert(Array{Float64,1},jac_num[9,:]))
+println("fdot gradient  alg: ",jac_alg[10,:])
+println("fdot gradient auto: ",convert(Array{Float64,1},jacobian_big[10,:]))
+println("fdot gradient diff: ",convert(Array{Float64,1},jac_num[10,:]))
+println("g-h gdot gradient   alg: ",jac_alg[11,:])
+println("g-h gdot gradient  auto: ",convert(Array{Float64,1},jacobian_big[11,:]))
+println("g-h gdot gradient  diff: ",convert(Array{Float64,1},jac_num[11,:]))
+println("gdot-1 gradient  alg: ",jac_alg[12,:])
+println("gdot-1 gradient auto: ",convert(Array{Float64,1},jacobian_big[12,:]))
+println("gdot-1 gradient diff: ",convert(Array{Float64,1},jac_num[12,:]))
+
 println("Dim of jacobian_big: ",size(jacobian_big)," dim of jac_num: ",size(jac_num))
 println("Maximum jac_big-jac_num: ",maxabs(convert(Array{Float64,2},jacobian_big-jac_num)))
 println("Maximum jac_big-jac_alg: ",maxabs(convert(Array{Float64,2},jacobian_big-jac_alg)))
