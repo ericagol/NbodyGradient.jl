@@ -1,4 +1,4 @@
-  2
+  
 
 # Wisdom & Hernandez version of Kepler solver, with Rein & Tamayo convergence test.
 # Now using \gamma = \sqrt{\abs{\beta}}s rather than s now to solve Kepler's equation.
@@ -446,7 +446,12 @@ if drift_first
       delxv_jac[ 7,i] = -sqb*rinv*((g2-h*c3*r0inv^3)*v0[i]+c3*x0[i]*r0inv^3); delxv_jac[7,3+i] = sqb*rinv*((-d+2*g2*h-h^2*c3*r0inv^3)*v0[i]+(-g2+h*c3*r0inv^3)*x0[i])
       delxv_jac[ 8,i] = (c20*betainv-c2*c3*rinv)*r0inv^3*x0[i]+((eta*g2+g1*r0)*rinv+h*r0inv^3*(c2*c3*rinv-c20*betainv))*v0[i]
 #      delxv_jac[8,3+i] = (g1-g2*c2*rinv+h*r0inv^3*(c2*c3*rinv-c20*betainv))*x0[i]+(-2g1*h+c18*betainv+(2g2*h-d)*c2*rinv+h^2*r0inv^3*(c20*betainv-c2*c3*rinv))*v0[i]
-      delxv_jac[8,3+i] = ((g1*r0+eta*g2)*rinv+h*r0inv^3*(c2*c3*rinv-c20*betainv))*x0[i]+(-2g1*h+c18*betainv+(2g2*h-d)*c2*rinv+h^2*r0inv^3*(c20*betainv-c2*c3*rinv))*v0[i]
+#      delxv_jac[8,3+i] = ((g1*r0+eta*g2)*rinv+h*r0inv^3*(c2*c3*rinv-c20*betainv))*x0[i]+(-2g1*h+c18*betainv+(2g2*h-d)*c2*rinv+h^2*r0inv^3*(c20*betainv-c2*c3*rinv))*v0[i]
+      drdx0x0 = (beta*g1*g2+((eta*g2+k*g3)*eta*g0*c3)*rinv*r0inv^3 + (g1*g0*(2k*eta^2*g2+3eta*k^2*g3))*betainv*rinv*r0inv^2- 
+                          k*betainv*r0inv^3*(eta*g1*(eta*g2+k*g3)+g3*g0*r0^2*beta+2h*g2*k)+(g1*zeta)*rinv*((h*c3)*r0inv^3 - g2) - 
+                         (eta*(beta*g2*g0*r0+k*g1^2)*(eta*g1+k*g2))*betainv*rinv*r0inv^2)
+      delxv_jac[8,3+i] = drdx0x0*x0[i]+ (k*betainv*rinv*(eta*(2g0*g3-g1*g2+g3) - h6*k^2 + (g2^2 - 2*g1*g3)*beta*k*r0) + h*drdx0x0)*v0[i]
+#                         +(-2g1*h+c18*betainv+(2g2*h-d)*c2*rinv+h^2*r0inv^3*(c20*betainv-c2*c3*rinv))*v0[i]
 #      delxv_jac[8,3+i] = ((eta*g2+g1*r0)*rinv+h*betainv*rinv*r0inv^3*((3g1*g3 - 2g2^2)*k^3 + k^2*eta*(3g0*g3 - g1*g2) + 
 #            beta*k^2*(g2^2 - 3*g1*g3)*r0 - beta*r0^3 - k*g2*beta*(eta^2*g2 + 2eta*g1*r0 + g0*r0^2)))*x0[i]+(-2g1*h+c18*betainv+((g1*r0-g3*k-2*g0*h)*c2)*betainv*rinv + 
 #         h^2*((2*g2^2 - 3*g1*g3)*k^3 + beta*r0^3 + k^2*(eta*(g1*g2 - 3*g0*g3) + beta*(3*g1*g3 - g2^2)*r0) + 
@@ -488,16 +493,19 @@ else
   c19 = 4*eta*h1+3*h2*r0
   c23 = h2*k-r0*g1
   c24 = r0*(2k*r0inv-beta)/beta-g1*c3*rinv/g2
+  h6 = H6(gamma,beta)
   # Derivatives of \delta x with respect to x0, v0, k & h:
   dfm1dxx = k*rinv^3*betainv*r0inv^4*(k*h1*r^2*r0*(beta-2*k*r0inv)+beta*c3*(r*c23+c14*c2)+c14*r*(k*(r-g2*k)+g0*r0*zeta))
   dfm1dxv = k*rinv^2*r0inv*(k*(g2*h2+g1*h1)-2g1*g2*r0+g2*c14*c2*rinv)
   dfm1dvx = dfm1dxv
-  dfm1dvv = k*r0inv*rinv^2*betainv*(r*(2*g2*r0-4*h1*k)+d*beta*c23-c18*c14+d*beta*c14*c2*rinv)
+#  dfm1dvv = k*r0inv*rinv^2*betainv*(r*(2*g2*r0-4*h1*k)+d*beta*c23-c18*c14+d*beta*c14*c2*rinv)
+  dfm1dvv = k*r0inv*rinv^2*betainv*(2eta*k*(g2*g3-g1*h1)+(3g3*h2-4h1*g2)*k^2 + 
+    beta*g2*r0*(3h1*k-g2*r0)+c14*rinv*(-beta*g2^2*eta^2+eta*k*(2g0*g3-h2)-
+     h6*k^2+(-2eta*g1*g2+k*(h1-2g1*g3))*beta*r0-beta*g1^2*r0^2))
   dfm1dh  = (g1*k-h2*k^2*r0inv-k*c14*c2*rinv*r0inv)*rinv^2
   dfm1dk  = rinv*r0inv*(4*h1*k^2*betainv*r0inv-k*h1-2*g2*k*betainv+c14-k*c14*c17*betainv*rinv*r0inv+
         k*(g1*r0-k*h2)*c1*rinv*r0inv-k*c14*c1*c2*rinv^2*r0inv)
 #  dfm1dk2_old  = 4*h1*k*betainv*r0inv-h1-2*g2*betainv-c14*c17*betainv*rinv*r0inv+ (g1*r0-k*h2)*c1*rinv*r0inv-c14*c1*c2*rinv^2*r0inv
-  h6 = H6(gamma,beta)
   # New expression for d(f-1-h \dot f)/dk with cancellations of higher order terms in gamma is:
   dfm1dk2  = betainv*r0inv*rinv^2*(r*(2eta*k*(g1*h1-g3*g2)+(4g2*h1-3g3*h2)*k^2-eta*r0*beta*g1*h1 + (g3*h2-4g2*h1)*beta*k*r0 + g2*h1*beta^2*r0^2) - 
           c14*(-eta^2*beta*g2^2 + k*eta*(3g0*g3 - g1*g2) - k^2*h6 - eta*r0*beta*(g1*g2 + g0*g3) + 2*(h1 - g1*g3)*beta*k*r0 - (g2 - beta*g1*g3)*beta*r0^2))

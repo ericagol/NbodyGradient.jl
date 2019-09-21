@@ -19,8 +19,8 @@ vcirc = sqrt(k/r0)
 # Define initial velocity at apastron:
 v0 = [.9*vcirc,0.01*vcirc,0.01*vcirc]  # The eccentricity is about ~2(1-v0/vcirc).
 #h = 18.0 # 18-day timesteps
-#h = 0.000005 # 18-day timesteps
-h = 0.05 # 18-day timesteps
+h = 0.000005 # 18-day timesteps
+#h = 0.05 # 18-day timesteps
 hbig = big(h)
 
 s0::Float64 = 0.0
