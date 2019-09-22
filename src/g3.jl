@@ -240,3 +240,34 @@ h7 *= gamma^5/(beta*sqrt(abs(beta)))
 return h7::T
 end
 
+function H8(gamma::T,beta::T) where {T <: Real}
+# This is H_8 = G_1 G_2 - 3 G_0 G_3:
+if gamma < 0.5
+  return H8_series(gamma,beta)
+else
+  if beta >= 0
+    return (-3gamma*cos(gamma) +sin(gamma) +sin(2gamma))/(beta*sqrt(beta))
+  else
+    return (-3gamma*cosh(gamma)+sinh(gamma)+sinh(2gamma))/(beta*sqrt(-beta))
+  end
+end
+end
+
+function H8_series(gamma::T,beta::T) where {T <: Real}
+# Computes H_3(\beta,s) using a series tailored to the precision of gamma:
+epsilon = eps(gamma)
+#x2 = -beta*s^2
+x2 = -sign(beta)*gamma^2
+term = convert(T,1//120)
+h8 = convert(T,3//20)
+n=0
+# Terminate series when required precision reached:
+while abs(term) > epsilon*abs(h8)
+  n += 1
+  term *= x2
+  term /= (2n+4)*(2n+5)
+  h8 += term*(2^(5+2n)-14-6n)
+end
+h8 *= gamma^5/(beta*sqrt(abs(beta)))
+return h8::T
+end

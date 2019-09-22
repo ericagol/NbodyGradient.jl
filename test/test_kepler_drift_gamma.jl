@@ -102,7 +102,7 @@ println("gdot-1 gradient diff: ",convert(Array{Float64,1},jac_num[12,:]))
 println("Dim of jacobian_big: ",size(jacobian_big)," dim of jac_num: ",size(jac_num))
 println("Maximum jac_big-jac_num: ",maxabs(convert(Array{Float64,2},jacobian_big-jac_num)))
 println("Maximum jac_big-jac_alg: ",maxabs(convert(Array{Float64,2},jacobian_big-jac_alg)))
-return xsave,jac_num,jacobian
+return xsave,jac_num,jac_alg
 end
 
 # First try:
@@ -114,6 +114,7 @@ for i=1:12, j=1:8
     diff = abs(convert(Float64,jac_num1[i,j])/jacobian[i,j]-1.0)
     if  diff > emax
       emax = diff; imax = i; jmax = j
+#      println("i ",i," j ",j," jac_num1: ",convert(Float64,jac_num1[i,j])," jacobian: ",jacobian[i,j])
     end
   end
 end
@@ -129,6 +130,7 @@ for i=1:6, j=1:8
     diff = abs(convert(Float64,jac_num1[i,j])/jacobian[i,j]-1.0)
     if  diff > emax
       emax = diff; imax = i; jmax = j
+#      println("i ",i," j ",j," jac_num1: ",convert(Float64,jac_num1[i,j])," jacobian: ",jacobian[i,j])
     end
   end
 end
