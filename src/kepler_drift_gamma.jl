@@ -514,6 +514,9 @@ else
   dgmhdxv = k*rinv^2*(h1*r-g2*c16-g1*c15+g2*c2*c15*rinv)
   dgmhdvx = dgmhdxv
   dgmhdvv = k*rinv^2*(-d*c16-c15*c18*betainv+r*c19*betainv+d*c2*c15*rinv)
+  dgmhdvv = k*betainv*rinv^2*(((2*eta^2*(g1*h1-g2*g3)+eta*k*(4g2*h1-3h2*g3)+r0*eta*(4g0*h1-2g1*g3)+ 
+           3r0*k*((g1+beta*g3)*h1-g3*g2)+(g0*(g1*g2-3g0*g3)-beta*g1*(g2^2+g1*g3))*r0^2)) + 
+           c15*rinv*(-beta*g2^2*eta^2+eta*k*(-g1*g2+3g0*g3)-h6*k^2+(-2eta*g1*g2+k*(g2^2-3g1*g3))*beta*r0-beta*g1^2*r0^2))
   dgmhdk  = rinv*(k*c1*c16*rinv*r0inv+c15-k*c15*c17*betainv*rinv*r0inv-k*c19*betainv*r0inv-k*c1*c2*c15*rinv^2*r0inv)
 #  dgmhdk2_old  = c1*c16*rinv-c15*c17*betainv*rinv-c19*betainv-c1*c2*c15*rinv^2
   h7 = H7(gamma,beta)
@@ -545,6 +548,9 @@ else
   ddfdtdxv = -dfdt*(g0*g2/g1+(r0*g1+eta*g2)*rinv)*rinv
   ddfdtdvx = ddfdtdxv
   ddfdtdvv = dfdt*(betainv-d*g0*rinv/g1-c18*betainv*rinv+d*c2*rinv^2)
+  ddfdtdvv = -k*rinv*r0inv*((eta*g2^2)*rinv+(k*(g1*g2 - 3g0*g3))*betainv*rinv+ 
+       g1*(-beta*eta^2*g2^2+eta*k *(-g1*g2+3g0*g3)- h6*k^2 + (-2eta*g1*g2+(h1-2g1*g3)*k)*beta*r0 - 
+       beta*g1^2*r0^2)*betainv*rinv^2)
   ddfdtdk  = dfdt*(1/k+c1*(r0-g2*k)*r0inv*rinv^2/g1-betainv*r0inv*(1+c17*rinv))
   ddfdtdk2  = -g1*(c1*(r0-g2*k)*r0inv*rinv^2/g1-betainv*r0inv*(1+c17*rinv))
 #  ddfdtdk2  = r0inv*(g1*c17*betainv*rinv+g1*betainv-g1*c1*c2*rinv^2-c1*g0*rinv)
@@ -553,7 +559,9 @@ else
   dgdotm1dxx = rinv^2*r0inv^3*((eta*g2+g1*r0)*k*c3*rinv+g2*k*(k*(g2*k-r)-g0*r0*zeta)*betainv)
   dgdotm1dxv = k*g2*rinv^3*(r*g1+r0*g1+eta*g2)
   dgdotm1dvx = dgdotm1dxv
-  dgdotm1dvv = k*rinv^2*(d*g1+g2*c18*betainv-2*r*g2*betainv-d*g2*c2*rinv)
+#  dgdotm1dvv = k*rinv^2*(d*g1+g2*c18*betainv-2*r*g2*betainv-d*g2*c2*rinv)
+  dgdotm1dvv = k*betainv*rinv^3*(eta^2*beta*g2^3+eta*k*(3g2*g3-g1*g2^2)+3r0*eta*beta*g1*g2^2 +
+         r0*k*(-g0*h6+3beta*g1*g2*g3)+beta*g2*(g0*g2+g1^2)*r0^2)
   dgdotm1dk = rinv*r0inv*(-r0*g2+g2*k*(r+r0-g2*k)*betainv*rinv-k*g1*c1*rinv+k*g2*c1*c2*rinv^2)
   dgdotm1dk2 = rinv*(g2*(r+r0-g2*k)*betainv-g1*c1+g2*c1*c2*rinv)
   dgdotm1dk2 = betainv*rinv^2*(-beta*eta^2*g2^3+eta*k*g2*(g1*g2-3*g3)+eta*r0*beta*g2*(-2g1*g2+g3)+ 
