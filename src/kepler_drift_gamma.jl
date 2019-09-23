@@ -1,4 +1,4 @@
-  
+
 
 # Wisdom & Hernandez version of Kepler solver, with Rein & Tamayo convergence test.
 # Now using \gamma = \sqrt{\abs{\beta}}s rather than s now to solve Kepler's equation.
@@ -381,7 +381,8 @@ if drift_first
 #  println("H5 : ",g1*g2-g3*(2+g0)," ",H2(gamma,beta)-2*G3(gamma,beta)," ",h5)
 #  h6 = 2*g2^2-3*g1*g3
 #  println("H6: ",2*g2^2-3*g1*g3," ",h6)
-  dfm1dk2  = (r0*h4+k*h6)*betainv*rinv
+#  dfm1dk2  = (r0*h4+k*h6)*betainv*rinv
+  dfm1dk2  = (r0*h4+k*h6)
 #  println("dfm1dk2: ",dfm1dk2," ", (r0*h4+k*h6)*betainv*rinv)
   dgmhdxx = c10
   dgmhdxv =  -g2*k*c13*rinv*r0inv-h*c10
@@ -393,7 +394,8 @@ if drift_first
   dgmhdh  =  g2*k*r0inv+k*c13*rinv*r0inv+g2*k*(2*k*r0inv-beta)*c13*rinv*r0inv-eta*c10
   dgmhdk  =  r0inv*(k*c1*c13*rinv*r0inv+g2*h-g3*r0-k*c9*betainv*r0inv)
 #  dgmhdk2  =  c1*c13*rinv-c9*betainv
-  dgmhdk2 = -betainv*rinv*(h6*g3*k^2+eta*r0*(h6+g2*h4)+r0^2*g0*h5+k*eta*g2*h6+(g1*h6+g3*h4)*k*r0)
+#  dgmhdk2 = -betainv*rinv*(h6*g3*k^2+eta*r0*(h6+g2*h4)+r0^2*g0*h5+k*eta*g2*h6+(g1*h6+g3*h4)*k*r0)
+  dgmhdk2 = -(h6*g3*k^2+eta*r0*(h6+g2*h4)+r0^2*g0*h5+k*eta*g2*h6+(g1*h6+g3*h4)*k*r0)
 #  println("dgmhdk2: ",dgmhdk2," ",-betainv*rinv*(h6*g3*k^2+eta*r0*(h6+g2*h4)+r0^2*g0*h5+k*eta*g2*h6+(g1*h6+g3*h4)*k*r0))
   @inbounds for j=1:3
     # First, compute the \delta x-derivatives:
@@ -406,7 +408,7 @@ if drift_first
     delxv_jac[  j,  7] = dfm1dk*x0[j] + dgmhdk*v0[j]
     delxv_jac[  j,  8] = dfm1dh*x0[j] + dgmhdh*v0[j]
     # Compute the mass jacobian separately since otherwise cancellations happen in kepler_driftij_gamma:
-    jac_mass[  j] = GNEWT^2*r0inv^2*(dfm1dk2*x0[j]+dgmhdk2*v0[j])
+    jac_mass[  j] = (GNEWT*r0inv)^2*betainv*rinv*(dfm1dk2*x0[j]+dgmhdk2*v0[j])
   end
   # Derivatives of \delta v with respect to x0, v0, k & h:
   c5 = (r0-k*g2)*rinv/g1

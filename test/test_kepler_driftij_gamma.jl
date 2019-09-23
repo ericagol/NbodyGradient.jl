@@ -8,12 +8,12 @@ for drift_first in [true,false]
 n = 3
 t0 = 7257.93115525
 #t0 = -300.0
-h  = 0.0000005
-#h  = 0.05
+#h  = 0.0000005
+h  = 0.05
 hbig  = big(h)
 tmax = 600.0
 #dlnq = 1e-8
-dlnq = big(1e-40)
+dlnq = big(1e-15)
 
 elements = readdlm("elements.txt",',')
 #elements[2,1] = 0.75
