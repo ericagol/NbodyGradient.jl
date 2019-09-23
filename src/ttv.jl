@@ -2053,6 +2053,14 @@ indi = 0; indj = 0
 end
 # Missing phic here [x]
 phic!(x,v,xerror,verror,h,m,n,jac_phi,dqdt_phi,pair)
+#hbig = big(h); mbig = big.(m)
+#xbig = big.(x); vbig = big.(v)
+#xerr_big = big.(xerror); verr_big = big.(verror)
+#jac_phi_big = big.(jac_phi); dqdt_phi_big = big.(dqdt_phi)
+#phisalpha!(xbig,vbig,xerr_big,verr_big,hbig,mbig,big(two),n,jac_phi_big,dqdt_phi_big,pair)
+#xcompare = convert(Array{T,2},xbig); vcompare = convert(Array{T,2},vbig)
+#x .= xcompare; v .= vcompare; jac_phi .= convert(Array{T,2},jac_phi_big)
+#xerror .= convert(Array{T,2},xerr_big); verror .= convert(Array{T,2},verr_big)
 phisalpha!(x,v,xerror,verror,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
 #  jac_step .= jac_phi*jac_step # < 1%  Perhaps use gemm?! [ ]
 if T == BigFloat

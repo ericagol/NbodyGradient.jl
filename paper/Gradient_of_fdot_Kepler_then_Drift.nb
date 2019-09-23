@@ -10,7 +10,7 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[    104293,       2951]
+NotebookDataLength[    104283,       2951]
 NotebookOptionsPosition[     97313,       2834]
 NotebookOutlinePosition[     97649,       2849]
 CellTagsIndexPosition[     97606,       2846]
@@ -2948,7 +2948,7 @@ Cell[84506, 2492, 4986, 119, 155, "Input",ExpressionUUID->"3fe14fed-732e-466b-a4
 Cell[89495, 2613, 3807, 96, 104, "Output",ExpressionUUID->"6137e6ec-4b42-4f08-8395-1e78399d92e9"]
 }, Open  ]],
 Cell[93317, 2712, 1121, 31, 52, "Input",ExpressionUUID->"713616e7-4ee2-4e6f-b3c8-1bf258212a70"],
-Cell[94441, 2745, 1003, 30, 30, InheritFromParent,ExpressionUUID->"2e46b6a8-8896-49e0-8883-1b0a3e833ba5"],
+Cell[94441, 2745, 1003, 30, 30, "Input",ExpressionUUID->"2e46b6a8-8896-49e0-8883-1b0a3e833ba5"],
 Cell[CellGroupData[{
 Cell[95469, 2779, 1216, 33, 52, "Input",ExpressionUUID->"19c08563-fc87-4439-9430-b86ff612ab8a"],
 Cell[96688, 2814, 609, 17, 55, "Output",ExpressionUUID->"0ae5c396-841e-4608-b208-0b97031aa0f1"]

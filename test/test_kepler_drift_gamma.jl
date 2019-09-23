@@ -66,7 +66,7 @@ x0big = big.(x0); v0big = big.(v0)
 # Now compute big-float precision autodiff Jacobian:
 delxv_big,jacobian_big = jac_delxv_gamma!(x0big,v0big,kbig,hbig,drift_first;grad=true,auto=true,debug=true)
 #println("Auto diff Jacobian: ",jacobian)
-jac_frac = jac_alg./convert(Array{Float64,2},jacobian_big)-1.0
+jac_frac = jac_alg[1:6,:]./convert(Array{Float64,2},jacobian_big[1:6,:])-1.0
 println("Fractional Jacobian difference: ",maxabs(jac_frac[.~isnan.(jac_frac)]))
 
 

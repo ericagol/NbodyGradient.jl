@@ -428,8 +428,13 @@ if drift_first
   dgdtmhdfdtm1dxx = c25
   dgdtmhdfdtm1dxv = c26-h*c25
   dgdtmhdfdtm1dvx = c26-h*c25
-  dgdtmhdfdtm1dvv = d*k*rinv^3*r0inv*(c13*c2-r*c12)+k*(c13*(r0*g0-k*g2)-g2*r*r0)*betainv*rinv^2*r0inv-2*h*c26+h^2*c25
+  h2 = H2(gamma,beta)
+#  dgdtmhdfdtm1dvv = d*k*rinv^3*r0inv*(c13*c2-r*c12)+k*(c13*(r0*g0-k*g2)-g2*r*r0)*betainv*rinv^2*r0inv-2*h*c26+h^2*c25
 #  dgdtmhdfdtm1dvv = d*k*rinv^3*r0inv*k*(r0*(g1*g2-g3)+eta*g2^2+k*g2*g3)+k*(c13*(r0*g0-k*g2)-g2*r*r0)*betainv*rinv^2*r0inv-2*h*c26+h^2*c25
+#  println("\dot g - h \dot f -1, dv0 terms: ",d*k*rinv^3*r0inv*c13*c2," ",-d*k*rinv^3*r0inv*r*c12," ",k*c13*r0*g0*betainv*rinv^2*r0inv," ",-k*c13*k*g2*betainv*rinv^2*r0inv," ",-k*g2*r*r0*betainv*rinv^2*r0inv," ",-2*h*c26," ",h^2*c25)
+#  println("second version of dv0 terms:     ",d*k*rinv^3*r0inv*k*r0*g1*g2," ",-d*k*rinv^3*r0inv*k*r0*g3," ",d*k*rinv^3*r0inv*k*eta*g2^2," ",d*k*rinv^3*r0inv*k*k*g2*g3," ",-k*eta*k*g1*g2^2*betainv*rinv^2*r0inv," ",-k*g1*g2*g3*k^2*betainv*rinv^2*r0inv," ",-k*r0*eta*beta*g1*g2^2*betainv*rinv^2*r0inv," ",-r0*k*k*g1*h2*betainv*rinv^2*r0inv," ",-beta*k*g2^2*g0*r0^2*betainv*rinv^2*r0inv," ",-2*h*c26," ",h^2*c25)
+  dgdtmhdfdtm1dvv = d*k*rinv^3*r0inv*k*(r0*(g1*g2-g3)+eta*g2^2+k*g2*g3)+k*(-eta*k*g1*g2^2-g1*g2*g3*k^2-r0*eta*beta*g1*g2^2-r0*k*g1*h2 -
+                    beta*g2^2*g0*r0^2)*betainv*rinv^2*r0inv-2*h*c26+h^2*c25
   dgdtmhdfdtm1dk = rinv*r0inv*(-k*(c13-g2*r0)*betainv*r0inv+c13-k*c13*c17*betainv*rinv*r0inv+k*c1*c12*rinv*r0inv-k*c1*c2*c13*rinv^2*r0inv)
   dgdtmhdfdtm1dk2 = -(c13-g2*r0)*betainv*r0inv-c13*c17*betainv*rinv*r0inv+c1*c12*rinv*r0inv-c1*c2*c13*rinv^2*r0inv
   #dgdtmhdfdtm1dk2 = g2*betainv+rinv*r0inv*(c1*c2+c13*((k*g2-r0)*betainv-c1*c2*rinv))
@@ -458,7 +463,7 @@ if drift_first
                           k*betainv*r0inv^3*(eta*g1*(eta*g2+k*g3)+g3*g0*r0^2*beta+2h*g2*k)+(g1*zeta)*rinv*((h*c3)*r0inv^3 - g2) - 
                          (eta*(beta*g2*g0*r0+k*g1^2)*(eta*g1+k*g2))*betainv*rinv*r0inv^2)
 #      delxv_jac[8,3+i] = drdv0x0*x0[i]+ (k*betainv*rinv*(eta*(2g0*g3-g1*g2+g3) - h6*k^2 + (g2^2 - 2*g1*g3)*beta*k*r0) + h*drdv0x0)*v0[i]
-      delxv_jac[8,3+i] = drdv0x0*x0[i]+ (k*betainv*rinv*(eta*(beta*g2*g3-h8) - h6*k^2 + (g2^2 - 2*g1*g3)*beta*k*r0) + h*drdv0x0)*v0[i]
+      delxv_jac[8,3+i] = drdv0x0*x0[i] - (k*betainv*rinv*(eta*(beta*g2*g3-h8) - h6*k + (g2^2 - 2*g1*g3)*beta*r0) + h*drdv0x0)*v0[i]
 #                         +(-2g1*h+c18*betainv+(2g2*h-d)*c2*rinv+h^2*r0inv^3*(c20*betainv-c2*c3*rinv))*v0[i]
 #      delxv_jac[8,3+i] = ((eta*g2+g1*r0)*rinv+h*betainv*rinv*r0inv^3*((3g1*g3 - 2g2^2)*k^3 - k^2*eta*h8 + 
 #            beta*k^2*(g2^2 - 3*g1*g3)*r0 - beta*r0^3 - k*g2*beta*(eta^2*g2 + 2eta*g1*r0 + g0*r0^2)))*x0[i]+(-2g1*h+c18*betainv+((g1*r0-g3*k-2*g0*h)*c2)*betainv*rinv + 
