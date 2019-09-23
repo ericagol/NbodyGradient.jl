@@ -17,8 +17,8 @@ tmax = 600.0
 dlnq = big(1e-15)
 
 elements = readdlm("elements.txt",',')
-elements[2,1] = 1.0
-elements[3,1] = 1.0
+#elements[2,1] = 1.0
+#elements[3,1] = 1.0
 
 m =zeros(n)
 x0=zeros(3,n)
@@ -169,11 +169,13 @@ end
 
 jacmax = 0.0
 for i=1:7, j=1:3, k=1:7, l=1:3
-  if jac_step[(j-1)*7+i,(l-1)*7+k] != 0
+  if jac_step[(j-1)*7+i,(l-1)*7+k] != 0 && jac_step_num[(j-1)*7+i,(l-1)*7+k] != 0
     # Compute the fractional error and absolute error, and take the minimum of the two:
-    diff = minimum([abs(float(jac_step_num[(j-1)*7+i,(l-1)*7+k])/jac_step[(j-1)*7+i,(l-1)*7+k]-1.0);float(jac_step_num[(j-1)*7+i,(l-1)*7+k])-jac_step[(j-1)*7+i,(l-1)*7+k]])
+#    diff = minimum([abs(float(jac_step_num[(j-1)*7+i,(l-1)*7+k])/jac_step[(j-1)*7+i,(l-1)*7+k]-1.0);float(jac_step_num[(j-1)*7+i,(l-1)*7+k])-jac_step[(j-1)*7+i,(l-1)*7+k]])
+    diff = abs(float(jac_step_num[(j-1)*7+i,(l-1)*7+k])/jac_step[(j-1)*7+i,(l-1)*7+k]-1.0)
     if diff > jacmax
       jacmax = diff
+      println(i," ",j," ",k," ",l," ",jacmax," ",convert(Float64,jac_step_num[(j-1)*7+i,(l-1)*7+k])," ",jac_step[(j-1)*7+i,(l-1)*7+k])
     end
   end
 end
