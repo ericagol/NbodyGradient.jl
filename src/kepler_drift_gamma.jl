@@ -436,8 +436,11 @@ if drift_first
   dgdtmhdfdtm1dvv = d*k*rinv^3*r0inv*k*(r0*(g1*g2-g3)+eta*g2^2+k*g2*g3)+k*(-eta*k*g1*g2^2-g1*g2*g3*k^2-r0*eta*beta*g1*g2^2-r0*k*g1*h2 -
                     beta*g2^2*g0*r0^2)*betainv*rinv^2*r0inv-2*h*c26+h^2*c25
   dgdtmhdfdtm1dk = rinv*r0inv*(-k*(c13-g2*r0)*betainv*r0inv+c13-k*c13*c17*betainv*rinv*r0inv+k*c1*c12*rinv*r0inv-k*c1*c2*c13*rinv^2*r0inv)
-  dgdtmhdfdtm1dk2 = -(c13-g2*r0)*betainv*r0inv-c13*c17*betainv*rinv*r0inv+c1*c12*rinv*r0inv-c1*c2*c13*rinv^2*r0inv
-  #dgdtmhdfdtm1dk2 = g2*betainv+rinv*r0inv*(c1*c2+c13*((k*g2-r0)*betainv-c1*c2*rinv))
+#  dgdtmhdfdtm1dk2 = -(c13-g2*r0)*betainv*r0inv-c13*c17*betainv*rinv*r0inv+c1*c12*rinv*r0inv-c1*c2*c13*rinv^2*r0inv
+  #dgdtmhdfdtm1dk2 = g2*betainv+rinv*r0inv*(c1*c12+c13*((k*g2-r0)*betainv-c1*c2*rinv))
+  h9 = 3*g3-g1*g2
+  dgdtmhdfdtm1dk2 = k*betainv*rinv^2*r0inv*(-beta*eta^2*g2^4+eta*g2*(g1*g2^2+g1^2*g3-5*g2*g3)*k-g2*g3*h9*k^2+ 
+        2eta*r0*beta*g2^2*(g3-g1*g2)+(4g3-g0*g3-g1*g2)*(g3-g1*g2)*r0*k+beta*(2g1*g3*g2-g1^2*g2^2-g3^2)*r0^2)
   dgdtmhdfdtm1dh = g1*k*rinv*r0inv+k*c12*rinv^2*r0inv-k*c2*c13*rinv^3*r0inv-(2*k*r0inv-beta)*c26-eta*c25
   @inbounds for j=1:3
     # Next, compute the \delta v-derivatives:

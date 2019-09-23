@@ -1044,7 +1044,6 @@ else
     v[k,j],verror[k,j] = comp_sum(v[k,j],verror[k,j],-mi*delxv[3+k])
   end
   # Compute Jacobian:
-  # The following lines are much slower than they should be:
   @inbounds for l=1:6, k=1:6
 # Compute derivatives of x_i,v_i with respect to initial conditions:
     jac_ij[  k,  l] += mj*jac_kepler[k,l]
@@ -1420,8 +1419,7 @@ a = zeros(T,3,n)
 rij = zeros(T,3)
 aij = zeros(T,3)
 coeff = alpha*h^3/96*2*GNEWT
-zero = 0.0*alpha
-fac = zero; fac1 = zero; fac2 = zero; r1 = zero; r2 = zero; r3 = zero
+fac = zero(T) ; fac1 = zero(T); fac2 = zero(T); r1 = zero(T); r2 = zero(T); r3 = zero(T)
 @inbounds for i=1:n-1
   for j = i+1:n
     if ~pair[i,j] # correction for Kepler pairs
@@ -1473,8 +1471,8 @@ a = zeros(T,3,n)
 rij = zeros(T,3)
 aij = zeros(T,3)
 coeff = alpha*h^3/96*2*GNEWT
-zero = 0.0*alpha
-fac = zero; fac1 = zero; fac2 = zero; r1 = zero; r2 = zero; r3 = zero
+
+fac = zero(T); fac1 = zero(T); fac2 = zero(T); r1 = zero(T); r2 = zero(T); r3 = zero(T)
 @inbounds for i=1:n-1
   for j = i+1:n
     if ~pair[i,j] # correction for Kepler pairs

@@ -1,14 +1,14 @@
 #include("../src/ttv.jl")
 #include("/Users/ericagol/Computer/Julia/regress.jl")
 
-@testset "ttv_elements" begin
+#@testset "ttv_elements" begin
 
 # This routine takes derivative of transit times with respect
 # to the initial orbital elements.
 #n = 8
 n = 3
 n_body = n
-t0 = 7257.93115525
+t0 = 7257.93115525-7300.0
 #h  = 0.12
 h  = 0.04
 #tmax = 600.0
@@ -17,6 +17,7 @@ tmax = 100.0
 
 # Read in initial conditions:
 elements = readdlm("elements.txt",',')
+elements[:,3] -= 7300.0
 # Make masses of planets bigger
 #elements[2,1] *= 10.0
 #elements[3,1] *= 10.0
@@ -108,7 +109,7 @@ dq0 = big(1e-20)
 tt2 = big.(tt2)
 tt3 = big.(tt3)
 t0big = big(t0); tmaxbig = big(tmax); hbig = big(h)
-zero = big(0.0)
+zilch = big(0.0)
 # Now, compute derivatives numerically:
 for jq=1:n_body
   for iq=1:7
@@ -116,9 +117,9 @@ for jq=1:n_body
 #    dq0 = delement[iq]; if jq==1 && iq==7 ; dq0 = big(1e-10); end  # Vary mass of star by a larger factor
     if iq == 7; ivary = 1; else; ivary = iq+1; end  # Shift mass variation to end
     elementsbig[jq,ivary] += dq0
-    dq_plus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt2,count2,zero,0,0,big(rstar))
+    dq_plus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt2,count2,zilch,0,0,big(rstar))
     elementsbig[jq,ivary] -= 2dq0
-    dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt3,count2,zero,0,0,big(rstar))
+    dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt3,count2,zilch,0,0,big(rstar))
     #xm,vm = init_nbody(elements,t0,n_body)
     for i=2:n
       for k=1:count2[i]
@@ -158,7 +159,7 @@ println("Max diff asinh(dtdelements): ",maximum(abs.(asinh.(dtdelements0[mask])-
 @test isapprox(asinh.(dtdelements0[mask]),asinh.(dtdelements0_num[mask]);norm=maxabs)
 #unit = ones(dtdelements0[mask])
 #@test isapprox(dtdelements0[mask]./dtdelements0_num[mask],unit;norm=maxabs)
-end
+#end
 
 ## Make a plot of some TTVs:
 #

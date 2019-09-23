@@ -7,7 +7,6 @@ function kepler_drift_step!(gm::T,h::T,state0::Array{T,1},state::Array{T,1},drif
 # compute beta, r0,  get x/v from state vector & call correct subroutine
 x0 = zeros(eltype(state0),3)
 v0 = zeros(eltype(state0),3)
-zero = 0.0*h
 for k=1:3
   x0[k]=state0[k+1]
   v0[k]=state0[k+4]
@@ -21,7 +20,6 @@ function kepler_drift_step!(gm::T,h::T,state0::Array{T,1},state::Array{T,1},jaco
 # compute beta, r0,  get x/v from state vector & call correct subroutine
 x0 = zeros(eltype(state0),3)
 v0 = zeros(eltype(state0),3)
-zero = 0.0*h
 for k=1:3
   x0[k]=state0[k+1]
   v0[k]=state0[k+4]

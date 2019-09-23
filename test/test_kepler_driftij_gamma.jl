@@ -17,8 +17,8 @@ dlnq = big(1e-40)
 
 elements = readdlm("elements.txt",',')
 #elements[2,1] = 0.75
-elements[2,1] = 1.0
-elements[3,1] = 1.0
+#elements[2,1] = 1.0
+#elements[3,1] = 1.0
 
 m =zeros(n)
 x0=zeros(NDIM,n)
@@ -32,7 +32,7 @@ for iter = 1:2
 x0,v0 = init_nbody(elements,t0,n)
  if iter == 2
    # Reduce masses to trigger hyperbolic routine:
-    m[1:n] *= 1e-1
+    m[1:n] *= 1e-3
     hbig = big(h)
  end
 # Tilt the orbits a bit:
