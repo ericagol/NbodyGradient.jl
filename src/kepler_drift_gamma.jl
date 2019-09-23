@@ -81,17 +81,21 @@ function jac_delxv_gamma!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,drift_first::B
   iter = 0
   ITMAX = 20
   # Compute coefficients: (8/28/19 notes)
-  c1 = k; c2 = -zeta; c3 = -eta*sqb; c4 = sqb*(eta-h*beta0); c5 = eta*signb*sqb
+#  c1 = k; c2 = -zeta; c3 = -eta*sqb; c4 = sqb*(eta-h*beta0); c5 = eta*signb*sqb
+  c1 = k; c2 = -2zeta; c3 = 2*eta*signb*sqb; c4 = -sqb*h*beta0; c5 = 2eta*signb*sqb
   # Solve for gamma:
   while true 
     gamma2 = gamma1
     gamma1 = gamma
+    xx = 0.5*gamma
+#    xx = gamma
     if beta0 > 0 
-      sx = sin(gamma); cx = cos(gamma) 
+      sx = sin(xx); cx = cos(xx) 
     else 
-      cx = cosh(gamma); sx = exp(gamma)-cx
+      sx = sinh(xx); cx = exp(-xx)+sx
     end
-    gamma -= (c1*gamma+c2*sx+c3*cx+c4)/(c2*cx+c5*sx+c1)
+#    gamma -= (c1*gamma+c2*sx+c3*cx+c4)/(c2*cx+c5*sx+c1)
+    gamma -= (k*gamma+c2*sx*cx+c3*sx^2+c4)/(2signb*zeta*sx^2+c5*sx*cx+r0*beta0)
     iter +=1 
     if iter >= ITMAX || gamma == gamma2 || gamma == gamma1
       break
@@ -111,7 +115,7 @@ function jac_delxv_gamma!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,drift_first::B
   if beta0 > 0 
     sx = sin(xx); cx = cos(xx) 
   else
-    cx = cosh(xx); sx = exp(xx)-cx
+    sx = sinh(xx); cx = exp(-xx)+sx
   end
   # Now, compute final values.  Compute Wisdom/Hernandez G_i^\beta(s) functions:
   g1bs = 2sx*cx/sqb
@@ -258,17 +262,21 @@ function jac_delxv_gamma!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,drift_first::B
   iter = 0
   ITMAX = 20
   # Compute coefficients: (8/28/19 notes)
-  c1 = k; c2 = -zeta; c3 = -eta*sqb; c4 = sqb*(eta-h*beta0); c5 = eta*signb*sqb
+#  c1 = k; c2 = -zeta; c3 = -eta*sqb; c4 = sqb*(eta-h*beta0); c5 = eta*signb*sqb
+  c1 = k; c2 = -2zeta; c3 = 2*eta*signb*sqb; c4 = -sqb*h*beta0; c5 = 2eta*signb*sqb
   # Solve for gamma:
   while true 
     gamma2 = gamma1
     gamma1 = gamma
+    xx = 0.5*gamma
+#    xx = gamma
     if beta0 > 0 
-      sx = sin(gamma); cx = cos(gamma) 
+      sx = sin(xx); cx = cos(xx) 
     else 
-      cx = cosh(gamma); sx = exp(gamma)-cx
+      sx = sinh(xx); cx = exp(-xx)+sx
     end
-    gamma -= (c1*gamma+c2*sx+c3*cx+c4)/(c2*cx+c5*sx+c1)
+#    gamma -= (c1*gamma+c2*sx+c3*cx+c4)/(c2*cx+c5*sx+c1)
+    gamma -= (k*gamma+c2*sx*cx+c3*sx^2+c4)/(2signb*zeta*sx^2+c5*sx*cx+r0*beta0)
     iter +=1 
     if iter >= ITMAX || gamma == gamma2 || gamma == gamma1
       break
@@ -281,7 +289,7 @@ function jac_delxv_gamma!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,drift_first::B
   if beta0 > 0 
     sx = sin(xx); cx = cos(xx) 
   else
-    cx = cosh(xx); sx = exp(xx)-cx
+    sx = sinh(xx); cx = exp(-xx)+sx
   end
   # Now, compute final values.  Compute Wisdom/Hernandez G_i^\beta(s) functions:
   g1bs = 2sx*cx/sqb

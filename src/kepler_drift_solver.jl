@@ -130,12 +130,12 @@ function jac_delxv(x0::Array{T,1},v0::Array{T,1},k::T,s::T,beta0::T,h::T,drift_f
 
 # Create a closure so that the function knows value of drift_first:
 
-  function delx_delv(input) # input = x0,v0,k,s,beta0,h,drift_first
+  function delx_delv(input::Array{T2,1}) where {T2 <: Real} # input = x0,v0,k,s,beta0,h,drift_first
   # Compute delx and delv from h, s, k, beta0, x0 and v0:
   x0 = input[1:3]; v0 = input[4:6]; k = input[7]
   s = input[8]; beta0=input[9]; h = input[10]
   # Set up a single output array for delx and delv:
-  delxv = zeros(T,6)
+  delxv = zeros(T2,6)
   # Compute square root of beta0:
   signb = sign(beta0)
   sqb = sqrt(abs(beta0))
