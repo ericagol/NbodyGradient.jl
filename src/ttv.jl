@@ -76,9 +76,9 @@ function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Arra
 #
 #fcons = open("fcons.txt","w");
 # Set up mass, position & velocity arrays.  NDIM =3
-m=zeros(eltype(elements),n)
-x=zeros(eltype(elements),NDIM,n)
-v=zeros(eltype(elements),NDIM,n)
+m=zeros(T,n)
+x=zeros(T,NDIM,n)
+v=zeros(T,NDIM,n)
 # Fill the transit-timing array with zeros:
 fill!(tt,0.0)
 # Counter for transits of each planet:
@@ -89,16 +89,19 @@ for i=1:n
 end
 # Allow for perturbations to initial conditions: jq labels body; iq labels phase-space element (or mass)
 # iq labels phase-space element (1-3: x; 4-6: v; 7: m)
-dq = 0.0
+dq = zero(T)
 if iq == 7 && dlnq != 0.0
   dq = m[jq]*dlnq
   m[jq] += dq
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
 x,v = init_nbody(elements,t0,n)
-#elements_big=big.(elements); t0big = big(t0)
-#xbig,vbig = init_nbody(elements_big,t0big,n)
-#x = convert(Array{Float64,2},xbig); v = convert(Array{Float64,2},vbig)
+elements_big=big.(elements); t0big = big(t0)
+xbig,vbig = init_nbody(elements_big,t0big,n)
+if T != BigFloat
+  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (dlnq version)")
+end
+x = convert(Array{T,2},xbig); v = convert(Array{T,2},vbig)
 # Perturb the initial condition by an amount dlnq (if it is non-zero):
 if dlnq != 0.0 && iq > 0 && iq < 7
   if iq < 4
@@ -165,6 +168,10 @@ end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
 jac_init     = zeros(Float64,7*n,7*n)
 x,v = init_nbody(elements,t0,n,jac_init)
+elements_big=big.(elements); t0big = big(t0); jac_init_big = zeros(BigFloat,7*n,7*n)
+xbig,vbig = init_nbody(elements_big,t0big,n,jac_init_big)
+println("Difference in x,v init: ",x-convert(Array{Float64,2},xbig)," ",v-convert(Array{Float64,2},vbig)," (transit derivative version)")
+x = convert(Array{Float64,2},xbig); v = convert(Array{Float64,2},vbig); jac_init=convert(Array{Float64,2},jac_init_big)
 #x,v = init_nbody(elements,t0,n)
 ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,dtdq0_num,dlnq,rstar,pair)
 # Need to apply initial jacobian TBD - convert from
@@ -225,6 +232,13 @@ end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
 jac_init     = zeros(T,7*n,7*n)
 x,v = init_nbody(elements,t0,n,jac_init)
+elements_big=big.(elements); t0big = big(t0); jac_init_big = zeros(BigFloat,7*n,7*n)
+xbig,vbig = init_nbody(elements_big,t0big,n,jac_init_big)
+if T != BigFloat
+  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (Jacobian version)")
+  println("Difference in Jacobian: ",jac_init-convert(Array{T,2},jac_init_big)," (Jacobian version)")
+end
+x = convert(Array{T,2},xbig); v = convert(Array{T,2},vbig); jac_init=convert(Array{T,2},jac_init_big)
 #x,v = init_nbody(elements,t0,n)
 ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,rstar,pair)
 # Need to apply initial jacobian TBD - convert from
@@ -300,7 +314,7 @@ while t < (t0+tmax) && param_real
       count[i] += 1
       if count[i] <= ntt_max
         dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
-        xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior; jac_trans_err = jac_error
+        xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior; jac_trans_err .= jac_error
 #        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
         dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,jac_trans_err,dtdq,pair) # 20%
         #tt[i,count[i]]=t+dt
@@ -470,7 +484,7 @@ while t < t0+tmax && param_real
         dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior; jac_trans_err .= jac_error_prior
 #        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
-      dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,jac_trans_err,dtdq,pair) # 20%
+        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,jac_trans_err,dtdq,pair) # 20%
         #tt[i,count[i]]=t+dt
         tt[i,count[i]],stmp = comp_sum(t,s2,dt)
         # Save for posterity:
@@ -2868,8 +2882,8 @@ x = copy(x1); v = copy(v1)
 fill!(xerror,zero(T)); fill!(verror,zero(T))
 # Compute dgdt with the updated time step.
 #dh17!(x,v,xerror,verror,tt,m,n,jac_step,pair)
-ah18!(x,v,xerror,verror,tt,m,n,jac_step,pair)
-#ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
+#ah18!(x,v,xerror,verror,tt,m,n,jac_step,pair)
+ah18!(x,v,xerror,verror,tt,m,n,jac_step,jac_error,pair)
 # Need to reset to compute dqdt:
 x = copy(x1); v = copy(v1)
 fill!(xerror,zero(T)); fill!(verror,zero(T))

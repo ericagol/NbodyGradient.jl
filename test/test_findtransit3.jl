@@ -9,7 +9,7 @@
 #KEPLER_TOL  = 1e-15
 #TRANSIT_TOL = 1e-15
 
-@testset "findtransit3" begin
+#@testset "findtransit3" begin
 
 #n = 8
 n = 3
@@ -17,8 +17,8 @@ t0 = 7257.93115525
 #h  = 0.12
 h  = 0.05
 #tmax = 600.0
-tmax = 100.0
-#tmax = 10.0
+#tmax = 100.0
+tmax = 10.0
 
 # Read in initial conditions:
 elements = readdlm("elements.txt",',')
@@ -43,8 +43,12 @@ dlnq = big(1e-10)
 # Make radius of star large:
 rstar = 1e12
 dtdelements_num = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,dtdq0_num,dlnq,rstar)
+# Now do computation in BigFloat precision:
+dtdq0_big = big.(dtdq0)
+dtdelements_num = ttv_elements!(n,big(t0),big(h),big(tmax),big.(elements),big.(tt),count,dtdq0_big,big(rstar))
 
 dtdq0_num = convert(Array{Float64,4},dtdq0_num)
+dtdq0_big = convert(Array{Float64,4},dtdq0_big)
 
 mask = zeros(Bool, size(dtdq0))
 for i=2:n, j=1:count[i], k=1:5, l=1:n
@@ -57,4 +61,4 @@ println("Max diff     dtdq0 : ",maximum((dtdq0_num[mask]-dtdq0[mask])))
 @test isapprox(asinh.(dtdq0[mask]),asinh.(convert(Array{Float64,4},dtdq0_num)[mask]);norm=maxabs)
 #unit = ones(dtdq0[mask])
 #@test isapprox(dtdq0[mask]./convert(Array{Float64,4},dtdq0_num)[mask],unit;norm=maxabs)
-end
+#end

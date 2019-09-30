@@ -11,12 +11,12 @@
 n = 3
 t0 = 7257.93115525-7300.0
 #h  = 0.12
-#h  = 0.04
-h  = 0.02
+h  = 0.04
+#h  = 0.02
 #tmax = 600.0
-#tmax = 1000.0
+tmax = 1000.0
 #tmax = 100.0
-tmax = 10.0
+#tmax = 10.0
 
 # Read in initial conditions:
 elements = readdlm("elements.txt",',')
@@ -57,11 +57,10 @@ end
 #read(STDIN,Char)
 
 # Compute derivatives numerically:
-nq = 15
-# This "summarizes" best numerical derivative:
-dtdq0_sum = zeros(BigFloat,n,maximum(ntt),7,n)
+# Compute the numerical derivative:
+dtdq0_num = zeros(BigFloat,n,maximum(ntt),7,n)
 itdq0 = zeros(Int64,n,maximum(ntt),7,n)
-dlnq = big(1e-18)
+dlnq = big(1e-15)
 hbig = big(h); t0big = big(t0); tmaxbig=big(tmax); tt2big = big.(tt2); tt3big = big.(tt3)
 for jq=1:n
   for iq=1:7
@@ -72,7 +71,7 @@ for jq=1:n
     for i=1:n
       for k=1:count2[i]
         # Compute double-sided derivative for more accuracy:
-        dtdq0_sum[i,k,iq,jq] = (tt2big[i,k]-tt3big[i,k])/(dq_plus-dq_minus)
+        dtdq0_num[i,k,iq,jq] = (tt2big[i,k]-tt3big[i,k])/(dq_plus-dq_minus)
 #        println(i," ",k," ",iq," ",jq," ",tt2big[i,k]," ",tt3big[i,k]," ")
       end
     end
@@ -84,11 +83,11 @@ ntot = 0
 diff_dtdq0 = zeros(n,maximum(ntt),7,n)
 mask = zeros(Bool, size(dtdq0))
 for i=2:n, j=1:count[i], k=1:7, l=1:n
-  if abs(dtdq0[i,j,k,l]-dtdq0_sum[i,j,k,l]) > 0.1*abs(dtdq0[i,j,k,l]) && ~(abs(dtdq0[i,j,k,l]) == 0.0  && abs(dtdq0_sum[i,j,k,l]) < 1e-3)
-#    println(i," ",j," ",k," ",l," ",dtdq0[i,j,k,l]," ",dtdq0_sum[i,j,k,l]," ",itdq0[i,j,k,l])
+  if abs(dtdq0[i,j,k,l]-dtdq0_num[i,j,k,l]) > 0.1*abs(dtdq0[i,j,k,l]) && ~(abs(dtdq0[i,j,k,l]) == 0.0  && abs(dtdq0_num[i,j,k,l]) < 1e-3)
+#    println(i," ",j," ",k," ",l," ",dtdq0[i,j,k,l]," ",dtdq0_num[i,j,k,l]," ",itdq0[i,j,k,l])
     nbad +=1
   end
-  diff_dtdq0[i,j,k,l] = abs(dtdq0[i,j,k,l]-dtdq0_sum[i,j,k,l])
+  diff_dtdq0[i,j,k,l] = abs(dtdq0[i,j,k,l]-dtdq0_num[i,j,k,l])
   if k != 2 && k != 5
     mask[i,j,k,l] = true
   end
@@ -121,10 +120,10 @@ for i=2:3
 end
 loglog([1.0,1024.0],2e-15*[1,2^15],":")
 for i=2:3, k=1:7, l=1:3
-  if maximum(abs.(dtdq0_sum[i,2:count1[i],k,l])) > 0
-    diff1 = abs.(dtdq0[i,2:count1[i],k,l]./dtdq0_sum[i,2:count1[i],k,l]-1.);
-    diff2 = abs.(asinh.(dtdq0[i,2:count1[i],k,l])-asinh.(dtdq0_sum[i,2:count1[i],k,l]));
-    diff3 = abs.(dtdq0_big[i,2:count1[i],k,l]./dtdq0_sum[i,2:count1[i],k,l]-1);
+  if maximum(abs.(dtdq0_num[i,2:count1[i],k,l])) > 0
+    diff1 = abs.(dtdq0[i,2:count1[i],k,l]./dtdq0_num[i,2:count1[i],k,l]-1.);
+    diff2 = abs.(asinh.(dtdq0[i,2:count1[i],k,l])-asinh.(dtdq0_num[i,2:count1[i],k,l]));
+    diff3 = abs.(dtdq0_big[i,2:count1[i],k,l]./dtdq0[i,2:count1[i],k,l]-1);
     loglog(tt[i,2:count1[i]]-tt[i,1],diff1);
     loglog(tt[i,2:count1[i]]-tt[i,1],diff3,linestyle=":");
 #    loglog(tt[i,2:count1[i]]-tt[i,1],diff2,".");
@@ -136,8 +135,8 @@ for i=2:3
   for j=1:count1[i]
     data_list = Float64[]
     for k=1:7, l=1:3
-      if abs(dtdq0_sum[i,j,k,l]) > 0
-        push!(data_list,abs(dtdq0[i,j,k,l]/dtdq0_sum[i,j,k,l]-1.0))
+      if abs(dtdq0_num[i,j,k,l]) > 0
+        push!(data_list,abs(dtdq0[i,j,k,l]/dtdq0_num[i,j,k,l]-1.0))
       end
     end
     mederror[i,j] = median(data_list)
@@ -149,17 +148,17 @@ end
 loglog([1.0,1024.0],1e-12*[1,2^15],":",linewidth=3)
 
 
-#println("Max diff log(dtdq0): ",maximum(abs.(dtdq0_sum[mask]./dtdq0[mask]-1.0)))
-println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_sum[mask])-asinh.(dtdq0[mask]))))
+#println("Max diff log(dtdq0): ",maximum(abs.(dtdq0_num[mask]./dtdq0[mask]-1.0)))
+println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_num[mask])-asinh.(dtdq0[mask]))))
 #unit = ones(dtdq0[mask])
-#@test isapprox(dtdq0[mask]./convert(Array{Float64,4},dtdq0_sum)[mask],unit;norm=maxabs)
-#@test isapprox(dtdq0[mask],convert(Array{Float64,4},dtdq0_sum)[mask];norm=maxabs)
-@test isapprox(asinh.(dtdq0[mask]),asinh.(convert(Array{Float64,4},dtdq0_sum)[mask]);norm=maxabs)
+#@test isapprox(dtdq0[mask]./convert(Array{Float64,4},dtdq0_num)[mask],unit;norm=maxabs)
+#@test isapprox(dtdq0[mask],convert(Array{Float64,4},dtdq0_num)[mask];norm=maxabs)
+@test isapprox(asinh.(dtdq0[mask]),asinh.(convert(Array{Float64,4},dtdq0_num)[mask]);norm=maxabs)
 #end
 
 #
 #nderiv = n^2*7*maximum(ntt)
-#loglog(abs.(reshape(dtdq0,nderiv)),abs.(reshape(convert(Array{Float64,4},dtdq0_sum),nderiv)),".")
+#loglog(abs.(reshape(dtdq0,nderiv)),abs.(reshape(convert(Array{Float64,4},dtdq0_num),nderiv)),".")
 #loglog(abs.(reshape(dtdq0,nderiv)),abs.(reshape(convert(Array{Float64,4},diff_dtdq0),nderiv)),".")
 
 
