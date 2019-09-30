@@ -63,7 +63,7 @@ v[3]=x[3]*rdotonr+rfdot*cosomegapf*sininc
 return x,v
 end
 
-function kepler_init(time::Float64,mass::Float64,elements::Array{Float64,1},jac_init::Array{Float64,2})
+function kepler_init(time::T,mass::T,elements::Array{T,1},jac_init::Array{T,2}) where {T <: Real}
 # Takes orbital elements of a single Keplerian; returns positions & velocities.
 # This is 3D), so 6 orbital elements specified, the code returns 3D.  For
 # Inclination = pi/2, motion is in X-Z plane; sky plane is X-Y.

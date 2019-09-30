@@ -27,7 +27,11 @@ timebig = big.(time)
 dt = period/ntime
 dtbig = big(dt)
 jac_init = zeros(Float64,7,7)
+# Compute Jacobian in BigFloat precision with analytic formulae:
+jac_init_big = zeros(BigFloat,7,7)
+# Compute Jacobian in BigFloat precision with finite differences:
 jac_init_num = zeros(BigFloat,7,7)
+# Variations in the elements for finite differences:
 delements = big.([1e-15,1e-15,1e-15,1e-15,1e-15,1e-15,1e-15])
 elements_name = ["P","t0","ecosom","esinom","inc","Omega","Mass"]
 cartesian_name = ["x","y","z","vx","vy","vz","mass"]
@@ -36,6 +40,9 @@ for i=1:ntime
   x,v = kepler_init(timebig[i],massbig,big.(elements))
   if i==1 
     x_ekep,v_ekep = kepler_init(time[i],mass,elements,jac_init)
+    # Redo in BigFloat
+    elements_big = big.(elements)
+    x_ekep_big,v_ekep_big = kepler_init(timebig[i],massbig,elements_big,jac_init_big)
   # Check that these agree:
 #    println("x-x_ekep: ",maximum(abs.(x-x_ekep))," v-v_ekep: ",maximum(abs.(v-v_ekep)))
   # Now take some derivatives:
@@ -119,4 +126,5 @@ println("Scatter in dAdt: ",std(dAdt))
 # Check that velocities match finite difference values
 
 @test isapprox(jac_init,jac_init_num;norm=maxabs)
+@test isapprox(jac_init,convert(Array{Float64,2},jac_init_big);norm=maxabs)
 end

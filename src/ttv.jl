@@ -185,7 +185,7 @@ return dtdelements
 end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
-function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},rstar::Float64;pair=zeros(Bool,n,n))
+function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dtdq0::Array{T,4},rstar::T;pair=zeros(Bool,n,n)) where {T <: Real}
 # 
 # Input quantities:
 # n     = number of bodies
@@ -209,12 +209,12 @@ function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::A
 # Example: see test_ttv_elements.jl in test/ directory
 #
 # Define initial mass, position & velocity arrays:
-m=zeros(Float64,n)
-x=zeros(Float64,NDIM,n)
-v=zeros(Float64,NDIM,n)
+m=zeros(T,n)
+x=zeros(T,NDIM,n)
+v=zeros(T,NDIM,n)
 # Fill the transit-timing & jacobian arrays with zeros:
-fill!(tt,0.0)
-fill!(dtdq0,0.0)
+fill!(tt,zero(T))
+fill!(dtdq0,zero(T))
 # Create an array for the derivatives with respect to the masses/orbital elements:
 dtdelements = copy(dtdq0)
 # Counter for transits of each planet:
@@ -223,7 +223,7 @@ for i=1:n
   m[i] = elements[i,1]
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-jac_init     = zeros(Float64,7*n,7*n)
+jac_init     = zeros(T,7*n,7*n)
 x,v = init_nbody(elements,t0,n,jac_init)
 #x,v = init_nbody(elements,t0,n)
 ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,rstar,pair)
@@ -234,7 +234,7 @@ for i=1:n, j=1:count[i]
   if j <= ntt_max
   # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
     for k=1:n, l=1:7
-      dtdelements[i,j,l,k] = 0.0
+      dtdelements[i,j,l,k] = zero(T)
       for p=1:n, q=1:7
         dtdelements[i,j,l,k] += dtdq0[i,j,q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
       end
@@ -277,7 +277,7 @@ for i=2:n
   gsave[i]= g!(i,1,x,v)
 end
 # Loop over time steps:
-dt::Float64 = 0.0
+dt::T = 0.0
 gi = 0.0
 ntt_max = size(tt)[2]
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m))
@@ -2006,7 +2006,7 @@ drift!(x,v,xerror,verror,h2,n,jac_step,jac_error)
 kickfast!(x,v,xerror,verror,h/6,m,n,jac_kick,dqdt_kick,pair)
 # Multiply Jacobian from kick step:
 if T == BigFloat
-  jac_copy = *(jac_kick,jac_step)
+  jac_copy .= *(jac_kick,jac_step)
 else
   BLAS.gemm!('N','N',uno,jac_kick,jac_step,zilch,jac_copy)
 end
@@ -2031,7 +2031,7 @@ indi = 0; indj = 0
       end
       # Carry out multiplication on the i/j components of matrix:
       if T == BigFloat
-        jac_tmp2 = *(jac_ij,jac_tmp1)
+        jac_tmp2 .= *(jac_ij,jac_tmp1)
       else
         BLAS.gemm!('N','N',uno,jac_ij,jac_tmp1,zilch,jac_tmp2)
       end
@@ -2062,7 +2062,7 @@ phic!(x,v,xerror,verror,h,m,n,jac_phi,dqdt_phi,pair)
 phisalpha!(x,v,xerror,verror,h,m,two,n,jac_phi,dqdt_phi,pair) # 10%
 #  jac_step .= jac_phi*jac_step # < 1%  Perhaps use gemm?! [ ]
 if T == BigFloat
-  jac_copy = *(jac_phi,jac_step)
+  jac_copy .= *(jac_phi,jac_step)
 else
   BLAS.gemm!('N','N',uno,jac_phi,jac_step,zilch,jac_copy)
 end
@@ -2088,7 +2088,7 @@ indi=0; indj=0
       end
       # Carry out multiplication on the i/j components of matrix:
       if T == BigFloat
-        jac_tmp2 = *(jac_ij,jac_tmp1)
+        jac_tmp2 .= *(jac_ij,jac_tmp1)
       else
         BLAS.gemm!('N','N',uno,jac_ij,jac_tmp1,zilch,jac_tmp2)
       end
@@ -2110,7 +2110,7 @@ end
 kickfast!(x,v,xerror,verror,h/6,m,n,jac_kick,dqdt_kick,pair)
 # Multiply Jacobian from kick step:
 if T == BigFloat
-  jac_copy = *(jac_kick,jac_step)
+  jac_copy .= *(jac_kick,jac_step)
 else
   BLAS.gemm!('N','N',uno,jac_kick,jac_step,zilch,jac_copy)
 end
@@ -2790,7 +2790,7 @@ function findtransit3!(i::Int64,j::Int64,n::Int64,h::T,tt::T,m::Array{T,1},x1::A
 # Initial guess using linear interpolation:
 dt = one(T)
 iter = 0
-r3 = 0.0
+r3 = zero(T)
 gdot = zero(T)
 gsky = gdot
 x = copy(x1)
@@ -2847,8 +2847,8 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   v .= v1
   # Advance planet state at start of step to estimated transit time:
 #  dh17!(x,v,tt,m,n,pair)
-  dh17!(x,v,xerror,verror,tt,m,n,dqdt,pair)
-  #ah18!(x,v,xerror,verror,tt,m,n,dqdt,pair)
+  #dh17!(x,v,xerror,verror,tt,m,n,dqdt,pair)
+  ah18!(x,v,xerror,verror,tt,m,n,dqdt,pair)
   # Compute time offset:
   gsky = g!(i,j,x,v)
 #  # Compute derivative of g with respect to time:
@@ -2867,21 +2867,21 @@ end
 x = copy(x1); v = copy(v1)
 fill!(xerror,zero(T)); fill!(verror,zero(T))
 # Compute dgdt with the updated time step.
-dh17!(x,v,xerror,verror,tt,m,n,jac_step,pair)
-#ah18!(x,v,xerror,verror,tt,m,n,jac_step,pair)
+#dh17!(x,v,xerror,verror,tt,m,n,jac_step,pair)
+ah18!(x,v,xerror,verror,tt,m,n,jac_step,pair)
 #ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
 # Need to reset to compute dqdt:
 x = copy(x1); v = copy(v1)
 fill!(xerror,zero(T)); fill!(verror,zero(T))
-dh17!(x,v,xerror,verror,tt,m,n,dqdt,pair)
-#ah18!(x,v,xerror,verror,tt,m,n,dqdt,pair)
+#dh17!(x,v,xerror,verror,tt,m,n,dqdt,pair)
+ah18!(x,v,xerror,verror,tt,m,n,dqdt,pair)
 # Compute time offset:
 gsky = g!(i,j,x,v)
 # Compute derivative of g with respect to time:
 gdot  = ((x[1,j]-x[1,i])*(dqdt[(j-1)*7+4]-dqdt[(i-1)*7+4])+(x[2,j]-x[2,i])*(dqdt[(j-1)*7+5]-dqdt[(i-1)*7+5])
       +  (v[1,j]-v[1,i])*(dqdt[(j-1)*7+1]-dqdt[(i-1)*7+1])+(v[2,j]-v[2,i])*(dqdt[(j-1)*7+2]-dqdt[(i-1)*7+2]))
 # Set dtdq to zero:
-fill!(dtdq,0.0)
+fill!(dtdq,zero(T))
 indj = (j-1)*7+1
 indi = (i-1)*7+1
 @inbounds for p=1:n

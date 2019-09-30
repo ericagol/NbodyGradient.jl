@@ -1,3 +1,5 @@
+
+
 #include("../src/ttv.jl")
 #include("/Users/ericagol/Computer/Julia/regress.jl")
 
@@ -7,12 +9,14 @@
 # to the initial cartesian coordinates of bodies. [x]
 #n = 8
 n = 3
-t0 = 7257.93115525
+t0 = 7257.93115525-7300.0
 #h  = 0.12
-h  = 0.04
+#h  = 0.04
+h  = 0.02
 #tmax = 600.0
-tmax = 100.0
-#tmax = 10.0
+#tmax = 1000.0
+#tmax = 100.0
+tmax = 10.0
 
 # Read in initial conditions:
 elements = readdlm("elements.txt",',')
@@ -34,17 +38,13 @@ count1 = zeros(Int64,n)
 # Call the ttv function:
 rstar = 1e12
 dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
-dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
-dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
-# Now call with one tenth the timestep:
+# Now call with half the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
-dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0,rstar)
+dq = ttv_elements!(n,t0,h/2,tmax,elements,tt2,count2,0.0,0,0,rstar)
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtdq0 = zeros(n,maximum(ntt),7,n)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
 dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
 #read(STDIN,Char)
 
@@ -61,7 +61,7 @@ nq = 15
 # This "summarizes" best numerical derivative:
 dtdq0_sum = zeros(BigFloat,n,maximum(ntt),7,n)
 itdq0 = zeros(Int64,n,maximum(ntt),7,n)
-dlnq = big(1e-12)
+dlnq = big(1e-18)
 hbig = big(h); t0big = big(t0); tmaxbig=big(tmax); tt2big = big.(tt2); tt3big = big.(tt3)
 for jq=1:n
   for iq=1:7
@@ -94,6 +94,61 @@ for i=2:n, j=1:count[i], k=1:7, l=1:n
   end
   ntot +=1
 end
+
+tt_big = big.(tt); elementsbig = big.(elements); rstarbig = big(rstar)
+dqbig = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt_big,count,big(0.0),0,0,rstarbig)
+# Now halve the time steps:
+tt_big_half = copy(tt_big)
+dqbig = ttv_elements!(n,t0big,hbig/2,tmaxbig,elementsbig,tt_big_half,count1,big(0.0),0,0,rstarbig)
+
+# Compute the derivatives in BigFloat precision to see whether finite difference
+# derivatives or Float64 derivatives are imprecise at the start:
+dtdq0_big = zeros(BigFloat,n,maximum(ntt),7,n)
+hbig = big(h); tt_big = big.(tt); elementsbig = big.(elements); rstarbig = big(rstar)
+dtdelements_big = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt_big,count,dtdq0_big,rstarbig)
+
+using PyPlot
+
+clf()
+# Plot the difference in the TTVs:
+for i=2:3
+#  diff1 = abs.(tt1[i,2:count1[i]]./tt_big[i,2:count1[i]]-1.0);
+  diff1 = abs.(tt1[i,2:count1[i]].-tt_big[i,2:count1[i]])/elements[i,2];
+  loglog(tt[i,2:count1[i]]-tt[i,1],diff1);
+#  diff2 = abs.(tt2[i,2:count1[i]]./tt_big_half[i,2:count1[i]]-1.0);
+  diff2 = abs.(tt2[i,2:count1[i]].-tt_big_half[i,2:count1[i]])/elements[i,2];
+  loglog(tt[i,2:count1[i]]-tt[i,1],diff2);
+end
+loglog([1.0,1024.0],2e-15*[1,2^15],":")
+for i=2:3, k=1:7, l=1:3
+  if maximum(abs.(dtdq0_sum[i,2:count1[i],k,l])) > 0
+    diff1 = abs.(dtdq0[i,2:count1[i],k,l]./dtdq0_sum[i,2:count1[i],k,l]-1.);
+    diff2 = abs.(asinh.(dtdq0[i,2:count1[i],k,l])-asinh.(dtdq0_sum[i,2:count1[i],k,l]));
+    diff3 = abs.(dtdq0_big[i,2:count1[i],k,l]./dtdq0_sum[i,2:count1[i],k,l]-1);
+    loglog(tt[i,2:count1[i]]-tt[i,1],diff1);
+    loglog(tt[i,2:count1[i]]-tt[i,1],diff3,linestyle=":");
+#    loglog(tt[i,2:count1[i]]-tt[i,1],diff2,".");
+    println(i," ",k," ",l," frac error: ",convert(Float64,maximum(diff1))," asinh error: ",convert(Float64,maximum(diff2))); #read(STDIN,Char);
+  end
+end
+mederror = zeros(size(tt))
+for i=2:3
+  for j=1:count1[i]
+    data_list = Float64[]
+    for k=1:7, l=1:3
+      if abs(dtdq0_sum[i,j,k,l]) > 0
+        push!(data_list,abs(dtdq0[i,j,k,l]/dtdq0_sum[i,j,k,l]-1.0))
+      end
+    end
+    mederror[i,j] = median(data_list)
+  end
+end
+
+# Plot a line that scales as time^{3/2}:
+
+loglog([1.0,1024.0],1e-12*[1,2^15],":",linewidth=3)
+
+
 #println("Max diff log(dtdq0): ",maximum(abs.(dtdq0_sum[mask]./dtdq0[mask]-1.0)))
 println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_sum[mask])-asinh.(dtdq0[mask]))))
 #unit = ones(dtdq0[mask])
@@ -102,7 +157,6 @@ println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_sum[mask])-asinh.(dt
 @test isapprox(asinh.(dtdq0[mask]),asinh.(convert(Array{Float64,4},dtdq0_sum)[mask]);norm=maxabs)
 #end
 
-#using PyPlot
 #
 #nderiv = n^2*7*maximum(ntt)
 #loglog(abs.(reshape(dtdq0,nderiv)),abs.(reshape(convert(Array{Float64,4},dtdq0_sum),nderiv)),".")
