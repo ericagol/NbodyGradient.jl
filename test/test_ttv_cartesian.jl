@@ -127,7 +127,7 @@ for i=2:3, k=1:7, l=1:3
 #    loglog(tt[i,2:count1[i]]-tt[i,1],diff1);
     loglog(tt[i,2:count1[i]]-tt[i,1],diff3,linestyle=":");
 #    loglog(tt[i,2:count1[i]]-tt[i,1],diff2,".");
-    println(i," ",k," ",l," frac error: ",convert(Float64,maximum(diff1))," asinh error: ",convert(Float64,maximum(diff3))); read(STDIN,Char);
+    println(i," ",k," ",l," frac error: ",convert(Float64,maximum(diff1))," asinh error: ",convert(Float64,maximum(diff3))); #read(STDIN,Char);
   end
 end
 mederror = zeros(size(tt))

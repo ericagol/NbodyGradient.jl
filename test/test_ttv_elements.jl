@@ -104,8 +104,6 @@ elements0 = copy(elements)
 #delement = big.([1e-15,1e-15,1e-15,1e-15,1e-15,1e-15,1e-15])
 #dq0 = big(1e-20)
 dq0 = big(1e-10)
-tt2 = big.(tt2)
-tt3 = big.(tt3)
 t0big = big(t0); tmaxbig = big(tmax); hbig = big(h)
 zilch = big(0.0)
 # Compute the transit times in BigFloat precision:
@@ -173,7 +171,7 @@ tt3 = big.(tt3)
 t0big = big(t0); tmaxbig = big(tmax); hbig = big(h)
 zilch = big(0.0)
 # Compute the transit times in BigFloat precision:
-tt_big = big(tt); elementsbig = big.(elements0)
+tt_big = big.(tt); elementsbig = big.(elements0)
 # Now, compute derivatives numerically:
 for jq=1:n_body
   for iq=1:7
