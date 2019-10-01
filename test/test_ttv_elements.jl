@@ -13,7 +13,8 @@ t0 = 7257.93115525-7300.0
 h  = 0.04
 #tmax = 600.0
 #tmax = 800.0
-tmax = 1000.0
+#tmax = 1000.0
+tmax = 10.0
 
 # Read in initial conditions:
 elements = readdlm("elements.txt",',')

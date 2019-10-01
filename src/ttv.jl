@@ -537,6 +537,9 @@ vprior = copy(v)
 xtransit = copy(x); xtransit_plus = big.(x); xtransit_minus = big.(x)
 vtransit = copy(v); vtransit_plus = big.(v); vtransit_minus = big.(v)
 xerror = zeros(Float64,size(x)); verror = zeros(Float64,size(x))
+xerr_trans = zeros(Float64,size(x)); verr_trans = zeros(Float64,size(x))
+xerr_prior = zeros(Float64,size(x)); verr_prior = zeros(Float64,size(x))
+xerr_big = zeros(BigFloat,size(x)); verr_big = zeros(BigFloat,size(x))
 m_plus = big.(m); m_minus = big.(m); hbig = big(h); dq = big(0.0)
 if h == 0
   println("h is zero ",h)
@@ -614,30 +617,30 @@ while t < t0+tmax && param_real
           # Compute numerical approximation of dtdq:
           dt_plus = big(dt)  # Starting estimate
 #          dt_plus = dtbig  # Starting estimate
-          xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m)
+          xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m); fill!(xerr_big,zero(BigFloat)); fill!(verr_big,zero(BigFloat))
           if k < 4; dq = dlnq*xtransit_plus[k,p]; xtransit_plus[k,p] += dq; elseif k < 7; dq =vtransit_plus[k-3,p]*dlnq; vtransit_plus[k-3,p] += dq; else; dq  = m_plus[p]*dlnq; m_plus[p] += dq; end
 #          dt_plus = findtransit2!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,pair) # 20%
-          dt_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,pair) # 20%
+          dt_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,xerr_big,verr_big,pair) # 20%
           dt_minus= big(dt)  # Starting estimate
 #          dt_minus= dtbig  # Starting estimate
-          xtransit_minus .= big.(xprior); vtransit_minus .= big.(vprior); m_minus .= big.(m)
+          xtransit_minus .= big.(xprior); vtransit_minus .= big.(vprior); m_minus .= big.(m); fill!(xerr_big,zero(BigFloat)); fill!(verr_big,zero(BigFloat))
           if k < 4; dq = dlnq*xtransit_minus[k,p];xtransit_minus[k,p] -= dq; elseif k < 7; dq =vtransit_minus[k-3,p]*dlnq; vtransit_minus[k-3,p] -= dq; else; dq  = m_minus[p]*dlnq; m_minus[p] -= dq; end
           hbig = big(h)
 #          dt_minus= findtransit2!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,pair) # 20%
-          dt_minus= findtransit3!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,pair) # 20%
+          dt_minus= findtransit3!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,xerr_big,verr_big,pair) # 20%
           # Compute finite-different derivative:
           dtdq0_num[i,count[i],k,p] = (dt_plus-dt_minus)/(2dq)
           if abs(dtdq0_num[i,count[i],k,p] - dtdq0[i,count[i],k,p]) > 1e-10
             # Compute gdot_num:
             dt_minus = big(dt)*(1-dlnq)  # Starting estimate
-            xtransit_minus .= big.(xprior); vtransit_minus .= big.(vprior); m_minus .= big.(m)
-            ah18!(xtransit_minus,vtransit_minus,dt_minus,m_minus,n,pair)
+            xtransit_minus .= big.(xprior); vtransit_minus .= big.(vprior); m_minus .= big.(m); fill!(xerr_big,zero(BigFloat)); fill!(verr_big,zero(BigFloat))
+            ah18!(xtransit_minus,vtransit_minus,xerr_big,verr_big,dt_minus,m_minus,n,pair)
             #dh17!(xtransit_minus,vtransit_minus,dt_minus,m_minus,n,pair)
             # Compute time offset:
             gsky_minus = g!(i,1,xtransit_minus,vtransit_minus)
             dt_plus = big(dt)*(1+dlnq)  # Starting estimate
-            xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m)
-            ah18!(xtransit_plus,vtransit_plus,dt_plus,m_plus,n,pair)
+            xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m); fill!(xerr_big,zero(BigFloat)); fill!(verr_big,zero(BigFloat))
+            ah18!(xtransit_plus,vtransit_plus,xerr_big,verr_big,dt_plus,m_plus,n,pair)
             #dh17!(xtransit_plus,vtransit_plus,dt_plus,m_plus,n,pair)
             # Compute time offset:
             gsky_plus = g!(i,1,xtransit_plus,vtransit_plus)

@@ -1,4 +1,4 @@
-
+2
 
 #include("../src/ttv.jl")
 #include("/Users/ericagol/Computer/Julia/regress.jl")
@@ -15,8 +15,8 @@ h  = 0.04
 #h  = 0.02
 #tmax = 600.0
 #tmax = 1000.0
-tmax = 100.0
-#tmax = 10.0
+#tmax = 100.0
+tmax = 10.0
 
 # Read in initial conditions:
 elements = readdlm("elements.txt",',')
