@@ -266,6 +266,8 @@ vprior = copy(v)
 xtransit = copy(x)
 vtransit = copy(v)
 xerror = zeros(T,size(x)); verror=zeros(T,size(v))
+xerr_trans = zeros(T,size(x)); verr_trans =zeros(T,size(v))
+xerr_prior = zeros(T,size(x)); verr_prior =zeros(T,size(v))
 # Set the time to the initial time:
 t = t0
 # Define error estimate based on Kahan (1965):
@@ -274,6 +276,7 @@ s2 = zero(T)
 istep = 0
 # Jacobian for each step (7- 6 elements+mass, n_planets, 7 - 6 elements+mass, n planets):
 jac_prior = zeros(T,7*n,7*n)
+jac_error_prior = zeros(T,7*n,7*n)
 jac_transit = zeros(T,7*n,7*n)
 jac_trans_err= zeros(T,7*n,7*n)
 # Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
@@ -314,9 +317,10 @@ while t < (t0+tmax) && param_real
       count[i] += 1
       if count[i] <= ntt_max
         dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
-        xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior; jac_trans_err .= jac_error
+        xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior; jac_trans_err .= jac_error_prior
+        xerr_trans .= xerr_prior; verr_trans .= verr_prior
 #        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
-        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,jac_trans_err,dtdq,pair) # 20%
+        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtdq,pair) # 20%
         #tt[i,count[i]]=t+dt
         tt[i,count[i]],stmp = comp_sum(t,s2,dt)
         # Save for posterity:
@@ -331,6 +335,9 @@ while t < (t0+tmax) && param_real
   xprior .= x
   vprior .= v
   jac_prior .= jac_step
+  jac_error_prior .= jac_error
+  xerr_prior .= xerror
+  verr_prior .= verror
   # Increment time by the time step using compensated summation:
   #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
   #t = tmp
@@ -349,6 +356,8 @@ vprior = copy(v)
 xtransit = copy(x)
 vtransit = copy(v)
 xerror = zeros(Float64,size(x)); verror=zeros(Float64,size(v))
+xerr_trans = zeros(Float64,size(x)); verr_trans =zeros(Float64,size(v))
+xerr_prior = zeros(Float64,size(x)); verr_prior =zeros(Float64,size(v))
 # Set the time to the initial time:
 t = t0
 # Define error estimate based on Kahan (1965):
@@ -399,8 +408,9 @@ while t < t0+tmax && param_real
       if count[i] <= ntt_max
         dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior; jac_trans_err .= jac_error_prior
+        xerr_trans .= xerr_prior; verr_trans .= verr_prior
 #        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
-        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,jac_trans_err,dtdq,pair) # 20%
+        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtdq,pair) # 20%
         #tt[i,count[i]]=t+dt
         tt[i,count[i]],stmp = comp_sum(t,s2,dt)
         # Save for posterity:
@@ -415,7 +425,9 @@ while t < t0+tmax && param_real
   xprior .= x
   vprior .= v
   jac_prior .= jac_step
-  jac_prior_error .= jac_error
+  jac_error_prior .= jac_error
+  xerr_prior .= xerror
+  verr_prior .= verror
   # Increment time by the time step using compensated summation:
   #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
   #t = tmp
@@ -434,6 +446,8 @@ vprior = copy(v)
 xtransit = copy(x)
 vtransit = copy(v)
 xerror = zeros(Float64,size(x)); verror = zeros(Float64,size(x))
+xerr_prior = zeros(Float64,size(x)); verr_prior = zeros(Float64,size(x))
+xerr_trans = zeros(Float64,size(x)); verr_trans = zeros(Float64,size(x))
 # Set the time to the initial time:
 t = t0
 # Define error estimate based on Kahan (1965):
@@ -483,8 +497,9 @@ while t < t0+tmax && param_real
       if count[i] <= ntt_max
         dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior; jac_trans_err .= jac_error_prior
+        xerr_trans .= xerr_prior; verr_trans .= verr_prior
 #        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
-        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,jac_trans_err,dtdq,pair) # 20%
+        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtdq,pair) # 20%
         #tt[i,count[i]]=t+dt
         tt[i,count[i]],stmp = comp_sum(t,s2,dt)
         # Save for posterity:
@@ -500,6 +515,7 @@ while t < t0+tmax && param_real
   vprior .= v
   jac_prior .= jac_step
   jac_error_prior .= jac_error
+  xerr_prior .= xerror; verr_prior .= verror
   # Increment time by the time step using compensated summation:
   #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
   #t = tmp
@@ -540,6 +556,8 @@ jac_prior = zeros(Float64,7*n,7*n)
 jac_step = eye(Float64,7*n)
 # Initialize Jacobian error matrix
 jac_error = zeros(Float64,7*n,7*n)
+jac_trans_err = zeros(Float64,7*n,7*n)
+jac_error_prior = zeros(Float64,7*n,7*n)
 
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
@@ -584,9 +602,9 @@ while t < t0+tmax && param_real
 #        dtdq = convert(Array{Float64,2},dtdqbig)
 #        dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         # Now, recompute with findtransit3:
-        xtransit .= xprior; vtransit .= vprior
-        jac_transit = eye(jac_step); jac_trans_err = zeros(jac_step)
-        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,jac_trans_err,dtdq3,pair) # Just computing derivative since prior timestep, so start with identity matrix
+        xtransit .= xprior; vtransit .= vprior; xerr_trans .= xerr_prior; verr_trans .= verr_prior
+        jac_transit = eye(jac_step); jac_trans_err .= jac_error_prior
+        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtdq3,pair) # Just computing derivative since prior timestep, so start with identity matrix
         # Save for posterity:
         #tt[i,count[i]]=t+dt
         tt[i,count[i]],stmp = comp_sum(t,s2,dt)
@@ -640,6 +658,8 @@ while t < t0+tmax && param_real
   xprior .= x
   vprior .= v
   jac_prior .= jac_step
+  jac_error_prior .= jac_error
+  xerr_prior .= xerror; verr_prior .= verror
   # Increment time by the time step using compensated summation:
   #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
   #t = tmp
@@ -659,6 +679,7 @@ vprior = copy(v)
 xtransit = copy(x)
 vtransit = copy(v)
 xerror = zeros(x); verror = zeros(v)
+xerr_prior = zeros(x); verr_prior = zeros(v)
 # Set the time to the initial time:
 t = t0
 # Define error estimate based on Kahan (1965):
@@ -707,7 +728,7 @@ while t < t0+tmax && param_real
         #hbig = big(h); dt0big=big(dt0); mbig=big.(m); xtbig = big.(xtransit); vtbig = big.(vtransit)
         #dtbig = findtransit2!(1,i,n,hbig,dt0big,mbig,xtbig,vtbig,pair)
         #dt = convert(Float64,dtbig)
-        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,pair)
+        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_prior,verr_prior,pair)
         #tt[i,count[i]]=t+dt
         tt[i,count[i]],stmp = comp_sum(t,s2,dt)
       end
@@ -716,8 +737,10 @@ while t < t0+tmax && param_real
     gsave[i] = gi
   end
   # Save the current state as prior state:
-  xprior .=x
-  vprior .=v
+  xprior .= x
+  vprior .= v
+  xerr_prior .= xerror
+  verr_prior .= verror
   if mod(istep,iout) == 0 && iout > 0
     # Write to file:
     writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
@@ -2796,7 +2819,7 @@ return tt::T,gdot::T
 end
 
 # Finds the transit by taking a partial dh17 step from prior times step, computes timing Jacobian, dtdq, wrt initial cartesian coordinates, masses:
-function findtransit3!(i::Int64,j::Int64,n::Int64,h::T,tt::T,m::Array{T,1},x1::Array{T,2},v1::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
+function findtransit3!(i::Int64,j::Int64,n::Int64,h::T,tt::T,m::Array{T,1},x1::Array{T,2},v1::Array{T,2},xerror::Array{T,2},verror::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
 # Computes the transit time, approximating the motion as a fraction of a DH17 step forward in time.
 # Also computes the Jacobian of the transit time with respect to the initial parameters, dtdq[7,n].
 # This version is same as findtransit2, but uses the derivative of dh17 step with respect to time
@@ -2807,19 +2830,22 @@ iter = 0
 r3 = zero(T)
 gdot = zero(T)
 gsky = gdot
-x = copy(x1)
-v = copy(v1)
-xerror = zeros(T,size(x1)); verror = zeros(T,size(v1))
+x = copy(x1); v = copy(v1); xerr_trans = copy(xerror); verr_trans = copy(verror)
 dqdt = zeros(T,7*n)
 #TRANSIT_TOL = 10*sqrt(eps(dt)
 TRANSIT_TOL = 10*eps(dt)
-while abs(dt) > TRANSIT_TOL && iter < 20
-  x .= x1
-  v .= v1
+ITMAX = 20
+tt1 = tt + 1
+tt2 = tt + 2
+#while abs(dt) > TRANSIT_TOL && iter < 20
+while true
+  tt2 = tt1
+  tt1 = tt
+  x .= x1; v .= v1; xerr_trans .= xerror; verr_trans .= verror
   # Advance planet state at start of step to estimated transit time:
 #  dh17!(x,v,tt,m,n,pair)
   #dh17!(x,v,xerror,verror,tt,m,n,dqdt,pair)
-  ah18!(x,v,xerror,verror,tt,m,n,dqdt,pair)
+  ah18!(x,v,xerr_trans,verr_trans,tt,m,n,dqdt,pair)
   # Compute time offset:
   gsky = g!(i,j,x,v)
 #  # Compute derivative of g with respect to time:
@@ -2830,6 +2856,11 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   # Add refinement to estimated time:
   tt += dt
   iter +=1
+  # Break out if we have reached maximum iterations, or if
+  # current transit time estimate equals one of the prior two steps:
+  if (iter >= ITMAX) || (tt == tt1) || (tt == tt2)
+    break
+  end
 end
 if iter >= 20
   println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
@@ -2838,8 +2869,8 @@ end
 return tt::T
 end
 
-# Finds the transit by taking a partial dh17 step from prior times step, computes timing Jacobian, dtdq, wrt initial cartesian coordinates, masses:
-function findtransit3!(i::Int64,j::Int64,n::Int64,h::T,tt::T,m::Array{T,1},x1::Array{T,2},v1::Array{T,2},jac_step::Array{T,2},jac_error::Array{T,2},dtdq::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
+# Finds the transit by taking a partial ah18 step from prior times step, computes timing Jacobian, dtdq, wrt initial cartesian coordinates, masses:
+function findtransit3!(i::Int64,j::Int64,n::Int64,h::T,tt::T,m::Array{T,1},x1::Array{T,2},v1::Array{T,2},xerror::Array{T,2},verror::Array{T,2},jac_step::Array{T,2},jac_error::Array{T,2},dtdq::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
 # Computes the transit time, approximating the motion as a fraction of a DH17 step forward in time.
 # Also computes the Jacobian of the transit time with respect to the initial parameters, dtdq[7,n].
 # This version is same as findtransit2, but uses the derivative of dh17 step with respect to time
@@ -2852,17 +2883,23 @@ gdot = zero(T)
 gsky = zero(T)
 x = copy(x1)
 v = copy(v1)
-xerror = zeros(T,size(x1)); verror = zeros(T,size(v1))
+#xerror = zeros(T,size(x1)); verror = zeros(T,size(v1))
+xerr_trans = copy(xerror); verr_trans = copy(verror)
 dqdt = zeros(T,7*n)
 #TRANSIT_TOL = 10*sqrt(eps(dt))
 TRANSIT_TOL = 10*eps(dt)
-while abs(dt) > TRANSIT_TOL && iter < 20
-  x .= x1
-  v .= v1
+tt1 = tt + 1
+tt2 = tt + 2
+ITMAX = 20
+#while abs(dt) > TRANSIT_TOL && iter < 20
+while true
+  tt2 = tt1
+  tt1 = tt
+  x .= x1; v .= v1; xerr_trans .= xerror; verr_trans .= verror
   # Advance planet state at start of step to estimated transit time:
 #  dh17!(x,v,tt,m,n,pair)
   #dh17!(x,v,xerror,verror,tt,m,n,dqdt,pair)
-  ah18!(x,v,xerror,verror,tt,m,n,dqdt,pair)
+  ah18!(x,v,xerr_trans,verr_trans,tt,m,n,dqdt,pair)
   # Compute time offset:
   gsky = g!(i,j,x,v)
 #  # Compute derivative of g with respect to time:
@@ -2873,22 +2910,25 @@ while abs(dt) > TRANSIT_TOL && iter < 20
   # Add refinement to estimated time:
   tt += dt
   iter +=1
+  # Break out if we have reached maximum iterations, or if
+  # current transit time estimate equals one of the prior two steps:
+  if (iter >= ITMAX) || (tt == tt1) || (tt == tt2)
+    break
+  end
 end
 if iter >= 20
   println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
 end
 # Compute time derivatives:
-x = copy(x1); v = copy(v1)
-fill!(xerror,zero(T)); fill!(verror,zero(T))
+x .= x1; v .= v1; xerr_trans .= xerror; verr_trans .= verror
 # Compute dgdt with the updated time step.
 #dh17!(x,v,xerror,verror,tt,m,n,jac_step,pair)
 #ah18!(x,v,xerror,verror,tt,m,n,jac_step,pair)
-ah18!(x,v,xerror,verror,tt,m,n,jac_step,jac_error,pair)
+ah18!(x,v,xerr_trans,verr_trans,tt,m,n,jac_step,jac_error,pair)
 # Need to reset to compute dqdt:
-x = copy(x1); v = copy(v1)
-fill!(xerror,zero(T)); fill!(verror,zero(T))
+x .= x1; v .= v1; xerr_trans .= xerror; verr_trans .= verror
 #dh17!(x,v,xerror,verror,tt,m,n,dqdt,pair)
-ah18!(x,v,xerror,verror,tt,m,n,dqdt,pair)
+ah18!(x,v,xerr_trans,verr_trans,tt,m,n,dqdt,pair)
 # Compute time offset:
 gsky = g!(i,j,x,v)
 # Compute derivative of g with respect to time:

@@ -7,12 +7,13 @@ include("../src/kepler_init.jl")
 
 @testset "kepler_init" begin
 
-
+ntrial = 10
+for itrial=1:ntrial
 t0 = 2.4
 mass = 1.0
 period = 1.5
 elements = ones(Float64,6)
-while elements[3]^2+elements[4]^2 >= 1.0
+while elements[3]^2+elements[4]^2 >= 0.2^2
   elements = [1.5,rand()*period,randn(),randn(),rand()*pi,rand()*pi]
 end
 elements_diff = zeros(Float64,6)
@@ -127,4 +128,5 @@ println("Scatter in dAdt: ",std(dAdt))
 
 @test isapprox(jac_init,jac_init_num;norm=maxabs)
 @test isapprox(jac_init,convert(Array{Float64,2},jac_init_big);norm=maxabs)
+end
 end

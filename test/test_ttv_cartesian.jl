@@ -14,8 +14,8 @@ t0 = 7257.93115525-7300.0
 h  = 0.04
 #h  = 0.02
 #tmax = 600.0
-tmax = 1000.0
-#tmax = 100.0
+#tmax = 1000.0
+tmax = 100.0
 #tmax = 10.0
 
 # Read in initial conditions:
@@ -115,19 +115,19 @@ for i=2:3
   diff1 = abs.(tt1[i,2:count1[i]].-tt_big[i,2:count1[i]])/elements[i,2];
   loglog(tt[i,2:count1[i]]-tt[i,1],diff1);
 #  diff2 = abs.(tt2[i,2:count1[i]]./tt_big_half[i,2:count1[i]]-1.0);
-  diff2 = abs.(tt2[i,2:count1[i]].-tt_big_half[i,2:count1[i]])/elements[i,2];
-  loglog(tt[i,2:count1[i]]-tt[i,1],diff2);
+#  diff2 = abs.(tt2[i,2:count1[i]].-tt_big_half[i,2:count1[i]])/elements[i,2];
+#  loglog(tt[i,2:count1[i]]-tt[i,1],diff2);
 end
 loglog([1.0,1024.0],2e-15*[1,2^15],":")
 for i=2:3, k=1:7, l=1:3
   if maximum(abs.(dtdq0_num[i,2:count1[i],k,l])) > 0
     diff1 = abs.(dtdq0[i,2:count1[i],k,l]./dtdq0_num[i,2:count1[i],k,l]-1.);
-    diff2 = abs.(asinh.(dtdq0[i,2:count1[i],k,l])-asinh.(dtdq0_num[i,2:count1[i],k,l]));
-    diff3 = abs.(dtdq0_big[i,2:count1[i],k,l]./dtdq0[i,2:count1[i],k,l]-1);
-    loglog(tt[i,2:count1[i]]-tt[i,1],diff1);
+    diff2 = abs.(asinh.(dtdq0_big[i,2:count1[i],k,l])-asinh.(dtdq0_num[i,2:count1[i],k,l]));
+    diff3 = abs.(asinh.(dtdq0_big[i,2:count1[i],k,l])-asinh.(dtdq0[i,2:count1[i],k,l]));
+#    loglog(tt[i,2:count1[i]]-tt[i,1],diff1);
     loglog(tt[i,2:count1[i]]-tt[i,1],diff3,linestyle=":");
 #    loglog(tt[i,2:count1[i]]-tt[i,1],diff2,".");
-    println(i," ",k," ",l," frac error: ",convert(Float64,maximum(diff1))," asinh error: ",convert(Float64,maximum(diff2))); #read(STDIN,Char);
+    println(i," ",k," ",l," frac error: ",convert(Float64,maximum(diff1))," asinh error: ",convert(Float64,maximum(diff3))); read(STDIN,Char);
   end
 end
 mederror = zeros(size(tt))
