@@ -364,15 +364,15 @@ if drift_first
 #  c10 = c3*c9*rinv+g2*r0*h-k*(2*g2*h+3*g3*r0)*betainv
   c9 = 2*g2*h-3*g3*r0
   c10 = k*r0inv^4*(-g2*r0*h+k*c9*betainv-c3*c13*rinv)
-  c24 = r0*(2*k*r0inv-beta)*betainv-g1*c3*rinv/g2
+  c24 = r0inv^3*(r0*(2*k*r0inv-beta)*betainv-g1*c3*rinv/g2)
   h6 = H6(gamma,beta)
   # Derivatives of \delta x with respect to x0, v0, k & h:
-  dfm1dxx = fm1*r0inv^3*c24
-  dfm1dxv = -fm1*(g1*rinv+h*r0inv^3*c24)
+  dfm1dxx = fm1*c24
+  dfm1dxv = -fm1*(g1*rinv+h*c24)
   dfm1dvx = dfm1dxv
-#  dfm1dvv = fm1*(2*betainv-g1*rinv*(d/g2-2*h)+h^2*r0inv^3*c24)
-  dfm1dvv = fm1*rinv*(-r0*g2 + k*h6*betainv/g2 + h*(2*g1+h*r*c24*r0inv^3))
-  dfm1dh  = fm1*(g1*rinv*(1/g2+2*k*r0inv-beta)-eta*r0inv^3*c24)
+#  dfm1dvv = fm1*(2*betainv-g1*rinv*(d/g2-2*h)+h^2*c24)
+  dfm1dvv = fm1*rinv*(-r0*g2 + k*h6*betainv/g2 + h*(2*g1+h*r*c24))
+  dfm1dh  = fm1*(g1*rinv*(1/g2+2*k*r0inv-beta)-eta*c24)
   dfm1dk  = fm1*(1/k+g1*c1*rinv*r0inv/g2-2*betainv*r0inv)
 #  dfm1dk2  = 2g2*betainv-c1*g1*rinv
   h4 = -H1(gamma,beta)*beta
@@ -428,8 +428,9 @@ if drift_first
   ddfdtdxv = dfdt*(c22-h*c21)
   ddfdtdvx = ddfdtdxv
 #  ddfdtdvv = dfdt*(betainv*(1-c18*rinv)+d*(g1*c2-g0*r)*rinv^2/g1-h*(2c22-h*c21))
-  ddfdtdvv = dfdt*((-beta*eta^2*g2^2-eta*k*h8-h6*k^2-2beta*eta*r0*g1*g2+(g2^2-3*g1*g3)*beta*k*r0- 
-             beta*g1^2*r0^2)*betainv*rinv^2+(eta*g2^2)*rinv/g1 + (k*h8)*betainv*rinv/g1 - 2*h*c22 +h^2*c21)
+  c34 = (-beta*eta^2*g2^2-eta*k*h8-h6*k^2-2beta*eta*r0*g1*g2+(g2^2-3*g1*g3)*beta*k*r0
+        - beta*g1^2*r0^2)*betainv*rinv^2+(eta*g2^2)*rinv/g1 + (k*h8)*betainv*rinv/g1 
+  ddfdtdvv = dfdt*(c34 - 2*h*c22 +h^2*c21)
   ddfdtdk  = dfdt*(1/k-betainv*r0inv-c17*betainv*rinv*r0inv-c1*(g1*c2-g0*r)*rinv^2*r0inv/g1)
 #  ddfdtdk2  = -g1*(-betainv*r0inv-c17*betainv*rinv*r0inv-c1*(g1*c2-g0*r)*rinv^2*r0inv/g1)
   #ddfdtdk2  = -(g2*k-r0)*(g1*r-beta*c1)*betainv*rinv^2*r0inv
@@ -443,13 +444,13 @@ if drift_first
 #  dgdtmhdfdtm1dvv = d*k*rinv^3*r0inv*k*(r0*(g1*g2-g3)+eta*g2^2+k*g2*g3)+k*(c13*(r0*g0-k*g2)-g2*r*r0)*betainv*rinv^2*r0inv-2*h*c26+h^2*c25
 #  println("\dot g - h \dot f -1, dv0 terms: ",d*k*rinv^3*r0inv*c13*c2," ",-d*k*rinv^3*r0inv*r*c12," ",k*c13*r0*g0*betainv*rinv^2*r0inv," ",-k*c13*k*g2*betainv*rinv^2*r0inv," ",-k*g2*r*r0*betainv*rinv^2*r0inv," ",-2*h*c26," ",h^2*c25)
 #  println("second version of dv0 terms:     ",d*k*rinv^3*r0inv*k*r0*g1*g2," ",-d*k*rinv^3*r0inv*k*r0*g3," ",d*k*rinv^3*r0inv*k*eta*g2^2," ",d*k*rinv^3*r0inv*k*k*g2*g3," ",-k*eta*k*g1*g2^2*betainv*rinv^2*r0inv," ",-k*g1*g2*g3*k^2*betainv*rinv^2*r0inv," ",-k*r0*eta*beta*g1*g2^2*betainv*rinv^2*r0inv," ",-r0*k*k*g1*h2*betainv*rinv^2*r0inv," ",-beta*k*g2^2*g0*r0^2*betainv*rinv^2*r0inv," ",-2*h*c26," ",h^2*c25)
-  dgdtmhdfdtm1dvv = d*k*rinv^3*r0inv*k*(r0*(g1*g2-g3)+eta*g2^2+k*g2*g3)+k*(-eta*k*g1*g2^2-g1*g2*g3*k^2-r0*eta*beta*g1*g2^2-r0*k*g1*h2 -
-                    beta*g2^2*g0*r0^2)*betainv*rinv^2*r0inv-2*h*c26+h^2*c25
+  c33 = d*k*rinv^3*r0inv*k*(h*g2- r0*g3)+k*(-eta*k*g1*g2^2-g1*g2*g3*k^2-r0*eta*beta*g1*g2^2-r0*k*g1*h2 - beta*g2^2*g0*r0^2)*betainv*rinv^2*r0inv
+  dgdtmhdfdtm1dvv = c33-2*h*c26+h^2*c25
   dgdtmhdfdtm1dk = rinv*r0inv*(-k*(c13-g2*r0)*betainv*r0inv+c13-k*c13*c17*betainv*rinv*r0inv+k*c1*c12*rinv*r0inv-k*c1*c2*c13*rinv^2*r0inv)
 #  dgdtmhdfdtm1dk2 = -(c13-g2*r0)*betainv*r0inv-c13*c17*betainv*rinv*r0inv+c1*c12*rinv*r0inv-c1*c2*c13*rinv^2*r0inv
   #dgdtmhdfdtm1dk2 = g2*betainv+rinv*r0inv*(c1*c12+c13*((k*g2-r0)*betainv-c1*c2*rinv))
-  h9 = 3*g3-g1*g2
-  dgdtmhdfdtm1dk2 = k*betainv*rinv^2*r0inv*(-beta*eta^2*g2^4+eta*g2*(g1*g2^2+g1^2*g3-5*g2*g3)*k-g2*g3*h9*k^2+ 
+  h3 = H3(gamma,beta)
+  dgdtmhdfdtm1dk2 = k*betainv*rinv^2*r0inv*(-beta*eta^2*g2^4+eta*g2*(g1*g2^2+g1^2*g3-5*g2*g3)*k+g2*g3*h3*k^2+ 
         2eta*r0*beta*g2^2*(g3-g1*g2)+(4g3-g0*g3-g1*g2)*(g3-g1*g2)*r0*k+beta*(2g1*g3*g2-g1^2*g2^2-g3^2)*r0^2)
   dgdtmhdfdtm1dh = g1*k*rinv*r0inv+k*c12*rinv^2*r0inv-k*c2*c13*rinv^3*r0inv-(2*k*r0inv-beta)*c26-eta*c25
   @inbounds for j=1:3
@@ -518,7 +519,6 @@ else
   c18 = eta*g1+2*g2*k
   c19 = 4*eta*h1+3*h2*r0
   c23 = h2*k-r0*g1
-  c24 = r0*(2k*r0inv-beta)/beta-g1*c3*rinv/g2
   h6 = H6(gamma,beta)
   h8 = H8(gamma,beta)
   # Derivatives of \delta x with respect to x0, v0, k & h:
@@ -542,10 +542,10 @@ else
   dgmhdxv = k*rinv^2*(h1*r-g2*c16-g1*c15+g2*c2*c15*rinv)
   dgmhdvx = dgmhdxv
 #  dgmhdvv = k*rinv^2*(-d*c16-c15*c18*betainv+r*c19*betainv+d*c2*c15*rinv)
-  dgmhdvv = k*betainv*rinv^2*(((2*eta^2*(g1*h1-g2*g3)+eta*k*(4g2*h1-3h2*g3)+r0*eta*(4g0*h1-2g1*g3)+ 
+  dgmhdvv = k*betainv*rinv^2*(2*eta^2*(g1*h1-g2*g3)+eta*k*(4g2*h1-3h2*g3)+r0*eta*(4g0*h1-2g1*g3)+ 
   # In the following lines I need to replace g1*g2-3g0*g3-g1*g2 by H8:
-           3r0*k*((g1+beta*g3)*h1-g3*g2)+(g0*h8-beta*g1*(g2^2+g1*g3))*r0^2)) + 
-           c15*rinv*(-beta*g2^2*eta^2-eta*k*h8-h6*k^2+(-2eta*g1*g2+k*(g2^2-3g1*g3))*beta*r0-beta*g1^2*r0^2))
+           3r0*k*((g1+beta*g3)*h1-g3*g2)+(g0*h8-beta*g1*(g2^2+g1*g3))*r0^2 -
+           c15*rinv*(beta*g2^2*eta^2+eta*k*h8+h6*k^2+(2eta*g1*g2-k*(g2^2-3g1*g3))*beta*r0+beta*g1^2*r0^2))
   dgmhdk  = rinv*(k*c1*c16*rinv*r0inv+c15-k*c15*c17*betainv*rinv*r0inv-k*c19*betainv*r0inv-k*c1*c2*c15*rinv^2*r0inv)
 #  dgmhdk2_old  = c1*c16*rinv-c15*c17*betainv*rinv-c19*betainv-c1*c2*c15*rinv^2
   h7 = H7(gamma,beta)
@@ -576,12 +576,12 @@ else
   ddfdtdxx = dfdt*(eta*g1*rinv-2-g0*c3*rinv*r0inv/g1+c2*c3*r0inv*rinv^2-k*(k*g2-r0)*betainv*rinv*r0inv)*r0inv^2
   ddfdtdxv = -dfdt*(g0*g2/g1+(r0*g1+eta*g2)*rinv)*rinv
   ddfdtdvx = ddfdtdxv
-  ddfdtdvv = dfdt*(betainv-d*g0*rinv/g1-c18*betainv*rinv+d*c2*rinv^2)
-  ddfdtdvv = -k*rinv*r0inv*((eta*g2^2)*rinv+k*h8*betainv*rinv+ 
-       g1*(-beta*eta^2*g2^2-eta*k*h8- h6*k^2 + (-2eta*g1*g2+(h1-2g1*g3)*k)*beta*r0 - 
-       beta*g1^2*r0^2)*betainv*rinv^2)
+#  ddfdtdvv = dfdt*(betainv-d*g0*rinv/g1-c18*betainv*rinv+d*c2*rinv^2)
+  ddfdtdvv = -k*rinv^3*r0inv*betainv*((beta*eta*g2^2+k*h8)*(r0*g0+k*g2)+ 
+       g1*(- h6*k^2 + (-2eta*g1*g2+(h1-2g1*g3)*k)*beta*r0 - 
+       beta*g1^2*r0^2))
   ddfdtdk  = dfdt*(1/k+c1*(r0-g2*k)*r0inv*rinv^2/g1-betainv*r0inv*(1+c17*rinv))
-  ddfdtdk2  = -g1*(c1*(r0-g2*k)*r0inv*rinv^2/g1-betainv*r0inv*(1+c17*rinv))
+#  ddfdtdk2  = -g1*(c1*(r0-g2*k)*r0inv*rinv^2/g1-betainv*r0inv*(1+c17*rinv))
 #  ddfdtdk2  = r0inv*(g1*c17*betainv*rinv+g1*betainv-g1*c1*c2*rinv^2-c1*g0*rinv)
   ddfdtdk2  = (r0-g2*k)*betainv*r0inv*rinv^2*(-eta*beta*g2^2+(g1*g2-3g3)*k+(g3-g1*g2)*beta*r0)
   ddfdtdh  = dfdt*(r0-g2*k)*rinv^2/g1
@@ -589,11 +589,12 @@ else
   dgdotm1dxv = k*g2*rinv^3*(r*g1+r0*g1+eta*g2)
   dgdotm1dvx = dgdotm1dxv
 #  dgdotm1dvv = k*rinv^2*(d*g1+g2*c18*betainv-2*r*g2*betainv-d*g2*c2*rinv)
-  dgdotm1dvv = k*betainv*rinv^3*(eta^2*beta*g2^3+eta*k*(3g2*g3-g1*g2^2)+3r0*eta*beta*g1*g2^2 +
+  h3 = H3(gamma,beta)
+  dgdotm1dvv = k*betainv*rinv^3*(eta^2*beta*g2^3-eta*k*g2*h3+3r0*eta*beta*g1*g2^2 +
          r0*k*(-g0*h6+3beta*g1*g2*g3)+beta*g2*(g0*g2+g1^2)*r0^2)
   dgdotm1dk = rinv*r0inv*(-r0*g2+g2*k*(r+r0-g2*k)*betainv*rinv-k*g1*c1*rinv+k*g2*c1*c2*rinv^2)
-  dgdotm1dk2 = rinv*(g2*(r+r0-g2*k)*betainv-g1*c1+g2*c1*c2*rinv)
-  dgdotm1dk2 = betainv*rinv^2*(-beta*eta^2*g2^3+eta*k*g2*(g1*g2-3*g3)+eta*r0*beta*g2*(-2g1*g2+g3)+ 
+#  dgdotm1dk2 = rinv*(g2*(r+r0-g2*k)*betainv-g1*c1+g2*c1*c2*rinv)
+  dgdotm1dk2 = betainv*rinv^2*(-beta*eta^2*g2^3+eta*k*g2*h3+eta*r0*beta*g2*(g3-2g1*g2)+ 
        (g2^2*(1+g0)-3*g1*g3)*r0*k + beta*(g1*g3 - g1^2*g2)*r0^2)
   dgdotm1dh = k*rinv^3*(g2*c2-r*g1)
   @inbounds for j=1:3

@@ -192,7 +192,7 @@ return dtdelements
 end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
-function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dtdq0::Array{T,4},rstar::T;pair=zeros(Bool,n,n)) where {T <: Real}
+function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dtdq0::Array{T,4},rstar::T;fout="",iout=-1,pair=zeros(Bool,n,n)) where {T <: Real}
 # 
 # Input quantities:
 # n     = number of bodies
@@ -240,7 +240,7 @@ if T != BigFloat
 end
 x = convert(Array{T,2},xbig); v = convert(Array{T,2},vbig); jac_init=convert(Array{T,2},jac_init_big)
 #x,v = init_nbody(elements,t0,n)
-ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,rstar,pair)
+ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,rstar,pair;fout=fout,iout=iout)
 # Need to apply initial jacobian TBD - convert from
 # derivatives with respect to (x,v,m) to (elements,m):
 ntt_max = size(tt)[2]
@@ -260,7 +260,7 @@ end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
 function ttv!(n::Int64,t0::T,h::T,tmax::T,m::Array{T,1},
-  x::Array{T,2},v::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dtdq0::Array{T,4},rstar::T,pair::Array{Bool,2}) where {T <: Real}
+  x::Array{T,2},v::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dtdq0::Array{T,4},rstar::T,pair::Array{Bool,2};fout="",iout=-1) where {T <: Real}
 xprior = copy(x)
 vprior = copy(v)
 xtransit = copy(x)
@@ -285,6 +285,10 @@ dtdq = zeros(T,7,n)
 jac_step = eye(T,7*n)
 # Initialize Jacobian error array:
 jac_error = zeros(T,7*n,7*n)
+if fout != ""
+  # Open file for output:
+  file_handle =open(fout,"a")
+end
 
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
@@ -338,6 +342,10 @@ while t < (t0+tmax) && param_real
   jac_error_prior .= jac_error
   xerr_prior .= xerror
   verr_prior .= verror
+  if mod(istep,iout) == 0 && iout > 0
+    # Write to file:
+    writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n));convert(Array{Float64,1},reshape(jac_step,49n^2))]') # Transpose to write each line
+  end
   # Increment time by the time step using compensated summation:
   #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
   #t = tmp
@@ -345,6 +353,10 @@ while t < (t0+tmax) && param_real
   # t += h <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
+end
+if fout != ""
+  # Close output file:
+  close(file_handle)
 end
 return 
 end
