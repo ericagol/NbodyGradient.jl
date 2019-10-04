@@ -1,4 +1,4 @@
-
+2
 
 
 #include("../src/ttv.jl")
@@ -61,26 +61,45 @@ using PyPlot
 clf()
 # Plot the difference in the TTVs:
 for i=2:3
-  diff1 = abs.(tt[i,2:count[i]].-tt_big[i,2:count[i]])/elements[i,2];
+  diff1 = abs.(tt[i,2:count[i]].-tt_big[i,2:count[i]])/h;
   loglog(tt[i,2:count[i]]-tt[i,1],diff1);
 #  diff2 = abs.(tt2[i,2:count[i]].-tt2_big[i,2:count[i]])/elements[i,2];
 #  loglog(tt[i,2:count[i]]-tt[i,1],diff2);
 end
+xlabel("Time since start")
+ylabel(L"(time_{dbl}-time_{big})/timestep")
 #loglog([1.0,1024.0],2e-15*[1,2^15],":")
-loglog([1.0,40000.0],2.2e-16*([1.0,40000.0]/h).^1.5,":")
+loglog([1.0,40000.0],0.5e-16*([1.0,40000.0]/h).^1.5,":")
+
+clf()
+nmed = 10
 for i=2:3, k=1:7, l=1:3
   if maximum(abs.(dtdq0[i,2:count[i],k,l])) > 0
-    diff1 = abs.(asinh.(dtdq0_big[i,2:count[i],k,l])-asinh.(dtdq0[i,2:count[i],k,l]));
+#    diff1 = abs.(asinh.(dtdq0_big[i,2:count[i],k,l])-asinh.(dtdq0[i,2:count[i],k,l]));
+#    diff1 = abs.(dtdq0_big[i,2:count[i],k,l]-dtdq0[i,2:count[i],k,l])/maximum(dtdq0[i,2:count[i],k,l]);
+    diff1 = abs.(dtdq0_big[i,2:count[i],k,l]-dtdq0[i,2:count[i],k,l])
+    diff2 = copy(diff1);
+    ntt1 = size(diff1)[1];
+    for it=nmed:ntt1-nmed
+      # Divide by a median smoothed dtdq0:
+      diff2[it] = diff1[it]/maximum(abs.(dtdq0[i,it+1-nmed+1:it+1+nmed,k,l]))
+    end;
+    diff2[1:nmed-1] .= diff2[nmed]; diff2[ntt1-nmed+1:ntt1] .= diff2[ntt1-nmed];
 #    diff3 = abs.(asinh.(dtdq2_big[i,2:count[i],k,l])-asinh.(dtdq2[i,2:count[i],k,l]));
-    loglog(tt[i,2:count[i]]-tt[i,1],diff1,linestyle=":");
+    loglog(tt[i,2:count[i]]-tt[i,1],diff2,linestyle=":");
 #    loglog(tt[i,2:count[i]]-tt[i,1],diff3);
-    println(i," ",k," ",l," asinh error h  : ",convert(Float64,maximum(diff1))); #read(STDIN,Char);
+    println(i," ",k," ",l," asinh error h  : ",convert(Float64,maximum(diff2))); #read(STDIN,Char);
 #    println(i," ",k," ",l," asinh error h/2: ",convert(Float64,maximum(diff3))); #read(STDIN,Char);
   end
 end
+loglog([1.0,40000.0],0.5e-16*([1.0,40000.0]/h).^1.5)
 
 #axis([1,1024,1e-19,1e-9])
 axis([1,31600,1e-19,2.5e-7])
+xlabel("Time since start")
+#ylabel("median(asinh(dt/dq)_dbl - asinh(dt/dq)_big,20)")
+ylabel("(dt/dq_{dbl}-dt/dq_{big})/maximum(dt/dq_{dbl}[i-9:i+10])")
+
 # Plot a line that scales as time^{3/2}:
 
 # loglog([1.0,1024.0],1e-12*[1,2^15],":",linewidth=3)
