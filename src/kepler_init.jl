@@ -1,3 +1,4 @@
+
 include("kepler.jl")
 
 #function kepler_init(time::Float64,mass::Float64,elements::Array{Float64,1})
@@ -10,7 +11,8 @@ period = elements[1]
 # Compute the semi-major axis in AU (or other units specified by GNEWT):
 semi = cbrt(GNEWT*mass*period^2/4/pi^2)
 # Convert to eccentricity & longitude of periastron:
-ecc=sqrt(elements[3]^2+elements[4]^2)
+ecc2=elements[3]^2+elements[4]^2
+ecc=sqrt(ecc2)
 omega = atan2(elements[4],elements[3])
 # The true anomaly at the time of transit:
 f1 = 1.5*pi-omega

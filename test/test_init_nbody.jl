@@ -6,12 +6,15 @@ const third = 1./3.
 
 include("../src/init_nbody.jl")
 
-@testset "init_nbody" begin
+#@testset "init_nbody" begin
 
 elements = readdlm("elements.txt",',')
 
-n_body = 4
-t0 = 7257.93115525
+#n_body = 4
+n_body = 3
+t0 = 7257.93115525-7300.0
+elements[:,3] -= 7300.0
+
 jac_init     = zeros(Float64,7*n_body,7*n_body)
 jac_init_big = zeros(BigFloat,7*n_body,7*n_body)
 jac_init_num = zeros(BigFloat,7*n_body,7*n_body)
@@ -60,9 +63,10 @@ end
 #println("Maximum jac_init-jac_init_num: ",maximum(abs.(jac_init-jac_init_num)))
 println("Maximum jac_init-jac_init_num: ",maximum(abs.(asinh.(jac_init)-asinh.(jac_init_num))))
 println("Maximum jac_init-jac_init_big: ",maximum(abs.(asinh.(jac_init)-asinh.(jac_init_big))))
+println("Maximum jac_init/jac_init_big-1: ",maximum(abs.(jac_init[jac_init_big .!= 0.0]./jac_init_big[jac_init_big .!= 0.0]-1)))
 println("Maximum jac_init_big-jac_init_num: ",maximum(abs.(asinh.(jac_init_num)-asinh.(jac_init_big))))
 println(convert(Array{Float64,2},jac_init_big-jac_init_num))
 #@test isapprox(jac_init_num,jac_init)
 @test isapprox(jac_init_num,jac_init;norm=maxabs)
 @test isapprox(jac_init,convert(Array{Float64,2},jac_init_big);norm=maxabs)
-end
+#end
