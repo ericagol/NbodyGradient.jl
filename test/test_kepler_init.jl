@@ -1,3 +1,4 @@
+
 # Runs a simple test of kepler_init.jl
 
 const GNEWT = 39.4845/365.242^2
@@ -20,9 +21,9 @@ elements_diff = zeros(Float64,6)
 ecc = sqrt(elements[3]^2+elements[4]^2)
 ntime = 10000
 time = linspace(t0,t0+period,ntime)
-xvec = zeros(BigFloat,3,ntime)
-vvec = zeros(BigFloat,3,ntime)
-vfvec = zeros(BigFloat,3,ntime)
+xvec = zeros(Float64,3,ntime)
+vvec = zeros(Float64,3,ntime)
+vfvec = zeros(Float64,3,ntime)
 timebig = big.(time)
 #dt = 1e-8
 dt = period/ntime
@@ -93,7 +94,7 @@ xfocus = semi*ecc*(-cos(omega)-sin(omega))
 zfocus = semi*ecc*sin(omega)
 # Check that we have an ellipse (we're assuming that the motion is in the x-z plane; no longer true):
 Atot = 0.0
-dAdt = zeros(BigFloat,ntime)
+dAdt = zeros(Float64,ntime)
 dx = xvec[1,1]-xvec[1,ntime-1]
 dy = xvec[2,1]-xvec[2,ntime-1]
 dz = xvec[3,1]-xvec[3,ntime-1]
