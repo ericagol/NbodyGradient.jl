@@ -61,6 +61,8 @@ for i=1:n_body-1
   # For now set inclination to Inclination = pi/2 and longitude of nodes to Omega = pi:
 #  r,rdot = kepler_init(t0,m1+m2,[elements[i+1,2:5];pi/2;pi])
   r,rdot = kepler_init(t0,m1+m2,elements[i+1,2:7])
+#  rbig,rdotbig = kepler_init(big(t0),big(m1+m2),big.(elements[i+1,2:7]))
+#  r = convert(Array{T,1},rbig); rdot = convert(Array{T,1},rdotbig)
   for j=1:NDIM
     rkepler[i,j] = r[j]
     rdotkepler[i,j] = rdot[j]
@@ -153,6 +155,8 @@ for i=1:n_body-1  # i labels the row of matrix, which weights masses in current 
   end
   # Compute Kepler problem: r is a vector of positions of "body" 2 with respect to "body" 1; rdot is velocity vector:
   r,rdot = kepler_init(t0,m1+m2,elements[i+1,2:7],jac_21)
+#  rbig,rdotbig = kepler_init(big(t0),big(m1+m2),big.(elements[i+1,2:7]))
+#  r = convert(Array{T,1},rbig); rdot = convert(Array{T,1},rdotbig)
   for j=1:NDIM
     rkepler[i,j] = r[j]
     rdotkepler[i,j] = rdot[j]

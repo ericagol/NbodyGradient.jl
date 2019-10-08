@@ -141,7 +141,9 @@ x = P321*xplane
 dxda = x/semi
 dxdekep = P321*semi*vplane
 P32 = P3*P2
-dxdecc  = -x/ecc + P321*semi*[-1.0; -ecc/sqrt1mecc2*sinekep; 0.0]
+#dxdecc  = -x/ecc + P321*semi*[-1.0; -ecc/sqrt1mecc2*sinekep; 0.0]
+# Get rid of cancellations in the prior expression:
+dxdecc  = -P321*semi/ecc*[cosekep; sinekep/sqrt1mecc2; zero(T)]
 # These may need to be rewritten to flag ecc = 0.0 case:
 dxdecos = dxdecc*deccdecos + P32/ecc*xplane
 dxdesin = dxdecc*deccdesin + P32/ecc*[-xplane[2]; xplane[1]; 0.0]
