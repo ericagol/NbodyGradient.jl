@@ -10,6 +10,7 @@ include("../src/init_nbody.jl")
 
 elements = readdlm("elements.txt",',')
 
+elements[2:3,1] /= 100.0
 #n_body = 4
 n_body = 3
 t0 = 7257.93115525-7300.0
@@ -70,3 +71,13 @@ println(convert(Array{Float64,2},jac_init_big-jac_init_num))
 @test isapprox(jac_init_num,jac_init;norm=maxabs)
 @test isapprox(jac_init,convert(Array{Float64,2},jac_init_big);norm=maxabs)
 #end
+
+for i=1:21, j=1:21
+  if jac_init_big[i,j] != 0.0
+    dij = abs(jac_init[i,j]/jac_init_big[i,j]-1)
+    if dij > 1e-12
+      jac_max = dij
+      println(i," ",j," ",convert(Float64,jac_max)," ",jac_init[i,j]," ",convert(Float64,jac_init_big[i,j])," ",convert(Float64,jac_init[i,j]-jac_init_big[i,j]))
+    end
+  end
+end

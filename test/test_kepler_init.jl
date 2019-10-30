@@ -15,11 +15,11 @@ mass = 1.0
 period = 1.5
 elements = ones(Float64,6)
 while elements[3]^2+elements[4]^2 >= 0.2^2
-  elements = [1.5,rand()*period,randn(),randn(),rand()*pi,rand()*pi]
+  elements = [period,rand()*period,randn(),randn(),rand()*pi,rand()*pi]
 end
 elements_diff = zeros(Float64,6)
 ecc = sqrt(elements[3]^2+elements[4]^2)
-ntime = 10000
+ntime = 1000
 time = linspace(t0,t0+period,ntime)
 xvec = zeros(Float64,3,ntime)
 vvec = zeros(Float64,3,ntime)
@@ -37,6 +37,7 @@ jac_init_num = zeros(BigFloat,7,7)
 delements = big.([1e-15,1e-15,1e-15,1e-15,1e-15,1e-15,1e-15])
 elements_name = ["P","t0","ecosom","esinom","inc","Omega","Mass"]
 cartesian_name = ["x","y","z","vx","vy","vz","mass"]
+println("Elements: ",elements)
 massbig=big(mass)
 for i=1:ntime
   x,v = kepler_init(timebig[i],massbig,big.(elements))
@@ -76,8 +77,12 @@ for i=1:ntime
       if abs(jac_init[k,j]-jac_init_num[k,j]) > 1e-8
         println(elements_name[j]," ",cartesian_name[k]," ",jac_init[k,j]," ",jac_init_num[k,j]," ",jac_init[k,j]-jac_init_num[k,j])
       end
+      if abs(jac_init[k,j]/jac_init_num[k,j]-1) > 1e-12 && jac_init_num[k,j] != 0.0
+        println(elements_name[j]," ",cartesian_name[k]," ",jac_init[k,j]," ",jac_init_num[k,j]," ",jac_init[k,j]/jac_init_num[k,j]-1)
+      end
     end
-    println("Jacobians: ",maximum(abs.(jac_init-jac_init_num)))
+    println("Jacobians: difference ",maximum(abs.(jac_init-jac_init_num)))
+    println("Jacobians: log diff   ",maximum(abs.(jac_init[jac_init_num .!= 0.0]./jac_init_num[jac_init_num .!= 0.0]-1)))
   end
   xvec[:,i]=x
   vvec[:,i]=v

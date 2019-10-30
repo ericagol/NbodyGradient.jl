@@ -169,16 +169,34 @@ dvdcom  = [-sincapomega -coscapomega 0.0; coscapomega -sincapomega 0.0; 0.0 0.0 
 # Elements are given by: period, t0, e*cos(omega), e*sin(omega), Inclination, Omega
 fill!(jac_init,0.0)
 jac_init[1:3,1] = dxda*dsemidp + dxdekep*dekepdm*(dmdp+dmdtp*dtpdp)
+if  T != BigFloat
+  println("position vs. period: term 1 ",dxda*dsemidp," term 2: ",dxdekep*dekepdm*dmdp," term 3: ",dxdekep*dekepdm*dmdtp*dtpdp," sum: ",jac_init[1:3,1])
+end
 jac_init[1:3,2] = dxdekep*dekepdm*dmdtp*dtpdt0
 jac_init[1:3,3] = dxdecos + dxdekep*(dekepdm*dmdtp*dtpdecos + dekepdecos)
+if  T != BigFloat
+  println("position vs. ecosom : term 1 ",dxdecos," term 2: ",dxdekep*dekepdm*dmdtp*dtpdecos," term 3: ",dxdekep*dekepdm*dekepdecos," sum: ",jac_init[1:3,3])
+end
 jac_init[1:3,4] = dxdesin + dxdekep*(dekepdm*dmdtp*dtpdesin + dekepdesin)
+if  T != BigFloat
+  println("position vs. esinom : term 1 ",dxdesin," term 2: ",dxdekep*dekepdm*dmdtp*dtpdesin," term 3: ",dxdekep*dekepdm*dekepdesin," sum: ",jac_init[1:3,4])
+end
 jac_init[1:3,5] = dxdinc
 jac_init[1:3,6] = dxdcom
 jac_init[1:3,7] = dxda*dsemidm
 jac_init[4:6,1] = dvdp + dvda*dsemidp +  dvdekep*dekepdm*(dmdp+dmdtp*dtpdp)
+if  T != BigFloat
+  println("velocity vs. period: term 1 ",dvdp," term 2: ",dvda*dsemidp," term 3: ",dvdekep*dekepdm*dmdp," term 4: ",dvdekep*dekepdm*dmdtp*dtpdp," sum: ",jac_init[4:6,1])
+end
 jac_init[4:6,2] = dvdekep*dekepdm*dmdtp*dtpdt0
 jac_init[4:6,3] = dvdecos + dvdekep*(dekepdm*dmdtp*dtpdecos + dekepdecos)
+if  T != BigFloat
+  println("velocity vs. ecosom : term 1 ",dvdecos," term 2: ",dvdekep*dekepdm*dmdtp*dtpdecos," term 3: ",dvdekep*dekepdm*dekepdecos," sum: ",jac_init[4:6,3])
+end
 jac_init[4:6,4] = dvdesin + dvdekep*(dekepdm*dmdtp*dtpdesin + dekepdesin)
+if  T != BigFloat
+  println("velocity vs. esinom : term 1 ",dvdesin," term 2: ",dvdekep*dekepdm*dmdtp*dtpdesin," term 3: ",dvdekep*dekepdm*dekepdesin," sum: ",jac_init[4:6,4])
+end
 jac_init[4:6,5] = dvdinc
 jac_init[4:6,6] = dvdcom
 jac_init[4:6,7] = dvda*dsemidm
