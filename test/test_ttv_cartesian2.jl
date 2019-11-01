@@ -79,16 +79,26 @@ for i=2:3, k=1:7, l=1:3
 #    diff1 = abs.(dtdq0_big[i,2:count[i],k,l]-dtdq0[i,2:count[i],k,l])/maximum(dtdq0[i,2:count[i],k,l]);
     diff1 = abs.(dtdq0_big[i,2:count[i],k,l]-dtdq0[i,2:count[i],k,l])
     diff2 = copy(diff1);
+    diff3 = abs.(dtdelements_big[i,2:count[i],k,l]-dtdelements[i,2:count[i],k,l])
+#    diff3 = abs.(asinh.(dtdelements_big[i,2:count[i],k,l])-asinh.(dtdelements[i,2:count[i],k,l]))
+    diff4 = copy(diff3);
     ntt1 = size(diff1)[1];
     for it=nmed:ntt1-nmed
       # Divide by a median smoothed dtdq0:
       diff2[it] = diff1[it]/maximum(abs.(dtdq0[i,it+1-nmed+1:it+1+nmed,k,l]))
+      maxit = maximum(abs.(dtdelements[i,it+1-nmed+1:it+1+nmed,k,l]))
+      if maxit > 0
+        diff4[it] = diff3[it]/maximum(abs.(dtdelements[i,it+1-nmed+1:it+1+nmed,k,l]))
+      end
     end;
     diff2[1:nmed-1] .= diff2[nmed]; diff2[ntt1-nmed+1:ntt1] .= diff2[ntt1-nmed];
+    diff4[1:nmed-1] .= diff4[nmed]; diff4[ntt1-nmed+1:ntt1] .= diff4[ntt1-nmed];
 #    diff3 = abs.(asinh.(dtdq2_big[i,2:count[i],k,l])-asinh.(dtdq2[i,2:count[i],k,l]));
     loglog(tt[i,2:count[i]]-tt[i,1],diff2,linestyle=":");
+    loglog(tt[i,2:count[i]]-tt[i,1],diff4,linestyle="--");
 #    loglog(tt[i,2:count[i]]-tt[i,1],diff3);
-    println(i," ",k," ",l," asinh error h  : ",convert(Float64,maximum(diff2))); #read(STDIN,Char);
+    println("xvs: ",i," ",k," ",l," asinh error h  : ",convert(Float64,maximum(diff2))); #read(STDIN,Char);
+    println("els: ",i," ",k," ",l," asinh error h  : ",convert(Float64,maximum(diff4))); #read(STDIN,Char);
 #    println(i," ",k," ",l," asinh error h/2: ",convert(Float64,maximum(diff3))); #read(STDIN,Char);
   end
 end

@@ -10,7 +10,7 @@ include("../src/init_nbody.jl")
 
 elements = readdlm("elements.txt",',')
 
-elements[2:3,1] /= 100.0
+#elements[2:3,1] /= 100.0
 #n_body = 4
 n_body = 3
 t0 = 7257.93115525-7300.0

@@ -171,7 +171,7 @@ x,v = init_nbody(elements,t0,n,jac_init)
 elements_big=big.(elements); t0big = big(t0); jac_init_big = zeros(BigFloat,7*n,7*n)
 xbig,vbig = init_nbody(elements_big,t0big,n,jac_init_big)
 println("Difference in x,v init: ",x-convert(Array{Float64,2},xbig)," ",v-convert(Array{Float64,2},vbig)," (transit derivative version)")
-x = convert(Array{Float64,2},xbig); v = convert(Array{Float64,2},vbig); jac_init=convert(Array{Float64,2},jac_init_big)
+# x = convert(Array{Float64,2},xbig); v = convert(Array{Float64,2},vbig); jac_init=convert(Array{Float64,2},jac_init_big)
 #x,v = init_nbody(elements,t0,n)
 ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,dtdq0_num,dlnq,rstar,pair)
 # Need to apply initial jacobian TBD - convert from
