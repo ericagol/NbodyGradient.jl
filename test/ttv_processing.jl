@@ -63,4 +63,19 @@ dtdelements_mixed_big = copy(dtdelements_big)
   end
 end
 
+clf()
+nmed = 10
+for i=2:3, k=1:7, l=1:3
+  if maximum(abs.(dtdq0[i,2:count[i],k,l])) > 0
+    diff1 = abs.(dtdq0_big[i,2:count[i],k,l]-dtdq0[i,2:count[i],k,l])/median(abs.(dtdq0[i,2:count[i],k,l]))
+    loglog(tt[i,2:count[i]]-tt[i,1],diff1,linestyle=":");
+    println("xvs: ",i," ",k," ",l," asinh error h  : ",convert(Float64,maximum(diff1))); #read(STDIN,Char);
+  end
+  if maximum(abs.(dtdelements[i,2:count[i],k,l])) > 0
+    diff3 = abs.(dtdelements_big[i,2:count[i],k,l]-dtdelements[i,2:count[i],k,l])/median(abs.(dtdelements[i,2:count[i],k,l]));
+    loglog(tt[i,2:count[i]]-tt[i,1],diff3,linestyle="--");
+    println("els: ",i," ",k," ",l," asinh error h  : ",convert(Float64,maximum(diff3))); #read(STDIN,Char);
+  end
+end
+loglog([1.0,40000.0],0.5e-16*([1.0,40000.0]/h).^1.5)
 
