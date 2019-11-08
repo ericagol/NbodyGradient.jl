@@ -9,17 +9,19 @@ function test_time(nt)
 T = Float64
 s2 = zero(T)
 h = 0.04
-#hbig = big(h)
+hbig = big(h)
 t = zeros(T,nt)
-#tb = zeros(BigFloat,nt)
+tb = zeros(BigFloat,nt)
 tc = zeros(T,nt)
 tm = zeros(T,nt)
 for i=2:nt
   tc[i],s2 = comp_sum(tc[i-1],s2,h)
   t[i] = t[i-1] + h
   tm[i] = (i-1)*h
-#  tb[i] = tb[i-1] + hbig
+  tb[i] = tb[i-1] + hbig
 end
+# Add compensated error at the end:
+println("Compensated: ",tc[nt]," big: ",tb[nt]," diff: ",tc[nt]-tb[nt]," diff+err: ",big(tc[nt])+big(s2)-tb[nt])
 
 #tref = convert(Array{Float64,1},tb)
 #semilogy(abs.(t-tref),label="Added")
