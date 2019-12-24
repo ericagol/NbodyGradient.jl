@@ -98,9 +98,9 @@ end
 x,v = init_nbody(elements,t0,n)
 elements_big=big.(elements); t0big = big(t0)
 xbig,vbig = init_nbody(elements_big,t0big,n)
-if T != BigFloat
-  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (dlnq version)")
-end
+#if T != BigFloat
+#  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (dlnq version)")
+#end
 x = convert(Array{T,2},xbig); v = convert(Array{T,2},vbig)
 # Perturb the initial condition by an amount dlnq (if it is non-zero):
 if dlnq != 0.0 && iq > 0 && iq < 7
@@ -234,10 +234,10 @@ jac_init     = zeros(T,7*n,7*n)
 x,v = init_nbody(elements,t0,n,jac_init)
 elements_big=big.(elements); t0big = big(t0); jac_init_big = zeros(BigFloat,7*n,7*n)
 xbig,vbig = init_nbody(elements_big,t0big,n,jac_init_big)
-if T != BigFloat
-  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (Jacobian version)")
-  println("Difference in Jacobian: ",jac_init-convert(Array{T,2},jac_init_big)," (Jacobian version)")
-end
+#if T != BigFloat
+#  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (Jacobian version)")
+#  println("Difference in Jacobian: ",jac_init-convert(Array{T,2},jac_init_big)," (Jacobian version)")
+#end
 x = convert(Array{T,2},xbig); v = convert(Array{T,2},vbig); jac_init=convert(Array{T,2},jac_init_big)
 #x,v = init_nbody(elements,t0,n)
 ttv!(n,t0,h,tmax,m,x,v,tt,count,dtdq0,rstar,pair;fout=fout,iout=iout)
