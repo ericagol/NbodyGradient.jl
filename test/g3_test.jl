@@ -118,8 +118,8 @@ return h1::T
 end
 
 nx = 10001
-s = linspace(-3.0,3.0,nx)
-#s = linspace(-0.5,0.5,nx)
+s = linearspace(-3.0,3.0,nx)
+#s = linearspace(-0.5,0.5,nx)
 
 beta = -rand(); epsilon = eps(beta)
 sqb = sqrt(abs(beta))

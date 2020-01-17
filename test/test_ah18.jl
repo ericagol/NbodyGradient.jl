@@ -35,7 +35,7 @@ v0=zeros(3,n)
 pair = zeros(Bool,n,n)
 
 # Initialize with identity matrix:
-jac_step = eye(Float64,7*n)
+jac_step = Matrix{Float64}(I,7*n,7*n)
 
 for k=1:n
   m[k] = elements[k,1]
@@ -55,20 +55,20 @@ xbig = big.(x0); vbig = big.(v0)
 xtest = copy(x0); vtest=copy(v0)
 # Take a single step (so that we aren't at initial coordinates):
 x = copy(x0); v = copy(v0)
-xerror = zeros(x0); verror = zeros(v0)
+xerror = zeros(3,n); verror = zeros(3,n)
 @time for i=1:nstep; ah18!(x,v,xerror,verror,h,m,n,pair); end
 # Take a step with big precision:
 ah18!(xbig,vbig,big(h),big.(m),n,pair)
 # Take a single DH17 step:
-xerror = zeros(x0); verror = zeros(v0)
+xerror = zeros(3,n); verror = zeros(3,n)
 @time for i=1:nstep; dh17!(xtest,vtest,xerror,verror,h,m,n,pair);end
 println("AH18 vs. DH17 x/v difference: ",x-xtest,v-vtest)
 # Compute x & v in BigFloat precision:
 xbig = big.(x0)
 vbig = big.(v0)
 mbig = big.(m0)
-xerr_big = zeros(xbig); verr_big = zeros(vbig)
-jac_step_big = eye(BigFloat,7*n,7*n)
+xerr_big = zeros(BigFloat,3,n); verr_big = zeros(BigFloat,3,n)
+jac_step_big = Matrix{BigFloat}(I,7*n,7*n)
 jac_err_big = zeros(BigFloat,7*n,7*n)
 @time for i=1:nstep; ah18!(xbig,vbig,xerr_big,verr_big,hbig,mbig,n,jac_step_big,jac_err_big,pair);end
 println("AH18 vs. AH18 BigFloat x/v difference: ",x-convert(Array{Float64,2},xbig),v-convert(Array{Float64,2},vbig))
@@ -78,7 +78,7 @@ println("AH18 vs. AH18 BigFloat x/v difference: ",x-convert(Array{Float64,2},xbi
 x = copy(x0)
 v = copy(v0)
 m = copy(m0)
-xerror = zeros(x0); verror = zeros(v0); jac_error = zeros(jac_step)
+xerror = zeros(3,n); verror = zeros(3,n); jac_error = zeros(7*n,7*n)
 # Compute jacobian exactly over nstep steps:
 for istep=1:nstep
   ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
@@ -93,8 +93,6 @@ println("AH18 vs. AH18 BigFloat jac_step difference: ",jac_step-convert(Array{Fl
 # misaligned or shifted when returned.  If I modify ah18! to output
 # jac_step, then it works.
 # Initialize with identity matrix:
-#jac_big= eye(BigFloat,7*n)
-#jac_copy = eye(BigFloat,7*n)
 ## Compute jacobian exactly over nstep steps:
 #for istep=1:nstep
 #  jac_copy = ah18!(xbig,vbig,hbig,mbig,n,jac_big,pair)
@@ -251,7 +249,7 @@ dqdt_num = zeros(BigFloat,7*n)
 x = copy(x0)
 v = copy(v0)
 m = copy(m0)
-xerror = zeros(x0); verror = zeros(v0)
+xerror = zeros(3,n); verror = zeros(3,n)
 ah18!(x,v,xerror,verror,h,m,n,dqdt,pair)
 xm= big.(x0)
 vm= big.(v0)

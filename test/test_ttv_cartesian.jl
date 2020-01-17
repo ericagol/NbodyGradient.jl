@@ -3,7 +3,7 @@
 #include("../src/ttv.jl")
 #include("/Users/ericagol/Computer/Julia/regress.jl")
 
-#@testset "ttv_cartesian" begin
+@testset "ttv_cartesian" begin
 
 # This routine takes derivative of transit times with respect
 # to the initial cartesian coordinates of bodies. [x]
@@ -20,7 +20,7 @@ tmax = 10.0
 
 # Read in initial conditions:
 elements = readdlm("elements.txt",',')
-elements[:,3] -= 7300.0
+elements[:,3] .-= 7300.0
 
 # Make an array, tt,  to hold transit times:
 # First, though, make sure it is large enough:
@@ -113,8 +113,9 @@ clf()
 # Plot the difference in the TTVs:
 for i=2:3
 #  diff1 = abs.(tt1[i,2:count1[i]]./tt_big[i,2:count1[i]]-1.0);
-  diff1 = abs.(tt1[i,2:count1[i]].-tt_big[i,2:count1[i]])/elements[i,2];
-  loglog(tt[i,2:count1[i]]-tt[i,1],diff1);
+  diff1 = convert(Array{Float64,1},abs.(tt1[i,2:count1[i]].-tt_big[i,2:count1[i]])/elements[i,2]);
+  dtt=tt[i,2:count1[i]].-tt[i,1]
+  loglog(dtt,diff1);
 #  diff2 = abs.(tt2[i,2:count1[i]]./tt_big_half[i,2:count1[i]]-1.0);
 #  diff2 = abs.(tt2[i,2:count1[i]].-tt_big_half[i,2:count1[i]])/elements[i,2];
 #  loglog(tt[i,2:count[i]]-tt[i,1],diff2);
@@ -122,19 +123,21 @@ end
 loglog([1.0,1024.0],2e-15*[1,2^15],":")
 for i=2:3, k=1:7, l=1:3
   if maximum(abs.(dtdelements_big[i,2:count[i],k,l])) > 0
-    diff1 = abs.(dtdelements_big[i,2:count[i],k,l]./dtdelements[i,2:count[i],k,l]-1);
-    diff3 = abs.(asinh.(dtdelements_big[i,2:count[i],k,l])-asinh.(dtdelements[i,2:count[i],k,l]));
+    diff1 = convert(Array{Float64,1},abs.(dtdelements_big[i,2:count[i],k,l]./dtdelements[i,2:count[i],k,l].-1));
+    diff3 = convert(Array{Float64,1},abs.(asinh.(dtdelements_big[i,2:count[i],k,l])-asinh.(dtdelements[i,2:count[i],k,l])));
 #    loglog(tt[i,2:count[i]]-tt[i,1],diff1);
-    loglog(tt[i,2:count[i]]-tt[i,1],diff3);
+    dtt = tt[i,2:count[i]].-tt[i,1]
+    loglog(dtt,diff3);
     println(i," ",k," ",l," frac error: ",convert(Float64,maximum(diff1))," asinh error: ",convert(Float64,maximum(diff3))); #read(STDIN,Char);
   end
   if maximum(abs.(dtdq0_big[i,2:count[i],k,l])) > 0
-    diff1 = abs.(dtdq0[i,2:count[i],k,l]./dtdq0_big[i,2:count[i],k,l]-1.);
-#    diff2 = abs.(asinh.(dtdq0_big[i,2:count[i],k,l])-asinh.(dtdq0_num[i,2:count[i],k,l]));
-    diff3 = abs.(asinh.(dtdq0_big[i,2:count[i],k,l])-asinh.(dtdq0[i,2:count[i],k,l]));
-#    loglog(tt[i,2:count[i]]-tt[i,1],diff1);
-    loglog(tt[i,2:count[i]]-tt[i,1],diff3,linestyle=":");
-#    loglog(tt[i,2:count[i]]-tt[i,1],diff2,".");
+    diff1 = convert(Array{Float64,1},abs.(dtdq0[i,2:count[i],k,l]./dtdq0_big[i,2:count[i],k,l].-1.0));
+#    diff2 = abs.(asinh.(dtdq0_big[i,2:count[i],k,l]).-asinh.(dtdq0_num[i,2:count[i],k,l]));
+    diff3 = convert(Array{Float64,1},abs.(asinh.(dtdq0_big[i,2:count[i],k,l]).-asinh.(dtdq0[i,2:count[i],k,l])));
+#    loglog(tt[i,2:count[i]].-tt[i,1],diff1);
+    dtt = tt[i,2:count[i]].-tt[i,1]
+    loglog(dtt,diff3,linestyle=":");
+#    loglog(tt[i,2:count[i]].-tt[i,1],diff2,".");
     println(i," ",k," ",l," frac error: ",convert(Float64,maximum(diff1))," asinh error: ",convert(Float64,maximum(diff3))); #read(STDIN,Char);
   end
 end
@@ -156,8 +159,8 @@ end
 loglog([1.0,1024.0],1e-12*[1,2^15],":",linewidth=3)
 
 
-#println("Max diff log(dtdq0): ",maximum(abs.(dtdq0_num[mask]./dtdq0[mask]-1.0)))
-println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_num[mask])-asinh.(dtdq0[mask]))))
+#println("Max diff log(dtdq0): ",maximum(abs.(dtdq0_num[mask]./dtdq0[mask].-1.0)))
+println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_num[mask]).-asinh.(dtdq0[mask]))))
 #unit = ones(dtdq0[mask])
 #@test isapprox(dtdq0[mask]./convert(Array{Float64,4},dtdq0_num)[mask],unit;norm=maxabs)
 #@test isapprox(dtdq0[mask],convert(Array{Float64,4},dtdq0_num)[mask];norm=maxabs)
@@ -195,4 +198,4 @@ println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_num[mask])-asinh.(dt
 #  ax[:plot](tti2,((ttv1-ttv2)-mean(ttv1-ttv2)))
 #  println(i," ",coeff," ",elements[i,2:3]," ",coeff[1]-elements[i,3]," ",coeff[2]-elements[i,2])
 #  println(i," ",maximum(ttv1-ttv2-mean(ttv1-ttv2))*60.," sec ", minimum(ttv1-ttv2-mean(ttv1-ttv2))*60.," sec" )
-#end
+end

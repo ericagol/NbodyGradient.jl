@@ -1,8 +1,16 @@
-  
+ 
 
+include("loglinspace.jl")
 include("../src/ttv.jl")
 maxabs(x) = maximum(abs.(x))
-using Base.Test
+if VERSION >= v"0.7"
+  using Test
+  using LinearAlgebra
+  using Statistics
+  using DelimitedFiles
+else
+  using Base.Test
+end
 
 include("test_kepler_init.jl")
 include("test_init_nbody.jl")

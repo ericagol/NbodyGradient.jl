@@ -2,7 +2,7 @@
 #include("../src/ttv.jl")
 #include("/Users/ericagol/Computer/Julia/regress.jl")
 
-#@testset "ttv_elements" begin
+@testset "ttv_elements" begin
 
 # This routine takes derivative of transit times with respect
 # to the initial orbital elements.
@@ -19,7 +19,7 @@ tmax = 10.0
 
 # Read in initial conditions:
 elements = readdlm("elements.txt",',')
-elements[:,3] -= 7300.0
+elements[:,3] .-= 7300.0
 # Make masses of planets bigger
 #elements[2,1] *= 10.0
 #elements[3,1] *= 10.0
@@ -187,7 +187,7 @@ for jq=1:n_body
     for i=2:n
       for k=1:count2[i]
         # Compute double-sided derivative for more accuracy:
-        dtdelements0_num[i,k,iq,jq] = (tt2[i,k]-tt3[i,k])/(2.*dq0)
+        dtdelements0_num[i,k,iq,jq] = (tt2[i,k]-tt3[i,k])/(2dq0)
         # Ignore inclination & longitude of nodes variations:
         if iq != 5 && iq != 6 && ~(jq == 1 && iq < 7) && ~(jq == i && iq == 7)
           mask[i,k,iq,jq] = true
@@ -197,7 +197,7 @@ for jq=1:n_body
   end
 end
 
-#println("Max diff dtdelements: ",maximum(abs.(dtdelements0[mask]./dtdelements0_num[mask]-1.0)))
+#println("Max diff dtdelements: ",maximum(abs.(dtdelements0[mask]./dtdelements0_num[mask].-1.0)))
 println("Max diff asinh(dtdelements): ",maximum(abs.(asinh.(dtdelements0[mask])-asinh.(dtdelements0_num[mask]))))
 
 #ntot = 0
@@ -221,22 +221,22 @@ using PyPlot
 # Make a plot of the fractional errors:
 for i=2:3, k=1:7, l=1:3
   if maximum(abs.(dtdelements0_num[i,2:count1[i],k,l])) > 0
-    loglog(tt[i,2:count1[i]]-tt[i,1],abs.(dtdelements0[i,2:count1[i],k,l]./dtdelements0_num[i,2:count1[i],k,l]-1.))
+    loglog(tt[i,2:count1[i]].-tt[i,1],convert(Array{Float64,1},abs.(dtdelements0[i,2:count1[i],k,l]./dtdelements0_num[i,2:count1[i],k,l].-1.)))
   end
 end
 
 clf()
 # Plot the difference in the TTVs:
 for i=2:3
-  diff1 = abs.(tt1[i,2:count1[i]]./tt_big[i,2:count1[i]]-1.0);
-  loglog(tt[i,2:count1[i]]-tt[i,1],diff1);
+  diff1 = convert(Array{Float64,1},abs.(tt1[i,2:count1[i]]./tt_big[i,2:count1[i]].-1.0));
+  loglog(tt[i,2:count1[i]].-tt[i,1],diff1);
 end
 for i=2:3, k=1:7, l=1:3
   if maximum(abs.(dtdelements0_num[i,2:count1[i],k,l])) > 0 && k != 5 && k != 6
-    diff1 = abs.(dtdelements0[i,2:count1[i],k,l]./dtdelements0_num[i,2:count1[i],k,l]-1.);
-    diff2 = abs.(asinh.(dtdelements0[i,2:count1[i],k,l])-asinh.(dtdelements0_num[i,2:count1[i],k,l]));
-    loglog(tt[i,2:count1[i]]-tt[i,1],diff1); 
-#    loglog(tt[i,2:count1[i]]-tt[i,1],diff2,"."); 
+    diff1 = convert(Array{Float64,1},abs.(dtdelements0[i,2:count1[i],k,l]./dtdelements0_num[i,2:count1[i],k,l].-1));
+    diff2 = convert(Array{Float64,1},abs.(asinh.(dtdelements0[i,2:count1[i],k,l])-asinh.(dtdelements0_num[i,2:count1[i],k,l])));
+    loglog(tt[i,2:count1[i]].-tt[i,1],diff1); 
+#    loglog(tt[i,2:count1[i]].-tt[i,1],diff2,"."); 
     println(i," ",k," ",l," frac error: ",convert(Float64,maximum(diff1))," asinh error: ",convert(Float64,maximum(diff2))); #read(STDIN,Char);
   end
 end
@@ -269,13 +269,13 @@ loglog([1.0,1024.0],1e-15*[1,2^15],":")
 #  end
 #  coeff,cov = regress(fn,tti1,sig)
 #  tt_ref1 = coeff[1]+coeff[2]*fn[2,:]
-#  ttv1 = (tti1-tt_ref1)*24.*60.
+#  ttv1 = (tti1.-tt_ref1)*24.*60.
 #  coeff,cov = regress(fn,tti2,sig)
 #  tt_ref2 = coeff[1]+coeff[2]*fn[2,:]
-#  ttv2 = (tti2-tt_ref2)*24.*60.
+#  ttv2 = (tti2.-tt_ref2)*24.*60.
 #  ax[:plot](tti1,ttv1)
 ##  ax[:plot](tti2,ttv2)
-#  ax[:plot](tti2,((ttv1-ttv2)-mean(ttv1-ttv2)))
+#  ax[:plot](tti2,((ttv1.-ttv2)-mean(ttv1.-ttv2)))
 #  println(i," ",coeff," ",elements[i,2:3]," ",coeff[1]-elements[i,3]," ",coeff[2]-elements[i,2])
 #  println(i," ",maximum(ttv1-ttv2-mean(ttv1-ttv2))*60.," sec ", minimum(ttv1-ttv2-mean(ttv1-ttv2))*60.," sec" )
-#end
+end

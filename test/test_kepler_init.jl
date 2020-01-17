@@ -1,4 +1,4 @@
-
+2
 # Runs a simple test of kepler_init.jl
 
 const GNEWT = 39.4845/365.242^2
@@ -20,7 +20,7 @@ end
 elements_diff = zeros(Float64,6)
 ecc = sqrt(elements[3]^2+elements[4]^2)
 ntime = 1000
-time = linspace(t0,t0+period,ntime)
+time = linearspace(t0,t0+period,ntime)
 xvec = zeros(Float64,3,ntime)
 vvec = zeros(Float64,3,ntime)
 vfvec = zeros(Float64,3,ntime)
@@ -82,7 +82,7 @@ for i=1:ntime
       end
     end
     println("Jacobians: difference ",maximum(abs.(jac_init-jac_init_num)))
-    println("Jacobians: log diff   ",maximum(abs.(jac_init[jac_init_num .!= 0.0]./jac_init_num[jac_init_num .!= 0.0]-1)))
+    println("Jacobians: log diff   ",maximum(abs.(jac_init[jac_init_num .!= 0.0]./jac_init_num[jac_init_num .!= 0.0].-1)))
   end
   xvec[:,i]=x
   vvec[:,i]=v
@@ -91,7 +91,8 @@ for i=1:ntime
   vfvec[:,i]=(xf-x)/dt
 end
 period = elements[1]
-omega=atan2(elements[4],elements[3])
+#omega=atan2(elements[4],elements[3])
+omega=atan(elements[4],elements[3])
 semi = (GNEWT*mass*period^2/4/pi^2)^third
 # Compute the focus:
 focus = [semi*ecc,0.,0.]
@@ -118,7 +119,7 @@ for i=2:ntime
   dAdt[i] = norm(dAvec)/(time[i]-time[i-1])
   Atot += norm(dAvec)
 end  
-println("Total area: ",Atot," ",pi*sqrt(1.-ecc^2)*semi^2," ratio: ",Atot/pi/semi^2/sqrt(1.-ecc^2))
+println("Total area: ",Atot," ",pi*sqrt(1-ecc^2)*semi^2," ratio: ",Atot/pi/semi^2/sqrt(1-ecc^2))
 #using PyPlot
 #plot(time,dAdt)
 #axis([minimum(time),maximum(time),0.,1.5*maximum(dAdt)])

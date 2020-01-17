@@ -48,13 +48,13 @@ println("Initial values: ",x0,v0)
 println("masses: ",m)
 i=1 ; j=2
 x = copy(x0) ; v=copy(v0)
-xerror = zeros(x); verror = zeros(v)
+xerror = zeros(NDIM,n); verror = zeros(NDIM,n)
 # Predict values of s:
 kepler_driftij!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,drift_first)
 x0 = copy(x) ; v0 = copy(v)
-xerror = zeros(x0); verror = zeros(v0)
+xerror = zeros(NDIM,n); verror = zeros(NDIM,n)
 xbig = big.(x) ; vbig=big.(v); mbig = big.(m)
-xerr_big = zeros(xbig); verr_big = zeros(vbig)
+xerr_big = zeros(BigFloat,NDIM,n); verr_big = zeros(BigFloat,NDIM,n)
 kepler_driftij!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,drift_first)
 # Now compute Jacobian with BigFloat precision:
 jac_ij_big = zeros(BigFloat,14,14)
@@ -257,8 +257,10 @@ jac_ij_num[14,14] =  1.0
 #println(jac_ij./jac_ij_num)
 emax = 0.0; imax = 0; jmax = 0
 emax_big = big(0.0); imax_big = 0; jmax_big = 0
-jac_ij += eye(14)
-jac_ij_big += eye(BigFloat,14)
+for i=1:14
+  jac_ij[i,i] += 1
+  jac_ij_big[i,i] += 1
+end
 for i=1:14, j=1:14
   if jac_ij[i,j] != 0.0
     diff = abs(convert(Float64,jac_ij_num[i,j])/jac_ij[i,j]-1.0)

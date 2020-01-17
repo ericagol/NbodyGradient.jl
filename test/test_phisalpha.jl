@@ -36,7 +36,7 @@ pair = zeros(Bool,n,n)
 #end
 println("pair: ",pair)
 
-jac_step = eye(7*n)
+jac_step = Matrix{Float64}(I,7*n,7*n)
 
 for k=1:n
   m[k] = elements[k,1]
@@ -61,7 +61,7 @@ dh17!(x0,v0,h,m,n,pair)
 x = copy(x0); v = copy(v0); m = copy(m0)
 # Compute jacobian exactly:
 dqdt_phi = zeros(7*n)
-xerror = zeros(x0); verror = zeros(v0)
+xerror = zeros(3,n); verror = zeros(3,n)
 phisalpha!(x,v,xerror,verror,h,m,alpha,n,jac_step,dqdt_phi,pair)
 
 

@@ -88,7 +88,8 @@ if ecc > 0
   ekep=ekepler(m,ecc)
 #  println(m-ekep+ecc*sin(ekep))
 #  f=2.0*atan(sqrt((1.0+ecc)/(1.0-ecc))*tan(0.5*ekep))
-  f=2.0*atan2(sqrt(1.0+ecc)*sin(0.5*ekep),sqrt(1.0-ecc)*cos(0.5*ekep))
+#  f=2.0*atan2(sqrt(1.0+ecc)*sin(0.5*ekep),sqrt(1.0-ecc)*cos(0.5*ekep))
+  f=2.0*atan(sqrt(1.0+ecc)*sin(0.5*ekep),sqrt(1.0-ecc)*cos(0.5*ekep))
 end
 return f
 end

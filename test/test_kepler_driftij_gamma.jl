@@ -50,13 +50,13 @@ println("Initial values: ",x0,v0)
 println("masses: ",m)
 i=1 ; j=2
 x = copy(x0) ; v=copy(v0)
-xerror = zeros(x); verror = zeros(v)
+xerror = zeros(NDIM,n); verror = zeros(NDIM,n)
 # Predict values of s:
 kepler_driftij_gamma!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,drift_first)
 x0 = copy(x) ; v0 = copy(v)
-xerror = zeros(x0); verror = zeros(v0)
+xerror = zeros(NDIM,n); verror = zeros(NDIM,n)
 xbig = big.(x) ; vbig=big.(v); mbig = big.(m)
-xerr_big = zeros(xbig); verr_big = zeros(vbig)
+xerr_big = zeros(BigFloat,NDIM,n); verr_big = zeros(BigFloat,NDIM,n)
 kepler_driftij_gamma!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,drift_first)
 # Now compute Jacobian with BigFloat precision:
 jac_ij_big = zeros(BigFloat,14,14)
@@ -81,12 +81,12 @@ vm = big.(v0)
 mm = big.(msave)
 dq = dlnq * hbig
 hbig -= dq
-xerr_big = zeros(xm); verr_big = zeros(vm)
+fill!(xerr_big,0.0) ; fill!(verr_big,0.0)
 kepler_driftij_gamma!(mm,xm,vm,xerr_big,verr_big,i,j,hbig,drift_first)
 xp = big.(x0)
 vp = big.(v0)
 hbig += 2dq
-xerr_big = zeros(xm); verr_big = zeros(vm)
+fill!(xerr_big,0.0) ; fill!(verr_big,0.0)
 kepler_driftij_gamma!(mm,xp,vp,xerr_big,verr_big,i,j,hbig,drift_first)
 # Now x & v are final positions & velocities after time step
 for k=1:3
@@ -110,7 +110,7 @@ for jj=1:3
     dq = dlnq
     xm[jj,i] = -dq
   end
-  xerr_big = zeros(xm); verr_big = zeros(vm)
+  fill!(xerr_big,0.0) ; fill!(verr_big,0.0)
   kepler_driftij_gamma!(mm,xm,vm,xerr_big,verr_big,i,j,hbig,drift_first)
   xp = big.(x0)
   vp = big.(v0)
@@ -120,7 +120,7 @@ for jj=1:3
     dq = dlnq
     xp[jj,i] = dq
   end
-  xerr_big = zeros(xm); verr_big = zeros(vm)
+  fill!(xerr_big,0.0) ; fill!(verr_big,0.0)
   kepler_driftij_gamma!(mm,xp,vp,xerr_big,verr_big,i,j,hbig,drift_first)
   # Now x & v are final positions & velocities after time step
   for k=1:3
@@ -139,7 +139,7 @@ for jj=1:3
     dq = dlnq
     vm[jj,i] = -dq
   end
-  xerr_big = zeros(xm); verr_big = zeros(vm)
+  fill!(xerr_big,0.0) ; fill!(verr_big,0.0)
   kepler_driftij_gamma!(mm,xm,vm,xerr_big,verr_big,i,j,hbig,drift_first)
   xp = big.(x0)
   vp = big.(v0)
@@ -150,7 +150,7 @@ for jj=1:3
     dq = dlnq
     vp[jj,i] = dq
   end
-  xerr_big = zeros(xm); verr_big = zeros(vm)
+  fill!(xerr_big,0.0) ; fill!(verr_big,0.0)
   kepler_driftij_gamma!(mm,xp,vp,xerr_big,verr_big,i,j,hbig,drift_first)
   for k=1:3
     jac_ij_num[   k,3+jj] = .5*(xp[k,i]-xm[k,i])/dq
@@ -166,14 +166,14 @@ vm= big.(v0)
 mm= big.(msave)
 dq = mm[i]*dlnq
 mm[i] -= dq
-xerr_big = zeros(xm); verr_big = zeros(vm)
+fill!(xerr_big,0.0) ; fill!(verr_big,0.0)
 kepler_driftij_gamma!(mm,xm,vm,xerr_big,verr_big,i,j,hbig,drift_first)
 xp= big.(x0)
 vp= big.(v0)
 mp= big.(msave)
 dq = mp[i]*dlnq
 mp[i] += dq
-xerr_big = zeros(xm); verr_big = zeros(vm)
+fill!(xerr_big,0.0) ; fill!(verr_big,0.0)
 kepler_driftij_gamma!(mp,xp,vp,xerr_big,verr_big,i,j,hbig,drift_first)
 for k=1:3
   jac_ij_num[   k,7] = .5*(xp[k,i]-xm[k,i])/dq
@@ -196,7 +196,7 @@ for jj=1:3
     dq = dlnq
     xm[jj,j] = -dq
   end
-  xerr_big = zeros(xm); verr_big = zeros(vm)
+  fill!(xerr_big,0.0) ; fill!(verr_big,0.0)
   kepler_driftij_gamma!(mm,xm,vm,xerr_big,verr_big,i,j,hbig,drift_first)
   xp = big.(x0)
   vp = big.(v0)
@@ -206,7 +206,7 @@ for jj=1:3
     dq = dlnq
     xp[jj,j] = dq
   end
-  xerr_big = zeros(xm); verr_big = zeros(vm)
+  fill!(xerr_big,0.0) ; fill!(verr_big,0.0)
   kepler_driftij_gamma!(mm,xp,vp,xerr_big,verr_big,i,j,hbig,drift_first)
   for k=1:3
     jac_ij_num[   k,7+jj] = .5*(xp[k,i]-xm[k,i])/dq
@@ -224,7 +224,7 @@ for jj=1:3
     dq = dlnq
     vm[jj,j] = -dq
   end
-  xerr_big = zeros(xm); verr_big = zeros(vm)
+  fill!(xerr_big,0.0) ; fill!(verr_big,0.0)
   kepler_driftij_gamma!(mm,xm,vm,xerr_big,verr_big,i,j,hbig,drift_first)
   xp= big.(x0)
   vp= big.(v0)
@@ -234,7 +234,7 @@ for jj=1:3
     dq = dlnq
     vp[jj,j] = dq
   end
-  xerr_big = zeros(xm); verr_big = zeros(vm)
+  fill!(xerr_big,0.0) ; fill!(verr_big,0.0)
   kepler_driftij_gamma!(mm,xp,vp,xerr_big,verr_big,i,j,hbig,drift_first)
   for k=1:3
     jac_ij_num[   k,10+jj] = .5*(xp[k,i]-xm[k,i])/dq
@@ -250,14 +250,14 @@ vm = big.(v0)
 mm = big.(msave)
 dq = mm[j]*dlnq
 mm[j] -= dq
-xerr_big = zeros(xm); verr_big = zeros(vm)
+fill!(xerr_big,0.0) ; fill!(verr_big,0.0)
 kepler_driftij_gamma!(mm,xm,vm,xerr_big,verr_big,i,j,hbig,drift_first)
 xp = big.(x0)
 vp = big.(v0)
 mp = big.(msave)
 dq = mp[j]*dlnq
 mp[j] += dq
-xerr_big = zeros(xm); verr_big = zeros(vm)
+fill!(xerr_big,0.0) ; fill!(verr_big,0.0)
 kepler_driftij_gamma!(mp,xp,vp,xerr_big,verr_big,i,j,hbig,drift_first)
 for k=1:3
   jac_ij_num[   k,14] = .5*(xp[k,i]-xm[k,i])/dq
@@ -273,8 +273,10 @@ jac_ij_num[14,14] =  1.0
 #println(jac_ij./jac_ij_num)
 emax = 0.0; imax = 0; jmax = 0
 emax_big = big(0.0); imax_big = 0; jmax_big = 0
-jac_ij += eye(14)
-jac_ij_big += eye(BigFloat,14)
+for i=1:14
+  jac_ij[i,i] += 1
+  jac_ij_big[i,i] += 1
+end
 for i=1:14, j=1:14
   if jac_ij[i,j] != 0.0
     diff = abs(convert(Float64,jac_ij_num[i,j])/jac_ij[i,j]-1.0)
@@ -293,7 +295,7 @@ for i=1:14
   println("jac_ij_num: i  ",i," ",convert(Array{Float64,1},jac_ij_num[i,:]))
   println("difference: i  ",i," ",jac_ij[i,:].-convert(Array{Float64,1},jac_ij_num[i,:]))
   if i != 7 && i != 14
-    println("frac diff : i  ",i," ",jac_ij[i,:]./convert(Array{Float64,1},jac_ij_num[i,:])-1.0)
+    println("frac diff : i  ",i," ",jac_ij[i,:]./convert(Array{Float64,1},jac_ij_num[i,:]).-1.0)
   end
 end
 println("Maximum fractional error big: ",emax_big," ",imax_big," ",jmax_big)

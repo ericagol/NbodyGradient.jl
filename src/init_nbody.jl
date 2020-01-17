@@ -96,8 +96,10 @@ v = zeros(T,NDIM,n_body)
 #    end
 #  end
 #end
-x = transpose(*(ainv,rkepler))
-v = transpose(*(ainv,rdotkepler))
+#x = transpose(*(ainv,rkepler))
+x = permutedims(*(ainv,rkepler))
+#v = transpose(*(ainv,rdotkepler))
+v = permutedims(*(ainv,rdotkepler))
 # Return the cartesian position & velocity matrices:
 #return x,v,amat,ainv
 return x,v
@@ -242,8 +244,10 @@ v = zeros(T,NDIM,n_body)
 #    end
 #  end
 #end
-x = transpose(*(ainv,rkepler))
-v = transpose(*(ainv,rdotkepler))
+#x = transpose(*(ainv,rkepler))
+x = permutedims(*(ainv,rkepler))
+#v = transpose(*(ainv,rdotkepler))
+v = permutedims(*(ainv,rdotkepler))
 # Finally, compute the overall Jacobian.
 # First, compute it for the orbital elements:
 dxdm = zeros(T,3,n_body); dvdm = zeros(T,3,n_body)
@@ -263,8 +267,10 @@ for i=1:n_body
   # Cartesian coordinates of all of the bodies can depend on the masses 
   # of all the others so we need to loop over indices of each body, k:
   for k=1:n_body
-    dxdm = transpose(dainvdm[:,:,k]*rkepler)
-    dvdm = transpose(dainvdm[:,:,k]*rdotkepler)
+#    dxdm = transpose(dainvdm[:,:,k]*rkepler)
+    dxdm = permutedims(dainvdm[:,:,k]*rkepler)
+#    dvdm = transpose(dainvdm[:,:,k]*rdotkepler)
+    dvdm = permutedims(dainvdm[:,:,k]*rdotkepler)
     jac_init[(i-1)*7+1:(i-1)*7+3,k*7] += dxdm[1:3,i]
     jac_init[(i-1)*7+4:(i-1)*7+6,k*7] += dvdm[1:3,i]
   end

@@ -69,8 +69,8 @@ else
   cx = cosh(xx); sx = exp(xx)-cx
 end
 # Now, compute final values.  Compute Wisdom/Hernandez G_i^\beta(s) functions:
-g1bs = 2.*sx*cx/sqb
-g2bs = 2.*signb*sx^2*beta0inv
+g1bs = 2.0*sx*cx/sqb
+g2bs = 2.0*signb*sx^2*beta0inv
 g0bs = 1.0-beta0*g2bs
 # This should be computed to prevent roundoff error. [ ]
 #g3bs = (1.0-g1bs)*beta0inv
@@ -156,8 +156,8 @@ function jac_delxv(x0::Array{T,1},v0::Array{T,1},k::T,s::T,beta0::T,h::T,drift_f
     cx = cosh(xx); sx = exp(xx)-cx
   end
   # Now, compute final values.  Compute Wisdom/Hernandez G_i^\beta(s) functions:
-  g1bs = 2.*sx*cx/sqb
-  g2bs = 2.*signb*sx^2*beta0inv
+  g1bs = 2.0*sx*cx/sqb
+  g2bs = 2.0*signb*sx^2*beta0inv
   g0bs = 1.0-beta0*g2bs
   g3bs = G3(s*sqb,beta0)
   # Compute Gauss' Kepler functions:

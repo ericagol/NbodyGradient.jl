@@ -66,7 +66,7 @@ x0big = big.(x0); v0big = big.(v0)
 # Now compute big-float precision autodiff Jacobian:
 delxv_big,jacobian_big = jac_delxv_gamma!(x0big,v0big,kbig,hbig,drift_first;grad=true,auto=true,debug=true)
 #println("Auto diff Jacobian: ",jacobian)
-jac_frac = jac_alg[1:6,:]./convert(Array{Float64,2},jacobian_big[1:6,:])-1.0
+jac_frac = jac_alg[1:6,:]./convert(Array{Float64,2},jacobian_big[1:6,:]).-1.0
 println("Fractional Jacobian difference: ",maxabs(jac_frac[.~isnan.(jac_frac)]))
 
 
@@ -78,7 +78,7 @@ for i=1:12
   println("Fini diff Jacobian: ",convert(Array{Float64,1},jac_num[i,:]))
   println("Algebraic Jacobian: ",convert(Array{Float64,1},jac_alg[i,:]))
   println("Auto diff Jacobian: ",convert(Array{Float64,1},jacobian_big[i,:]))
-  println("Frac diff Jacobian: ",jac_alg[i,:]./convert(Array{Float64,1},jacobian_big[i,:])-1.0)
+  println("Frac diff Jacobian: ",jac_alg[i,:]./convert(Array{Float64,1},jacobian_big[i,:]).-1.0)
 end
 println("gamma alg  gradient: ",jac_alg[7,:])
 println("gamma auto gradient: ",convert(Array{Float64,1},jacobian_big[7,:]))

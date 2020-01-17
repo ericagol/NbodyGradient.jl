@@ -3,14 +3,14 @@
 # system with BH15 integrator.  Please cite Hernandez & Bertschinger (2015)
 # if using this in a paper.
 
-if ~isdefined(:YEAR)
+if ~@isdefined YEAR
   const YEAR  = 365.242
   const GNEWT = 39.4845/YEAR^2
   const NDIM  = 3
 #const TRANSIT_TOL = 1e-8
-#  const TRANSIT_TOL = 10.*sqrt(eps(1.0))
-#const TRANSIT_TOL = 10.*eps(1.0)
-  const third = 1./3.
+#  const TRANSIT_TOL = 10.0*sqrt(eps(1.0))
+#const TRANSIT_TOL = 10.0*eps(1.0)
+  const third = 1.0/3.0
   const alpha0 = 0.0
 end
 include("kepler_step.jl")
@@ -46,7 +46,7 @@ end
 
 
 # These "constants" pre-allocate memory for matrices used in the derivative computation (to save time with allocation and garbage collection):
-if ~isdefined(:pxpr0)
+if ~@isdefined pxpr0
   const pxpr0 = zeros(Float64,3);const  pxpa0=zeros(Float64,3);const  pxpk=zeros(Float64,3);const  pxps=zeros(Float64,3);const  pxpbeta=zeros(Float64,3)
   const dxdr0 = zeros(Float64,3);const  dxda0=zeros(Float64,3);const  dxdk=zeros(Float64,3);const  dxdv0 =zeros(Float64,3)
   const prvpr0 = zeros(Float64,3);const  prvpa0=zeros(Float64,3);const  prvpk=zeros(Float64,3);const  prvps=zeros(Float64,3);const  prvpbeta=zeros(Float64,3)
@@ -282,7 +282,8 @@ jac_trans_err= zeros(T,7*n,7*n)
 # Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
 dtdq = zeros(T,7,n)
 # Initialize the Jacobian to the identity matrix:
-jac_step = eye(T,7*n)
+#jac_step = eye(T,7*n)
+jac_step = Matrix{T}(I,7*n,7*n)
 # Initialize Jacobian error array:
 jac_error = zeros(T,7*n,7*n)
 if fout != ""
@@ -390,7 +391,8 @@ dtdq = zeros(Float64,7,n)
 dtdq3 = zeros(Float64,7,n)
 # Initialize the Jacobian to the identity matrix:
 jac_prior = zeros(Float64,7*n,7*n)
-jac_step = eye(Float64,7*n)
+#jac_step = eye(Float64,7*n)
+jac_step = Matrix{Float64}(I,7*n,7*n)
 # Initialize Jacobian error matrix
 jac_error = zeros(Float64,7*n,7*n)
 jac_trans_err = zeros(Float64,7*n,7*n)
@@ -440,7 +442,8 @@ while t < t0+tmax && param_real
 #        dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
         # Now, recompute with findtransit3:
         xtransit .= xprior; vtransit .= vprior; xerr_trans .= xerr_prior; verr_trans .= verr_prior
-        jac_transit = eye(jac_step); jac_trans_err .= jac_error_prior
+#        jac_transit = eye(jac_step); jac_trans_err .= jac_error_prior
+        jac_transit = Matrix{Float64}(I,7*n,7*n); jac_trans_err .= jac_error_prior
         dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtdq3,pair) # Just computing derivative since prior timestep, so start with identity matrix
         # Save for posterity:
         #tt[i,count[i]]=t+dt
@@ -515,8 +518,11 @@ xprior = copy(x)
 vprior = copy(v)
 xtransit = copy(x)
 vtransit = copy(v)
-xerror = zeros(x); verror = zeros(v)
-xerr_prior = zeros(x); verr_prior = zeros(v)
+#xerror = zeros(x); verror = zeros(v)
+xerror = copy(x); verror = copy(v)
+fill!(xerror,zero(T)); fill!(verror,zero(T))
+#xerr_prior = zeros(x); verr_prior = zeros(v)
+xerr_prior = copy(xerror); verr_prior = copy(verror)
 # Set the time to the initial time:
 t = t0
 # Define error estimate based on Kahan (1965):
@@ -1525,7 +1531,7 @@ indi = 0; indj=0; indd = 0
           jac_step[indj+3+k,indd+7] -= fac*m[i]*(dadq[k,i,4,d]-dadq[k,j,4,d])
         end
         # Now, for the final term:  (\delta a_ij . r_ij ) r_ij
-        fac = 3.*fac1*rij[k]
+        fac = 3.0*fac1*rij[k]
         @inbounds for d=1:n
           indd = (d-1)*7
           for p=1:3
@@ -1778,7 +1784,7 @@ indi = 0; indj=0; indd = 0
           jac_step[indj+3+k,indd+7] -= fac*m[i]*(dadq[k,i,4,d]-dadq[k,j,4,d])
         end
         # Now, for the final term:  (\delta a_ij . r_ij ) r_ij
-        fac = 3.*fac1*rij[k]
+        fac = 3.0*fac1*rij[k]
         @inbounds for d=1:n
           indd = (d-1)*7
           for p=1:3
@@ -2131,7 +2137,7 @@ end
 # kick and correction for pairs which are kicked:
 phic!(x,v,h,m,n,pair)
 if alpha != 1.0
-  phisalpha!(x,v,h,m,2.*(1.-alpha),n,pair)
+  phisalpha!(x,v,h,m,2.0*(1.0-alpha),n,pair)
 end
 @inbounds for i=n-1:-1:1
   @inbounds for j=n:-1:i+1
@@ -2185,7 +2191,7 @@ end
 phic!(x,v,xerror,verror,h,m,n,pair)
 if alpha != 1.0
 #  xbig = big.(x); vbig = big.(v)
-  phisalpha!(x,v,xerror,verror,h,m,2.*(1.-alpha),n,pair)
+  phisalpha!(x,v,xerror,verror,h,m,2.0*(1.0-alpha),n,pair)
 #  phisalpha!(xbig,vbig,hbig,mbig,2*(1-big(alpha)),n,pair)
 #  xcompare = convert(Array{T,2},xbig); vcompare = convert(Array{T,2},vbig)
 #  x .= xcompare; v .= vcompare
@@ -2300,7 +2306,7 @@ end
 # kick and correction for pairs which are kicked:
 phic!(x,v,xerror,verror,h,m,n,jac_phi,dqdt_phi,pair)
 if alpha != uno 
-#  phisalpha!(x,v,h,m,2.*(1.-alpha),n,jac_phi,pair) # 10%
+#  phisalpha!(x,v,h,m,2.0*(1.0-alpha),n,jac_phi,pair) # 10%
   phisalpha!(x,v,xerror,verror,h,m,two*(uno-alpha),n,jac_phi,dqdt_phi,pair) # 10%
 #  @inbounds for i in eachindex(jac_step)
 #    jac_copy[i] = jac_step[i]
@@ -2610,7 +2616,9 @@ end
 # Compute time derivatives:
 x = copy(x1)
 v = copy(v1)
-xerror = zeros(x1); verror = zeros(v1)
+#xerror = zeros(x1); verror = zeros(v1)
+xerror = copy(x1); verror = copy(v1)
+fill!(xerror,0.0); fill!(verror,0.0)
 # Compute dgdt with the updated time step.
 dh17!(x,v,xerror,verror,tt,m,n,jac_step,pair)
 #println("\Delta t: ",tt)

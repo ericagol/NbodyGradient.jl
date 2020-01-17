@@ -50,12 +50,14 @@ dh17!(x0,v0,h,m,n,pair)
 # Now, copy these to compute Jacobian (so that I don't step
 # x0 & v0 forward in time):
 x = copy(x0); v = copy(v0); m = copy(m0)
-xerror = zeros(x0); verror = zeros(v0)
+xerror = zeros(3,n); verror = zeros(3,n)
 # Compute jacobian exactly:
 dqdt_kick = zeros(7*n)
 kickfast!(x,v,xerror,verror,h,m,n,jac_step,dqdt_kick,pair)
 # Add in identity matrix:
-jac_step += eye(jac_step)
+for i=1:7*n
+  jac_step[i,i] += 1
+end
 
 # Now compute numerical derivatives, using BigFloat to avoid
 # round-off errors:
@@ -65,7 +67,7 @@ xsave = big.(x0)
 vsave = big.(v0)
 msave = big.(m0)
 hbig = big(h)
-xerror = zeros(x0); verror = zeros(v0)
+xerror = zeros(3,n); verror = zeros(3,n)
 # Carry out step using BigFloat for extra precision:
 kickfast!(xsave,vsave,hbig,msave,n,pair)
 xbig = big.(x0)

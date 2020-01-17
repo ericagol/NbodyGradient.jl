@@ -62,7 +62,7 @@ jacobian_big =zeros(BigFloat,7,7)
 #iter = kep_elliptic!(x0big,v0big,r0big,kbig,hbig,beta0big,s0big,statebig)
 iter = kep_ell_hyp!(x0big,v0big,r0big,kbig,hbig,beta0big,s0big,statebig,jacobian_big)
 #println("Final state: ",statebig[2:7])
-jac_frac = jacobian./convert(Array{Float64,2},jacobian_big)-1.0
+jac_frac = jacobian./convert(Array{Float64,2},jacobian_big).-1.0
 println("Fractional Jacobian difference: ",maxabs(jac_frac[.~isnan.(jac_frac)]))
 #println(jacobian)
 #println(jac_frac)

@@ -101,8 +101,8 @@ else
   cx = cosh(xx); sx = exp(xx)-cx
 end
 # Now, compute final values:
-g1bs = 2.*sx*cx/sqb
-g2bs = 2.*signb*sx^2*beta0inv
+g1bs = 2.0*sx*cx/sqb
+g2bs = 2.0*signb*sx^2*beta0inv
 f = one(T) - k*r0inv*g2bs # eqn (25)
 g = r0*g1bs + eta*g2bs # eqn (27)
 for j=1:3
