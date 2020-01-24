@@ -18,6 +18,8 @@ include("kepler_drift_step.jl")
 include("kepler_drift_gamma.jl")
 include("init_nbody.jl")
 
+using LinearAlgebra
+
 function comp_sum(sum_value::T,sum_error::T,addend::T) where {T <: Real}
 #  Function for compensated summation using the Kahan (1965) algorithm.
 #  sum_value:  current value of the sum

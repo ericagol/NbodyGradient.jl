@@ -1,4 +1,4 @@
-2
+
 # Runs a simple test of kepler_init.jl
 
 const GNEWT = 39.4845/365.242^2
