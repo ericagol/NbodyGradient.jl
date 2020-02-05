@@ -246,7 +246,7 @@ ttvbv!(n,t0,h,tmax,m,x,v,ttbv,count,dtbvdq0,dtbvdq0_num,dlnq,rstar,pair)
 # derivatives with respect to (x,v,m) to (elements,m):
 ntt_max = size(ttbv)[3]
 ntbv = size(ttbv)[1] # = 1 for just times; = 3 for times + v_sky + b_sky
-@inbounds for itbv=1:nout, for i=1:n, j=1:count[i]
+@inbounds for itbv=1:ntbv, for i=1:n, j=1:count[i]
   if j <= ntt_max
   # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
     @inbounds for k=1:n, l=1:7
@@ -255,76 +255,6 @@ ntbv = size(ttbv)[1] # = 1 for just times; = 3 for times + v_sky + b_sky
         dtbvdelements[itbv,i,j,l,k] += dtbvdq0[itbv,i,j,q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
       end
     end
-  end
-end
-return dtbvdelements
-end
-
-
-# Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
-function ttvbv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::Array{T,3},
-count::Array{Int64,1},dtbvdq0::Array{T,5},rstar::T;fout="",iout=-1,pair=zeros(Bool,n,n)) where {T <: Real}
-# 
-# Input quantities:
-# n     = number of bodies
-# t0    = initial time of integration  [days]
-# h     = time step [days]
-# tmax  = duration of integration [days]
-# elements[i,j] = 2D n x 7 array of the masses & orbital elements of the bodies (currently first body's orbital elements are ignored)
-#            elements are ordered as: mass, period, t0, e*cos(omega), e*sin(omega), inclination, longitude of ascending node (Omega)
-# ttbv    = array of transit times, impact parameter & sky velocity of size 3 x [n x max(ntt)] (currently only compute transits of star, so first row is zero) [days]
-# count = array of the number of transits for each body
-# dtbvdq0 = derivative of transit times, impact parameters & sky velocities with respect to initial x,v,m [various units: day/length (3), day^2/length (3), day/mass]
-#         5D array  [1-3] x [n x max(ntt) ] x [n x 7] - derivatives of transits of each planet with respect to initial positions/velocities
-#             masses of *all* bodies.  Note: mass derivatives are *after* positions/velocities, even though they are at start
-#             of the elements[i,j] array.
-#
-# Output quantity:
-# dtbvdelements = 5D array  [1-3] x [n x max(ntt) ] x [n x 7] - derivatives of transits of each planet with respect to initial orbital
-#             elements/masses of *all* bodies.  Note: mass derivatives are *after* elements, even though they are at start
-#             of the elements[i,j] array
-#
-# Example: see test_ttvbv_elements.jl in test/ directory
-#
-# Define initial mass, position & velocity arrays:
-m=zeros(T,n)
-x=zeros(T,NDIM,n)
-v=zeros(T,NDIM,n)
-# Fill the transit-timing & jacobian arrays with zeros:
-fill!(ttbv,zero(T))
-fill!(dtbvdq0,zero(T))
-# Create an array for the derivatives with respect to the masses/orbital elements:
-dtbvdelements = copy(dtbvdq0)
-# Counter for transits of each planet:
-fill!(count,0)
-for i=1:n
-  m[i] = elements[i,1]
-end
-# Initialize the N-body problem using nested hierarchy of Keplerians:
-jac_init     = zeros(T,7*n,7*n)
-x,v = init_nbody(elements,t0,n,jac_init)
-elements_big=big.(elements); t0big = big(t0); jac_init_big = zeros(BigFloat,7*n,7*n)
-xbig,vbig = init_nbody(elements_big,t0big,n,jac_init_big)
-#if T != BigFloat
-#  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (Jacobian version)")
-#  println("Difference in Jacobian: ",jac_init-convert(Array{T,2},jac_init_big)," (Jacobian version)")
-#end
-x = convert(Array{T,2},xbig); v = convert(Array{T,2},vbig); jac_init=convert(Array{T,2},jac_init_big)
-#x,v = init_nbody(elements,t0,n)
-ttvbv!(n,t0,h,tmax,m,x,v,ttbv,count,dtbvdq0,rstar,pair;fout=fout,iout=iout)
-# Need to apply initial jacobian TBD - convert from
-# derivatives with respect to (x,v,m) to (elements,m):
-ntt_max = size(ttbv)[3]
-ntbv = size(ttbv)[1] # = 1 for just times; = 3 for times + v_sky + b_sky
-@inbounds for itbv=1:ntbv, i=1:n, j=1:count[i]
-  if j <= ntt_max
-  # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
-    @inbounds for k=1:n, l=1:7
-      dtdelements[itbv,i,j,l,k] = zero(T)
-      @inbounds for p=1:n, q=1:7
-        dtdelements[itbv,i,j,l,k] += dtdq0[itbv,i,j,q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
-      end
-     end
   end
 end
 return dtbvdelements
@@ -395,6 +325,179 @@ for i=1:n, j=1:count[i]
   end
 end
 return dtdelements
+end
+
+# Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
+function ttvbv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::Array{T,3},
+count::Array{Int64,1},dtbvdq0::Array{T,5},rstar::T;fout="",iout=-1,pair=zeros(Bool,n,n)) where {T <: Real}
+# 
+# Input quantities:
+# n     = number of bodies
+# t0    = initial time of integration  [days]
+# h     = time step [days]
+# tmax  = duration of integration [days]
+# elements[i,j] = 2D n x 7 array of the masses & orbital elements of the bodies (currently first body's orbital elements are ignored)
+#            elements are ordered as: mass, period, t0, e*cos(omega), e*sin(omega), inclination, longitude of ascending node (Omega)
+# ttbv    = array of transit times, impact parameter & sky velocity of size 3 x [n x max(ntt)] (currently only compute transits of star, so first row is zero) [days]
+# count = array of the number of transits for each body
+# dtbvdq0 = derivative of transit times, impact parameters & sky velocities with respect to initial x,v,m [various units: day/length (3), day^2/length (3), day/mass]
+#         5D array  [1-3] x [n x max(ntt) ] x [n x 7] - derivatives of transits of each planet with respect to initial positions/velocities
+#             masses of *all* bodies.  Note: mass derivatives are *after* positions/velocities, even though they are at start
+#             of the elements[i,j] array.
+#
+# Output quantity:
+# dtbvdelements = 5D array  [1-3] x [n x max(ntt) ] x [n x 7] - derivatives of transits of each planet with respect to initial orbital
+#             elements/masses of *all* bodies.  Note: mass derivatives are *after* elements, even though they are at start
+#             of the elements[i,j] array
+#
+# Example: see test_ttvbv_elements.jl in test/ directory
+#
+# Define initial mass, position & velocity arrays:
+m=zeros(T,n)
+x=zeros(T,NDIM,n)
+v=zeros(T,NDIM,n)
+# Fill the transit-timing & jacobian arrays with zeros:
+fill!(ttbv,zero(T))
+fill!(dtbvdq0,zero(T))
+# Create an array for the derivatives with respect to the masses/orbital elements:
+dtbvdelements = copy(dtbvdq0)
+# Counter for transits of each planet:
+fill!(count,0)
+for i=1:n
+  m[i] = elements[i,1]
+end
+# Initialize the N-body problem using nested hierarchy of Keplerians:
+jac_init     = zeros(T,7*n,7*n)
+x,v = init_nbody(elements,t0,n,jac_init)
+elements_big=big.(elements); t0big = big(t0); jac_init_big = zeros(BigFloat,7*n,7*n)
+xbig,vbig = init_nbody(elements_big,t0big,n,jac_init_big)
+#if T != BigFloat
+#  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (Jacobian version)")
+#  println("Difference in Jacobian: ",jac_init-convert(Array{T,2},jac_init_big)," (Jacobian version)")
+#end
+x = convert(Array{T,2},xbig); v = convert(Array{T,2},vbig); jac_init=convert(Array{T,2},jac_init_big)
+#x,v = init_nbody(elements,t0,n)
+ttvbv!(n,t0,h,tmax,m,x,v,ttbv,count,dtbvdq0,rstar,pair;fout=fout,iout=iout)
+# Need to apply initial jacobian TBD - convert from
+# derivatives with respect to (x,v,m) to (elements,m):
+ntt_max = size(ttbv)[3]
+ntbv = size(ttbv)[1] # = 1 for just times; = 3 for times + v_sky + b_sky
+@inbounds for itbv=1:ntbv, i=1:n, j=1:count[i]
+  if j <= ntt_max
+  # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
+    @inbounds for k=1:n, l=1:7
+      dtdelements[itbv,i,j,l,k] = zero(T)
+      @inbounds for p=1:n, q=1:7
+        dtdelements[itbv,i,j,l,k] += dtdq0[itbv,i,j,q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
+      end
+     end
+  end
+end
+return dtbvdelements
+end
+
+# Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
+function ttv!(n::Int64,t0::T,h::T,tmax::T,m::Array{T,1},
+  x::Array{T,2},v::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dtdq0::Array{T,4},rstar::T,pair::Array{Bool,2};fout="",iout=-1) where {T <: Real}
+xprior = copy(x)
+vprior = copy(v)
+xtransit = copy(x)
+vtransit = copy(v)
+xerror = zeros(T,size(x)); verror=zeros(T,size(v))
+xerr_trans = zeros(T,size(x)); verr_trans =zeros(T,size(v))
+xerr_prior = zeros(T,size(x)); verr_prior =zeros(T,size(v))
+# Set the time to the initial time:
+t = t0
+# Define error estimate based on Kahan (1965):
+s2 = zero(T)
+# Set step counter to zero:
+istep = 0
+# Jacobian for each step (7- 6 elements+mass, n_planets, 7 - 6 elements+mass, n planets):
+jac_prior = zeros(T,7*n,7*n)
+jac_error_prior = zeros(T,7*n,7*n)
+jac_transit = zeros(T,7*n,7*n)
+jac_trans_err= zeros(T,7*n,7*n)
+# Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
+dtdq = zeros(T,7,n)
+# Initialize the Jacobian to the identity matrix:
+#jac_step = eye(T,7*n)
+jac_step = Matrix{T}(I,7*n,7*n)
+# Initialize Jacobian error array:
+jac_error = zeros(T,7*n,7*n)
+if fout != ""
+  # Open file for output:
+  file_handle =open(fout,"a")
+end
+
+# Save the g function, which computes the relative sky velocity dotted with relative position
+# between the planets and star:
+gsave = zeros(T,n)
+for i=2:n
+  # Compute the relative sky velocity dotted with position:
+  gsave[i]= g!(i,1,x,v)
+end
+# Loop over time steps:
+dt = zero(T)
+gi = zero(T)
+ntt_max = size(tt)[2]
+param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
+while t < (t0+tmax) && param_real
+  # Carry out a dh17 mapping step:
+  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
+  #dh17!(x,v,h,m,n,jac_step,pair)
+  param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
+  # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
+  # Star is body 1; planets are 2-nbody (note that this could be modified to see if
+  # any body transits another body):
+  for i=2:n
+    # Compute the relative sky velocity dotted with position:
+    gi = g!(i,1,x,v)
+    ri = sqrt(x[1,i]^2+x[2,i]^2+x[3,i]^2)  # orbital distance
+    # See if sign of g switches, and if planet is in front of star (by a good amount):
+    # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
+    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri && ri < rstar
+      # A transit has occurred between the time steps - integrate dh17! between timesteps
+      count[i] += 1
+      if count[i] <= ntt_max
+        dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
+        xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior; jac_trans_err .= jac_error_prior
+        xerr_trans .= xerr_prior; verr_trans .= verr_prior
+#        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
+        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtdq,pair) # 20%
+        #tt[i,count[i]]=t+dt
+        tt[i,count[i]],stmp = comp_sum(t,s2,dt)
+        # Save for posterity:
+        for k=1:7, p=1:n
+          dtdq0[i,count[i],k,p] = dtdq[k,p]
+        end
+      end
+    end
+    gsave[i] = gi
+  end
+  # Save the current state as prior state:
+  xprior .= x
+  vprior .= v
+  jac_prior .= jac_step
+  jac_error_prior .= jac_error
+  xerr_prior .= xerror
+  verr_prior .= verror
+  if mod(istep,iout) == 0 && iout > 0
+    # Write to file:
+    writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n));convert(Array{Float64,1},reshape(jac_step,49n^2))]') # Transpose to write each line
+  end
+  # Increment time by the time step using compensated summation:
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
+  # t += h <- this leads to loss of precision
+  # Increment counter by one:
+  istep +=1
+end
+if fout != ""
+  # Close output file:
+  close(file_handle)
+end
+return 
 end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
@@ -475,110 +578,6 @@ while t < (t0+tmax) && param_real
         # Save for posterity:
         @inbounds for itbv=1:ntbv, k=1:7, p=1:n
           dtbvdq0[itbv,i,count[i],k,p] = dtbvdq[itbv,k,p]
-        end
-      end
-    end
-    gsave[i] = gi
-  end
-  # Save the current state as prior state:
-  xprior .= x
-  vprior .= v
-  jac_prior .= jac_step
-  jac_error_prior .= jac_error
-  xerr_prior .= xerror
-  verr_prior .= verror
-  if mod(istep,iout) == 0 && iout > 0
-    # Write to file:
-    writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n));convert(Array{Float64,1},reshape(jac_step,49n^2))]') # Transpose to write each line
-  end
-  # Increment time by the time step using compensated summation:
-  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
-  #t = tmp
-  t,s2 = comp_sum(t,s2,h)
-  # t += h <- this leads to loss of precision
-  # Increment counter by one:
-  istep +=1
-end
-if fout != ""
-  # Close output file:
-  close(file_handle)
-end
-return 
-end
-
-# Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
-function ttv!(n::Int64,t0::T,h::T,tmax::T,m::Array{T,1},
-  x::Array{T,2},v::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dtdq0::Array{T,4},rstar::T,pair::Array{Bool,2};fout="",iout=-1) where {T <: Real}
-xprior = copy(x)
-vprior = copy(v)
-xtransit = copy(x)
-vtransit = copy(v)
-xerror = zeros(T,size(x)); verror=zeros(T,size(v))
-xerr_trans = zeros(T,size(x)); verr_trans =zeros(T,size(v))
-xerr_prior = zeros(T,size(x)); verr_prior =zeros(T,size(v))
-# Set the time to the initial time:
-t = t0
-# Define error estimate based on Kahan (1965):
-s2 = zero(T)
-# Set step counter to zero:
-istep = 0
-# Jacobian for each step (7- 6 elements+mass, n_planets, 7 - 6 elements+mass, n planets):
-jac_prior = zeros(T,7*n,7*n)
-jac_error_prior = zeros(T,7*n,7*n)
-jac_transit = zeros(T,7*n,7*n)
-jac_trans_err= zeros(T,7*n,7*n)
-# Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
-dtdq = zeros(T,7,n)
-# Initialize the Jacobian to the identity matrix:
-#jac_step = eye(T,7*n)
-jac_step = Matrix{T}(I,7*n,7*n)
-# Initialize Jacobian error array:
-jac_error = zeros(T,7*n,7*n)
-if fout != ""
-  # Open file for output:
-  file_handle =open(fout,"a")
-end
-
-# Save the g function, which computes the relative sky velocity dotted with relative position
-# between the planets and star:
-gsave = zeros(T,n)
-for i=2:n
-  # Compute the relative sky velocity dotted with position:
-  gsave[i]= g!(i,1,x,v)
-end
-# Loop over time steps:
-dt = zero(T)
-gi = zero(T)
-ntt_max = size(tt)[2]
-param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
-while t < (t0+tmax) && param_real
-  # Carry out a dh17 mapping step:
-  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
-  #dh17!(x,v,h,m,n,jac_step,pair)
-  param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
-  # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
-  # Star is body 1; planets are 2-nbody (note that this could be modified to see if
-  # any body transits another body):
-  for i=2:n
-    # Compute the relative sky velocity dotted with position:
-    gi = g!(i,1,x,v)
-    ri = sqrt(x[1,i]^2+x[2,i]^2+x[3,i]^2)  # orbital distance
-    # See if sign of g switches, and if planet is in front of star (by a good amount):
-    # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
-    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri && ri < rstar
-      # A transit has occurred between the time steps - integrate dh17! between timesteps
-      count[i] += 1
-      if count[i] <= ntt_max
-        dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
-        xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior; jac_trans_err .= jac_error_prior
-        xerr_trans .= xerr_prior; verr_trans .= verr_prior
-#        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtdq,pair) # 20%
-        dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtdq,pair) # 20%
-        #tt[i,count[i]]=t+dt
-        tt[i,count[i]],stmp = comp_sum(t,s2,dt)
-        # Save for posterity:
-        for k=1:7, p=1:n
-          dtdq0[i,count[i],k,p] = dtdq[k,p]
         end
       end
     end
@@ -824,6 +823,111 @@ while t < t0+tmax && param_real
         tt[i,count[i]],stmp = comp_sum(t,s2,dt)
       end
 #      tt[i,count[i]]=t+findtransit2!(1,i,n,h,gi,gsave[i],m,xprior,vprior,pair)
+    end
+    gsave[i] = gi
+  end
+  # Save the current state as prior state:
+  xprior .= x
+  vprior .= v
+  xerr_prior .= xerror
+  verr_prior .= verror
+  if mod(istep,iout) == 0 && iout > 0
+    # Write to file:
+    writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
+  end
+  # Increment time by the time step using compensated summation:
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
+  # t += h  <- this leads to loss of precision
+  # Increment counter by one:
+  istep +=1
+#  println("xerror: ",xerror)
+#  println("verror: ",verror)
+end
+#println("xerror: ",xerror)
+#println("verror: ",verror)
+if fout != ""
+  # Close output file:
+  close(file_handle)
+end
+return
+end
+
+# Computes TTVs, sky velocities, and impact parameters as a function of initial x,v,m.
+function ttvbv!(n::Int64,t0::T,h::T,tmax::T,m::Array{T,1},x::Array{T,2},v::Array{T,2},ttbv::Array{T,3},count::Array{Int64,1},fout::String,iout::Int64,rstar::T,pair::Array{Bool,2}) where {T <: Real}
+# Make some copies to allocate space for saving prior step and computing coordinates at the times of transit.
+xprior = copy(x)
+vprior = copy(v)
+xtransit = copy(x)
+vtransit = copy(v)
+#xerror = zeros(x); verror = zeros(v)
+xerror = copy(x); verror = copy(v)
+fill!(xerror,zero(T)); fill!(verror,zero(T))
+#xerr_prior = zeros(x); verr_prior = zeros(v)
+xerr_prior = copy(xerror); verr_prior = copy(verror)
+# Set the time to the initial time:
+t = t0
+# Define error estimate based on Kahan (1965):
+s2 = zero(T)
+# Set step counter to zero:
+istep = 0
+# Jacobian for each step (7 elements+mass, n_planets, 7 elements+mass, n planets):
+# Save the g function, which computes the relative sky velocity dotted with relative position
+# between the planets and star:
+gsave = zeros(T,n)
+gi  = 0.0
+dt::T = 0.0
+# Loop over time steps:
+ntt_max = size(ttbv)[3]
+# How many variables are we computing?  1 = just times; 3 = times + v_sky + b_sky:
+ntbv = size(ttbv)[1]
+if ntbv == 3
+  calcbvsky = true
+else
+  calcbvsky = false
+end
+param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m))
+if fout != ""
+  # Open file for output:
+  file_handle =open(fout,"a")
+end
+while t < t0+tmax && param_real
+  # Carry out a phi^2 mapping step:
+#  phi2!(x,v,h,m,n)
+  ah18!(x,v,xerror,verror,h,m,n,pair)
+#  xbig = big.(x); vbig = big.(v); hbig = big(h); mbig = big.(m)
+  #dh17!(x,v,xerror,verror,h,m,n,pair)
+#  dh17!(xbig,vbig,hbig,mbig,n,pair)
+#  x .= convert(Array{Float64,2},xbig); v .= convert(Array{Float64,2},vbig)
+  param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m))
+  # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
+  # Star is body 1; planets are 2-nbody:
+  for i=2:n
+    # Compute the relative sky velocity dotted with position:
+    gi = g!(i,1,x,v)
+    ri = sqrt(x[1,i]^2+x[2,i]^2+x[3,i]^2)
+    # See if sign switches, and if planet is in front of star (by a good amount):
+    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri && ri < rstar
+      # A transit has occurred between the time steps.
+      # Approximate the planet-star motion as a Keplerian, weighting over timestep:
+      count[i] += 1
+      if count[i] <= ntt_max
+        dt0 = -gsave[i]*h/(gi-gsave[i])
+        xtransit .= xprior
+        vtransit .= vprior
+        #hbig = big(h); dt0big=big(dt0); mbig=big.(m); xtbig = big.(xtransit); vtbig = big.(vtransit)
+        #dtbig = findtransit2!(1,i,n,hbig,dt0big,mbig,xtbig,vtbig,pair)
+        #dt = convert(Float64,dtbig)
+        if calcbvsky
+          dt,vsky,bsky = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_prior,verr_prior,pair;calcbvsky=calcbvsky) 
+          ttbv[2,i,count[i]] = vsky
+          ttbv[3,i,count[i]] = bsky
+        else
+          dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_prior,verr_prior,pair)
+        end
+        ttbv[1,i,count[i]],stmp = comp_sum(t,s2,dt)
+      end
     end
     gsave[i] = gi
   end
