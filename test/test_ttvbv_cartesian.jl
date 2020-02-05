@@ -1,4 +1,5 @@
 
+using JLD2
 
 #include("../src/ttv.jl")
 #include("/Users/ericagol/Computer/Julia/regress.jl")
@@ -135,18 +136,18 @@ for i=2:3, k=1:7, l=1:3
     end
   end
 end
-mederror = zeros(size(tt))
-for i=2:3
-  for j=1:count1[i]
-    data_list = Float64[]
-    for itbv=1:ntbv, k=1:7, l=1:3
-      if abs(dtbvdq0_num[itbv,i,j,k,l]) > 0
-        push!(data_list,abs(dtbvdq0[itbv,i,j,k,l]/dtbvdq0_num[itbv,i,j,k,l]-1.0))
-      end
-    end
-    mederror[i,j] = median(data_list)
-  end
-end
+#mederror = zeros(size(ttbv))
+#for i=2:3
+#  for j=1:count1[i]
+#    data_list = Float64[]
+#    for itbv=1:ntbv, k=1:7, l=1:3
+#      if abs(dtbvdq0_num[itbv,i,j,k,l]) > 0
+#        push!(data_list,abs(dtbvdq0[itbv,i,j,k,l]/dtbvdq0_num[itbv,i,j,k,l]-1.0))
+#      end
+#      mederror[itbv,i,j] = median(data_list)
+#    end
+#  end
+#end
 
 # Plot a line that scales as time^{3/2}:
 
@@ -154,6 +155,6 @@ loglog([1.0,1024.0],1e-12*[1,2^15],":",linewidth=3)
 
 
 println("Max diff asinh(dtbvdq0): ",maximum(abs.(asinh.(dtbvdq0_num[mask]).-asinh.(dtbvdq0[mask]))))
-@test isapprox(asinh.(dtbvdq0[mask]),asinh.(convert(Array{Float64,4},dtbvdq0_num)[mask]);norm=maxabs)
-
+@test isapprox(asinh.(dtbvdq0[mask]),asinh.(convert(Array{Float64,5},dtbvdq0_num)[mask]);norm=maxabs)
+@save "test_ttbv.jld2" dtbvdq0 dtbvdq0_num
 end

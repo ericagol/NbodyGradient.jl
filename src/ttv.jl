@@ -126,7 +126,7 @@ ttv!(n,t0,h,tmax,m,x,v,tt,count,fout,iout,rstar,pair)
 return dq
 end
 
-# Computes TTVs, v_sky & b_sky as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
+# Computes TTVs, v_sky & b_sky^2 as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
 function ttvbv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::Array{T,3},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,n,n)) where {T <: Real}
 # 
 # Input quantities:
@@ -136,8 +136,8 @@ function ttvbv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::
 # tmax  = duration of integration [days]
 # elements[i,j] = 2D n x 7 array of the masses & orbital elements of the bodies (currently first body's orbital elements are ignored)
 #            elements are ordered as: mass, period, t0, e*cos(omega), e*sin(omega), inclination, longitude of ascending node (Omega)
-# ttbv  = pre-allocated array to hold transit times (& v_sky/b_sky) of size [1-3] x [n x max(ntt)] (currently only compute transits of star, so first row is zero) [days]
-#         upon output, set to transit times (& v_sky/b_sky) of planets.
+# ttbv  = pre-allocated array to hold transit times (& v_sky/b_sky^2) of size [1-3] x [n x max(ntt)] (currently only compute transits of star, so first row is zero) [days]
+#         upon output, set to transit times (& v_sky/b_sky^2) of planets.
 # count = pre-allocated array of the number of transits for each body upon output
 #
 # dlnq  = fractional variation in initial parameter jq of body iq for finite-difference calculation of
@@ -277,7 +277,7 @@ count::Array{Int64,1},dtbvdq0::Array{Float64,5},dtbvdq0_num::Array{BigFloat,5},d
 # ttbv    = array of transit times of size 3 x [n x max(ntt)] (currently only compute transits of star, so first row is zero) [days]
 # count = array of the number of transits for each body
 # dtbvdq0 = derivative of transit times, impact parameters, and sky velocities with respect to initial x,v,m [various units: day/length (3), day^2/length (3), day/mass]
-#             5D array  [1-3] x [n x max(ntt) ] x [n x 7] - derivatives of transits times (and v_sky/b_sky) of each planet with respect to initial positions/velocities
+#             5D array  [1-3] x [n x max(ntt) ] x [n x 7] - derivatives of transits times (and v_sky/b_sky^2) of each planet with respect to initial positions/velocities
 #             masses of *all* bodies.  Note: mass derivatives are *after* positions/velocities, even though they are at start
 #             of the elements[i,j] array.
 # Output quantity:
@@ -314,7 +314,7 @@ ttvbv!(n,t0,h,tmax,m,x,v,ttbv,count,dtbvdq0,dtbvdq0_num,dlnq,rstar,pair)
 # Need to apply initial jacobian TBD - convert from
 # derivatives with respect to (x,v,m) to (elements,m):
 ntt_max = size(ttbv)[3]
-ntbv = size(ttbv)[1] # = 1 for just times; = 3 for times + v_sky + b_sky
+ntbv = size(ttbv)[1] # = 1 for just times; = 3 for times + v_sky + b_sky^2
 @inbounds for itbv=1:ntbv, i=1:n, j=1:count[i]
   if j <= ntt_max
   # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
@@ -450,7 +450,7 @@ ttvbv!(n,t0,h,tmax,m,x,v,ttbv,count,dtbvdq0,rstar,pair;fout=fout,iout=iout)
 # Need to apply initial jacobian TBD - convert from
 # derivatives with respect to (x,v,m) to (elements,m):
 ntt_max = size(ttbv)[3]
-ntbv = size(ttbv)[1] # = 1 for just times; = 3 for times + v_sky + b_sky
+ntbv = size(ttbv)[1] # = 1 for just times; = 3 for times + v_sky + b_sky^2
 @inbounds for itbv=1:ntbv, i=1:n, j=1:count[i]
   if j <= ntt_max
   # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
@@ -643,9 +643,9 @@ while t < (t0+tmax) && param_real
         xerr_trans .= xerr_prior; verr_trans .= verr_prior
 #        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtbvdq,pair) # 20%
         if calcbvsky
-          dt,vsky,bsky = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtbvdq,pair) # 20%
+          dt,vsky,bsky2 = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtbvdq,pair) # 20%
           ttbv[2,i,count[i]] = vsky
-          ttbv[3,i,count[i]] = bsky
+          ttbv[3,i,count[i]] = bsky2
         else
           dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtbvdq,pair) # 20%
         end
@@ -834,7 +834,7 @@ end
 return
 end
 
-# Computes TTVs, v_sky, b_sky for initial x,v, as well as timing derivatives with respect to x,v,m (dtbvdq0).
+# Computes TTVs, v_sky, b_sky^2 for initial x,v, as well as timing derivatives with respect to x,v,m (dtbvdq0).
 # This version is used to test findtransit2 by computing finite difference derivative of findtransit2.
 function ttvbv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},ttbv::Array{Float64,3},count::Array{Int64,1},dtbvdq0::Array{Float64,5},dtbvdq0_num::Array{BigFloat,5},dlnq::BigFloat,rstar::Float64,pair::Array{Bool,2})
 xprior = copy(x)
@@ -860,7 +860,7 @@ istep = 0
 # Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
 ntbv = size(ttbv)[1]
 if ntbv == 3
-  # Compute times, vsky & bsky:
+  # Compute times, vsky & bsky^2:
   calcbvsky = true
 else
   # Just compute transit times:
@@ -913,10 +913,10 @@ while t < t0+tmax && param_real
         xtransit .= xprior; vtransit .= vprior; xerr_trans .= xerr_prior; verr_trans .= verr_prior
         jac_transit = Matrix{Float64}(I,7*n,7*n); jac_trans_err .= jac_error_prior
         if calcbvsky
-          # Compute time of transit, vsky, and bsky:
-          dt,vsky,bsky = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtbvdq3,pair) # Just computing derivative since prior timestep, so start with identity matrix
+          # Compute time of transit, vsky, and bsky^2:
+          dt,vsky,bsky2 = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtbvdq3,pair) # Just computing derivative since prior timestep, so start with identity matrix
           ttbv[2,i,count[i]] = vsky
-          ttbv[3,i,count[i]] = bsky
+          ttbv[3,i,count[i]] = bsky2
         else
           # Compute only time of transit:
           dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtbvdq3,pair) # Just computing derivative since prior timestep, so start with identity matrix
@@ -930,14 +930,14 @@ while t < t0+tmax && param_real
           dt_plus = big(dt)  # Starting estimate
           if calcbvsky
             dvsky_plus = big(vsky)  # Starting estimate
-            dbsky_plus = big(bsky)  # Starting estimate
+            dbsky2_plus = big(bsky2)  # Starting estimate
           end
           xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m); fill!(xerr_big,zero(BigFloat)); fill!(verr_big,zero(BigFloat))
           if k < 4; dq = dlnq*xtransit_plus[k,p]; xtransit_plus[k,p] += dq; elseif k < 7; dq =vtransit_plus[k-3,p]*dlnq; vtransit_plus[k-3,p] += dq; else; dq  = m_plus[p]*dlnq; m_plus[p] += dq; end
           if calcbvsky 
-            dt_plus,dvsky_plus,dbsky_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,xerr_big,verr_big,pair;calcbvsky=calcbvsky) # 20%
+            dt_plus,dvsky_plus,dbsky2_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,xerr_big,verr_big,pair;calcbvsky=calcbvsky) # 20%
             dvsky_minus = big(vsky)
-            dbsky_minus = big(bsky)
+            dbsky2_minus = big(bsky2)
           else
             dt_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,xerr_big,verr_big,pair) # 20%
           end
@@ -946,9 +946,9 @@ while t < t0+tmax && param_real
           if k < 4; dq = dlnq*xtransit_minus[k,p];xtransit_minus[k,p] -= dq; elseif k < 7; dq =vtransit_minus[k-3,p]*dlnq; vtransit_minus[k-3,p] -= dq; else; dq  = m_minus[p]*dlnq; m_minus[p] -= dq; end
           hbig = big(h)
           if calcbvsky
-            dt_minus,dvsky_minus,dbsky_minus= findtransit3!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,xerr_big,verr_big,pair;calcbvsky=calcbvsky) # 20%
+            dt_minus,dvsky_minus,dbsky2_minus= findtransit3!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,xerr_big,verr_big,pair;calcbvsky=calcbvsky) # 20%
             dtbvdq0_num[2,i,count[i],k,p] = (dvsky_plus-dvsky_minus)/(2dq)
-            dtbvdq0_num[3,i,count[i],k,p] = (dbsky_plus-dbsky_minus)/(2dq)
+            dtbvdq0_num[3,i,count[i],k,p] = (dbsky2_plus-dbsky2_minus)/(2dq)
           else
             dt_minus= findtransit3!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,xerr_big,verr_big,pair) # 20%
           end
@@ -1114,7 +1114,7 @@ gi  = 0.0
 dt::T = 0.0
 # Loop over time steps:
 ntt_max = size(ttbv)[3]
-# How many variables are we computing?  1 = just times; 3 = times + v_sky + b_sky:
+# How many variables are we computing?  1 = just times; 3 = times + v_sky + b_sky^2:
 ntbv = size(ttbv)[1]
 if ntbv == 3
   calcbvsky = true
@@ -1154,9 +1154,9 @@ while t < t0+tmax && param_real
         #dtbig = findtransit2!(1,i,n,hbig,dt0big,mbig,xtbig,vtbig,pair)
         #dt = convert(Float64,dtbig)
         if calcbvsky
-          dt,vsky,bsky = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_prior,verr_prior,pair;calcbvsky=calcbvsky) 
+          dt,vsky,bsky2 = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_prior,verr_prior,pair;calcbvsky=calcbvsky) 
           ttbv[2,i,count[i]] = vsky
-          ttbv[3,i,count[i]] = bsky
+          ttbv[3,i,count[i]] = bsky2
         else
           dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_prior,verr_prior,pair)
         end
@@ -3300,9 +3300,9 @@ end
 if calcbvsky
  # Compute the sky velocity and impact parameter:
  vsky = sqrt((v[1,j]-v[1,i])^2 + (v[2,j]-v[2,i])^2)
- bsky = sqrt((x[1,j]-x[1,i])^2 + (x[2,j]-x[2,i])^2)
+ bsky2 = (x[1,j]-x[1,i])^2 + (x[2,j]-x[2,i])^2
  # return the transit time, impact parameter, and sky velocity:
- return tt::T,vsky::T,bsky::T
+ return tt::T,vsky::T,bsky2::T
 else
  return tt::T
 end
@@ -3391,9 +3391,9 @@ ntbv = size(dtbvdq)[1]
 if ntbv == 3
   # Compute the impact parameter and sky velocity:
   vsky = sqrt((v[1,j]-v[1,i])^2 + (v[2,j]-v[2,i])^2)
-  bsky = sqrt((x[1,j]-x[1,i])^2 + (x[2,j]-x[2,i])^2)
+  bsky2 = (x[1,j]-x[1,i])^2 + (x[2,j]-x[2,i])^2
   # partial derivative v_{sky} with respect to time:
-  dvdt = gdot/vsky
+  dvdt = ((v[1,j]-v[1,i])*(dqdt[(j-1)*7+4]-dqdt[(i-1)*7+4])+(v[2,j]-v[2,i])*(dqdt[(j-1)*7+5]-dqdt[(i-1)*7+5]))/vsky
   # (note that \partial b/\partial t = 0 at mid-transit since g_{sky} = 0 mid-transit).
   @inbounds for p=1:n
     indp = (p-1)*7
@@ -3401,12 +3401,12 @@ if ntbv == 3
       # Compute derivatives:
       #v_{sky} = sqrt((v[1,j]-v[1,i])^2+(v[2,j]-v[2,i])^2)
       dtbvdq[2,k,p] = ((jac_step[indj+3,indp+k]-jac_step[indi+3,indp+k])*(v[1,j]-v[1,i])+(jac_step[indj+4,indp+k]-jac_step[indi+4,indp+k])*(v[2,j]-v[2,i]))/vsky + dvdt*dtbvdq[1,k,p]
-      #b_{sky} = sqrt((x[1,j]-x[1,i])^2+(x[2,j]-x[2,i])^2)
-      dtbvdq[3,k,p] = ((jac_step[indj  ,indp+k]-jac_step[indi  ,indp+k])*(x[1,j]-x[1,i])+(jac_step[indj+1,indp+k]-jac_step[indi+1,indp+k])*(x[2,j]-x[2,i]))/bsky
+      #b_{sky}^2 = (x[1,j]-x[1,i])^2+(x[2,j]-x[2,i])^2
+      dtbvdq[3,k,p] = 2*((jac_step[indj  ,indp+k]-jac_step[indi  ,indp+k])*(x[1,j]-x[1,i])+(jac_step[indj+1,indp+k]-jac_step[indi+1,indp+k])*(x[2,j]-x[2,i]))
     end
   end
   # return the transit time, impact parameter, and sky velocity:
-  return tt::T,vsky::T,bsky::T
+  return tt::T,vsky::T,bsky2::T
 else
   return tt::T
 end
