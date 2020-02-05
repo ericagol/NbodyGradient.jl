@@ -455,9 +455,9 @@ ntbv = size(ttbv)[1] # = 1 for just times; = 3 for times + v_sky + b_sky
   if j <= ntt_max
   # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
     @inbounds for k=1:n, l=1:7
-      dtdelements[itbv,i,j,l,k] = zero(T)
+      dtbvdelements[itbv,i,j,l,k] = zero(T)
       @inbounds for p=1:n, q=1:7
-        dtdelements[itbv,i,j,l,k] += dtdq0[itbv,i,j,q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
+        dtbvdelements[itbv,i,j,l,k] += dtbvdq0[itbv,i,j,q,p]*jac_init[(p-1)*7+q,(k-1)*7+l]
       end
      end
   end
@@ -571,7 +571,7 @@ end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
 function ttvbv!(n::Int64,t0::T,h::T,tmax::T,m::Array{T,1},
-  x::Array{T,2},v::Array{T,2},ttbv::Array{T,3},count::Array{Int64,1},dtbvdq0::Array{T,4},rstar::T,pair::Array{Bool,2};fout="",iout=-1) where {T <: Real}
+  x::Array{T,2},v::Array{T,2},ttbv::Array{T,3},count::Array{Int64,1},dtbvdq0::Array{T,5},rstar::T,pair::Array{Bool,2};fout="",iout=-1) where {T <: Real}
 xprior = copy(x)
 vprior = copy(v)
 xtransit = copy(x)
@@ -643,16 +643,14 @@ while t < (t0+tmax) && param_real
         xerr_trans .= xerr_prior; verr_trans .= verr_prior
 #        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtbvdq,pair) # 20%
         if calcbvsky
-          dt,vsky,bsky = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtbvdq,pair;calcbvsky=calcbvsky) # 20%
+          dt,vsky,bsky = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtbvdq,pair) # 20%
+          ttbv[2,i,count[i]] = vsky
+          ttbv[3,i,count[i]] = bsky
         else
           dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtbvdq,pair) # 20%
         end
         #tt[i,count[i]]=t+dt
         ttbv[1,i,count[i]],stmp = comp_sum(t,s2,dt)
-        if calcbvsky
-          ttbv[2,i,count[i]] = vsky
-          ttbv[3,i,count[i]] = bsky
-        end
         # Save for posterity:
         @inbounds for itbv=1:ntbv, k=1:7, p=1:n
           dtbvdq0[itbv,i,count[i],k,p] = dtbvdq[itbv,k,p]
@@ -838,7 +836,7 @@ end
 
 # Computes TTVs, v_sky, b_sky for initial x,v, as well as timing derivatives with respect to x,v,m (dtbvdq0).
 # This version is used to test findtransit2 by computing finite difference derivative of findtransit2.
-function ttvbv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},ttbv::Array{Float64,3},count::Array{Int64,1},dtbvdq0::Array{Float64,4},dtbvdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64,pair::Array{Bool,2})
+function ttvbv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},ttbv::Array{Float64,3},count::Array{Int64,1},dtbvdq0::Array{Float64,5},dtbvdq0_num::Array{BigFloat,5},dlnq::BigFloat,rstar::Float64,pair::Array{Bool,2})
 xprior = copy(x)
 vprior = copy(v)
 #xtransit = big.(x); xtransit_plus = big.(x); xtransit_minus = big.(x)
@@ -926,11 +924,8 @@ while t < t0+tmax && param_real
         # Save for posterity:
         #tt[i,count[i]]=t+dt
         ttbv[1,i,count[i]],stmp = comp_sum(t,s2,dt)
-        for k=1:7, p=1:n
-#          dtbvdq0[i,count[i],k,p] = dtbvdq[k,p]
-          for itbv = 1:ntbv
-            dtbvdq0[itbv,i,count[i],k,p] = dtbvdq3[itbv,k,p]
-          end
+        for itbv=1:ntbv, k=1:7, p=1:n
+          dtbvdq0[itbv,i,count[i],k,p] = dtbvdq3[itbv,k,p]
           # Compute numerical approximation of dtbvdq:
           dt_plus = big(dt)  # Starting estimate
           if calcbvsky
@@ -3302,13 +3297,12 @@ if iter >= 20
   println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot)
 end
 # Note: this is the time elapsed *after* the beginning of the timestep:
-ntbv = 
 if calcbvsky
  # Compute the sky velocity and impact parameter:
  vsky = sqrt((v[1,j]-v[1,i])^2 + (v[2,j]-v[2,i])^2)
  bsky = sqrt((x[1,j]-x[1,i])^2 + (x[2,j]-x[2,i])^2)
  # return the transit time, impact parameter, and sky velocity:
- return tt:T,vsky::T,bsky::T
+ return tt::T,vsky::T,bsky::T
 else
  return tt::T
 end
@@ -3412,7 +3406,7 @@ if ntbv == 3
     end
   end
   # return the transit time, impact parameter, and sky velocity:
-  return tt:T,vsky::T,bsky::T
+  return tt::T,vsky::T,bsky::T
 else
   return tt::T
 end
