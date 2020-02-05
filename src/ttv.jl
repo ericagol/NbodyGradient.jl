@@ -57,7 +57,6 @@ if ~@isdefined pxpr0
 end
 
 # Computes TTVs as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
-#function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dlnq::Float64,iq::Int64,jq::Int64)
 function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,n,n)) where {T <: Real}
 # 
 # Input quantities:
@@ -124,6 +123,76 @@ if dlnq != 0.0 && iq > 0 && iq < 7
   end
 end
 ttv!(n,t0,h,tmax,m,x,v,tt,count,fout,iout,rstar,pair)
+return dq
+end
+
+# Computes TTVs, v_sky & b_sky as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
+function ttvbv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::Array{T,3},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,n,n)) where {T <: Real}
+# 
+# Input quantities:
+# n     = number of bodies
+# t0    = initial time of integration  [days]
+# h     = time step [days]
+# tmax  = duration of integration [days]
+# elements[i,j] = 2D n x 7 array of the masses & orbital elements of the bodies (currently first body's orbital elements are ignored)
+#            elements are ordered as: mass, period, t0, e*cos(omega), e*sin(omega), inclination, longitude of ascending node (Omega)
+# ttbv  = pre-allocated array to hold transit times (& v_sky/b_sky) of size [1-3] x [n x max(ntt)] (currently only compute transits of star, so first row is zero) [days]
+#         upon output, set to transit times (& v_sky/b_sky) of planets.
+# count = pre-allocated array of the number of transits for each body upon output
+#
+# dlnq  = fractional variation in initial parameter jq of body iq for finite-difference calculation of
+#         derivatives [this is only needed for testing derivative code, below].
+#
+# Example: see test_ttvbv_elements.jl in test/ directory
+#
+#fcons = open("fcons.txt","w");
+# Set up mass, position & velocity arrays.  NDIM =3
+m=zeros(T,n)
+x=zeros(T,NDIM,n)
+v=zeros(T,NDIM,n)
+# Fill the transit-timing array with zeros:
+fill!(ttbv,0.0)
+# Counter for transits of each planet:
+fill!(count,0)
+# Insert masses from the elements array:
+for i=1:n
+  m[i] = elements[i,1]
+end
+# Allow for perturbations to initial conditions: jq labels body; iq labels phase-space element (or mass)
+# iq labels phase-space element (1-3: x; 4-6: v; 7: m)
+dq = zero(T)
+if iq == 7 && dlnq != 0.0
+  dq = m[jq]*dlnq
+  m[jq] += dq
+end
+# Initialize the N-body problem using nested hierarchy of Keplerians:
+x,v = init_nbody(elements,t0,n)
+elements_big=big.(elements); t0big = big(t0)
+xbig,vbig = init_nbody(elements_big,t0big,n)
+#if T != BigFloat
+#  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (dlnq version)")
+#end
+x = convert(Array{T,2},xbig); v = convert(Array{T,2},vbig)
+# Perturb the initial condition by an amount dlnq (if it is non-zero):
+if dlnq != 0.0 && iq > 0 && iq < 7
+  if iq < 4
+    if x[iq,jq] != 0
+      dq = x[iq,jq]*dlnq
+    else
+      dq = dlnq
+    end
+    x[iq,jq] += dq
+  else
+  # Same for v
+    if v[iq-3,jq] != 0
+      dq = v[iq-3,jq]*dlnq
+    else
+      dq = dlnq
+    end
+    v[iq-3,jq] += dq
+  end
+end
+ttvbv!(n,t0,h,tmax,m,x,v,ttbv,count,fout,iout,rstar,pair)
 return dq
 end
 
@@ -735,6 +804,171 @@ while t < t0+tmax && param_real
 #            println("x: ",x)
 #            println("v: ",v)
 #            read(STDIN,Char)
+          end
+        end
+      end
+    end
+    gsave[i] = gi
+  end
+  # Save the current state as prior state:
+  xprior .= x
+  vprior .= v
+  jac_prior .= jac_step
+  jac_error_prior .= jac_error
+  xerr_prior .= xerror; verr_prior .= verror
+  # Increment time by the time step using compensated summation:
+  #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
+  #t = tmp
+  t,s2 = comp_sum(t,s2,h)
+  # t += h  <- this leads to loss of precision
+  # Increment counter by one:
+  istep +=1
+end
+return
+end
+
+# Computes TTVs, v_sky, b_sky for initial x,v, as well as timing derivatives with respect to x,v,m (dtbvdq0).
+# This version is used to test findtransit2 by computing finite difference derivative of findtransit2.
+function ttvbv!(n::Int64,t0::Float64,h::Float64,tmax::Float64,m::Array{Float64,1},x::Array{Float64,2},v::Array{Float64,2},ttbv::Array{Float64,3},count::Array{Int64,1},dtbvdq0::Array{Float64,4},dtbvdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64,pair::Array{Bool,2})
+xprior = copy(x)
+vprior = copy(v)
+#xtransit = big.(x); xtransit_plus = big.(x); xtransit_minus = big.(x)
+#vtransit = big.(v); vtransit_plus = big.(v); vtransit_minus = big.(v)
+xtransit = copy(x); xtransit_plus = big.(x); xtransit_minus = big.(x)
+vtransit = copy(v); vtransit_plus = big.(v); vtransit_minus = big.(v)
+xerror = zeros(Float64,size(x)); verror = zeros(Float64,size(x))
+xerr_trans = zeros(Float64,size(x)); verr_trans = zeros(Float64,size(x))
+xerr_prior = zeros(Float64,size(x)); verr_prior = zeros(Float64,size(x))
+xerr_big = zeros(BigFloat,size(x)); verr_big = zeros(BigFloat,size(x))
+m_plus = big.(m); m_minus = big.(m); hbig = big(h); dq = big(0.0)
+if h == 0
+  println("h is zero ",h)
+end
+# Set the time to the initial time:
+t = t0
+# Define error estimate based on Kahan (1965):
+s2 = 0.0
+# Set step counter to zero:
+istep = 0
+# Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
+ntbv = size(ttbv)[1]
+if ntbv == 3
+  # Compute times, vsky & bsky:
+  calcbvsky = true
+else
+  # Just compute transit times:
+  calcbvsky = false
+end
+dtbvdqbig = zeros(BigFloat,ntbv,7,n)
+dtbvdq = zeros(Float64,ntbv,7,n)
+dtbvdq3 = zeros(Float64,ntbv,7,n)
+# Initialize the Jacobian to the identity matrix:
+jac_prior = zeros(Float64,7*n,7*n)
+#jac_step = eye(Float64,7*n)
+jac_step = Matrix{Float64}(I,7*n,7*n)
+# Initialize Jacobian error matrix
+jac_error = zeros(Float64,7*n,7*n)
+jac_trans_err = zeros(Float64,7*n,7*n)
+jac_error_prior = zeros(Float64,7*n,7*n)
+
+# Save the g function, which computes the relative sky velocity dotted with relative position
+# between the planets and star:
+gsave = zeros(Float64,n)
+for i=2:n
+  # Compute the relative sky velocity dotted with position:
+  gsave[i]= g!(i,1,x,v)
+end
+# Loop over time steps:
+dt::Float64 = 0.0
+gi = 0.0
+ntt_max = size(tt)[2]
+param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
+while t < t0+tmax && param_real
+  # Carry out a dh17 mapping step:
+  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
+  #dh17!(x,v,h,m,n,jac_step,pair)
+  param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
+  # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
+  # Star is body 1; planets are 2-nbody (note that this could be modified to see if
+  # any body transits another body):
+  for i=2:n
+    # Compute the relative sky velocity dotted with position:
+    gi = g!(i,1,x,v)
+    ri = sqrt(x[1,i]^2+x[2,i]^2+x[3,i]^2)
+    # See if sign of g switches, and if planet is in front of star (by a good amount):
+    # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
+    if gi > 0 && gsave[i] < 0 && x[3,i] > 0.25*ri && ri < rstar
+      # A transit has occurred between the time steps - integrate dh17! between timesteps
+      count[i] += 1
+      if count[i] <= ntt_max
+        dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
+        # Now, recompute with findtransit3:
+        xtransit .= xprior; vtransit .= vprior; xerr_trans .= xerr_prior; verr_trans .= verr_prior
+        jac_transit = Matrix{Float64}(I,7*n,7*n); jac_trans_err .= jac_error_prior
+        if calcbvsky
+          # Compute time of transit, vsky, and bsky:
+          dt,vsky,bsky = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtbvdq3,pair) # Just computing derivative since prior timestep, so start with identity matrix
+          ttbv[2,i,count[i]] = vsky
+          ttbv[3,i,count[i]] = bsky
+        else
+          # Compute only time of transit:
+          dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtbvdq3,pair) # Just computing derivative since prior timestep, so start with identity matrix
+        end
+        # Save for posterity:
+        #tt[i,count[i]]=t+dt
+        ttbv[1,i,count[i]],stmp = comp_sum(t,s2,dt)
+        for k=1:7, p=1:n
+#          dtbvdq0[i,count[i],k,p] = dtbvdq[k,p]
+          for itbv = 1:ntbv
+            dtbvdq0[itbv,i,count[i],k,p] = dtbvdq3[itbv,k,p]
+          end
+          # Compute numerical approximation of dtbvdq:
+          dt_plus = big(dt)  # Starting estimate
+          if calcbvsky
+            dvsky_plus = big(vsky)  # Starting estimate
+            dbsky_plus = big(bsky)  # Starting estimate
+          end
+          xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m); fill!(xerr_big,zero(BigFloat)); fill!(verr_big,zero(BigFloat))
+          if k < 4; dq = dlnq*xtransit_plus[k,p]; xtransit_plus[k,p] += dq; elseif k < 7; dq =vtransit_plus[k-3,p]*dlnq; vtransit_plus[k-3,p] += dq; else; dq  = m_plus[p]*dlnq; m_plus[p] += dq; end
+          if calcbvsky 
+            dt_plus,dvsky_plus,dbsky_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,xerr_big,verr_big,pair) # 20%
+          else
+            dt_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,xerr_big,verr_big,pair) # 20%
+          end
+          dt_minus= big(dt)  # Starting estimate
+          if calcbvsky
+            dvsky_minus = big(vsky)
+            dbsky_minus = big(bsky)
+          end
+          xtransit_minus .= big.(xprior); vtransit_minus .= big.(vprior); m_minus .= big.(m); fill!(xerr_big,zero(BigFloat)); fill!(verr_big,zero(BigFloat))
+          if k < 4; dq = dlnq*xtransit_minus[k,p];xtransit_minus[k,p] -= dq; elseif k < 7; dq =vtransit_minus[k-3,p]*dlnq; vtransit_minus[k-3,p] -= dq; else; dq  = m_minus[p]*dlnq; m_minus[p] -= dq; end
+          hbig = big(h)
+          if calcbvsky
+            dt_minus,dvsky_minus,dbsky_minus= findtransit3!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,xerr_big,verr_big,pair) # 20%
+          else
+            dt_minus= findtransit3!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,xerr_big,verr_big,pair) # 20%
+          end
+          # Compute finite-different derivative:
+          dtbvdq0_num[1,i,count[i],k,p] = (dt_plus-dt_minus)/(2dq)
+          if calcbvsky
+            dtbvdq0_num[2,i,count[i],k,p] = (dvsky_plus-dvsky_minus)/(2dq)
+            dtbvdq0_num[3,i,count[i],k,p] = (dbsky_plus-dbsky_minus)/(2dq)
+          end
+          if abs(dtdq0_num[1,i,count[i],k,p] - dtdq0[1,i,count[i],k,p]) > 1e-10
+            # Compute gdot_num:
+            dt_minus = big(dt)*(1-dlnq)  # Starting estimate
+            xtransit_minus .= big.(xprior); vtransit_minus .= big.(vprior); m_minus .= big.(m); fill!(xerr_big,zero(BigFloat)); fill!(verr_big,zero(BigFloat))
+            ah18!(xtransit_minus,vtransit_minus,xerr_big,verr_big,dt_minus,m_minus,n,pair)
+            #dh17!(xtransit_minus,vtransit_minus,dt_minus,m_minus,n,pair)
+            # Compute time offset:
+            gsky_minus = g!(i,1,xtransit_minus,vtransit_minus)
+            dt_plus = big(dt)*(1+dlnq)  # Starting estimate
+            xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m); fill!(xerr_big,zero(BigFloat)); fill!(verr_big,zero(BigFloat))
+            ah18!(xtransit_plus,vtransit_plus,xerr_big,verr_big,dt_plus,m_plus,n,pair)
+            #dh17!(xtransit_plus,vtransit_plus,dt_plus,m_plus,n,pair)
+            # Compute time offset:
+            gsky_plus = g!(i,1,xtransit_plus,vtransit_plus)
+            gdot_num = convert(Float64,(gsky_plus-gsky_minus)/(2dlnq*big(dt)))
           end
         end
       end
