@@ -1,4 +1,4 @@
-
+2
 using JLD2
 
 #include("../src/ttv.jl")
@@ -7,7 +7,7 @@ using JLD2
 @testset "ttvbv_cartesian" begin
 
 # This routine takes derivative of transit times, sky velocity & 
-# impact parameter with respect to the initial cartesian coordinates of bodies. [x]
+# impact parameter squared with respect to the initial cartesian coordinates of bodies. [x]
 #n = 8
 n = 3
 t0 = 7257.93115525-7300.0
@@ -156,5 +156,5 @@ loglog([1.0,1024.0],1e-12*[1,2^15],":",linewidth=3)
 
 println("Max diff asinh(dtbvdq0): ",maximum(abs.(asinh.(dtbvdq0_num[mask]).-asinh.(dtbvdq0[mask]))))
 @test isapprox(asinh.(dtbvdq0[mask]),asinh.(convert(Array{Float64,5},dtbvdq0_num)[mask]);norm=maxabs)
-@save "test_ttbv.jld2" dtbvdq0 dtbvdq0_num
+#@save "test_ttbv.jld2" dtbvdq0 dtbvdq0_num
 end
