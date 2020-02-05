@@ -407,7 +407,7 @@ count::Array{Int64,1},dtbvdq0::Array{T,5},rstar::T;fout="",iout=-1,pair=zeros(Bo
 # tmax  = duration of integration [days]
 # elements[i,j] = 2D n x 7 array of the masses & orbital elements of the bodies (currently first body's orbital elements are ignored)
 #            elements are ordered as: mass, period, t0, e*cos(omega), e*sin(omega), inclination, longitude of ascending node (Omega)
-# ttbv    = array of transit times, impact parameter & sky velocity of size 3 x [n x max(ntt)] (currently only compute transits of star, so first row is zero) [days]
+# ttbv    = array of transit times, impact parameter & sky velocity of size [1-3] x [n x max(ntt)] (currently only compute transits of star, so first row is zero) [days]
 # count = array of the number of transits for each body
 # dtbvdq0 = derivative of transit times, impact parameters & sky velocities with respect to initial x,v,m [various units: day/length (3), day^2/length (3), day/mass]
 #         5D array  [1-3] x [n x max(ntt) ] x [n x 7] - derivatives of transits of each planet with respect to initial positions/velocities
@@ -592,6 +592,11 @@ jac_transit = zeros(T,7*n,7*n)
 jac_trans_err= zeros(T,7*n,7*n)
 # Initialize matrix for derivatives of transit times, impact parameters & sky velocity with respect to the initial x,v,m:
 ntbv = size(dtbvdq0)[1]
+if ntbv == 3
+  calcbvsky = true
+else
+  calcbvsky = false
+end
 dtbvdq = zeros(T,ntbv,7,n)
 # Initialize the Jacobian to the identity matrix:
 #jac_step = eye(T,7*n)
@@ -637,10 +642,14 @@ while t < (t0+tmax) && param_real
         xtransit .= xprior; vtransit .= vprior; jac_transit .= jac_prior; jac_trans_err .= jac_error_prior
         xerr_trans .= xerr_prior; verr_trans .= verr_prior
 #        dt = findtransit2!(1,i,n,h,dt0,m,xtransit,vtransit,jac_transit,dtbvdq,pair) # 20%
-        dt,vsky,bsky = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtbvdq,pair) # 20%
+        if calcbvsky
+          dt,vsky,bsky = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtbvdq,pair;calcbvsky=calcbvsky) # 20%
+        else
+          dt = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_trans,verr_trans,jac_transit,jac_trans_err,dtbvdq,pair) # 20%
+        end
         #tt[i,count[i]]=t+dt
         ttbv[1,i,count[i]],stmp = comp_sum(t,s2,dt)
-        if ntbv == 3
+        if calcbvsky
           ttbv[2,i,count[i]] = vsky
           ttbv[3,i,count[i]] = bsky
         end
@@ -931,29 +940,25 @@ while t < t0+tmax && param_real
           xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m); fill!(xerr_big,zero(BigFloat)); fill!(verr_big,zero(BigFloat))
           if k < 4; dq = dlnq*xtransit_plus[k,p]; xtransit_plus[k,p] += dq; elseif k < 7; dq =vtransit_plus[k-3,p]*dlnq; vtransit_plus[k-3,p] += dq; else; dq  = m_plus[p]*dlnq; m_plus[p] += dq; end
           if calcbvsky 
-            dt_plus,dvsky_plus,dbsky_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,xerr_big,verr_big,pair) # 20%
+            dt_plus,dvsky_plus,dbsky_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,xerr_big,verr_big,pair;calcbvsky=calcbvsky) # 20%
+            dvsky_minus = big(vsky)
+            dbsky_minus = big(bsky)
           else
             dt_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,xerr_big,verr_big,pair) # 20%
           end
           dt_minus= big(dt)  # Starting estimate
-          if calcbvsky
-            dvsky_minus = big(vsky)
-            dbsky_minus = big(bsky)
-          end
           xtransit_minus .= big.(xprior); vtransit_minus .= big.(vprior); m_minus .= big.(m); fill!(xerr_big,zero(BigFloat)); fill!(verr_big,zero(BigFloat))
           if k < 4; dq = dlnq*xtransit_minus[k,p];xtransit_minus[k,p] -= dq; elseif k < 7; dq =vtransit_minus[k-3,p]*dlnq; vtransit_minus[k-3,p] -= dq; else; dq  = m_minus[p]*dlnq; m_minus[p] -= dq; end
           hbig = big(h)
           if calcbvsky
-            dt_minus,dvsky_minus,dbsky_minus= findtransit3!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,xerr_big,verr_big,pair) # 20%
+            dt_minus,dvsky_minus,dbsky_minus= findtransit3!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,xerr_big,verr_big,pair;calcbvsky=calcbvsky) # 20%
+            dtbvdq0_num[2,i,count[i],k,p] = (dvsky_plus-dvsky_minus)/(2dq)
+            dtbvdq0_num[3,i,count[i],k,p] = (dbsky_plus-dbsky_minus)/(2dq)
           else
             dt_minus= findtransit3!(1,i,n,hbig,dt_minus,m_minus,xtransit_minus,vtransit_minus,xerr_big,verr_big,pair) # 20%
           end
           # Compute finite-different derivative:
           dtbvdq0_num[1,i,count[i],k,p] = (dt_plus-dt_minus)/(2dq)
-          if calcbvsky
-            dtbvdq0_num[2,i,count[i],k,p] = (dvsky_plus-dvsky_minus)/(2dq)
-            dtbvdq0_num[3,i,count[i],k,p] = (dbsky_plus-dbsky_minus)/(2dq)
-          end
           if abs(dtdq0_num[1,i,count[i],k,p] - dtdq0[1,i,count[i],k,p]) > 1e-10
             # Compute gdot_num:
             dt_minus = big(dt)*(1-dlnq)  # Starting estimate
