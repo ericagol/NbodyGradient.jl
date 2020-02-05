@@ -246,7 +246,7 @@ ttvbv!(n,t0,h,tmax,m,x,v,ttbv,count,dtbvdq0,dtbvdq0_num,dlnq,rstar,pair)
 # derivatives with respect to (x,v,m) to (elements,m):
 ntt_max = size(ttbv)[3]
 ntbv = size(ttbv)[1] # = 1 for just times; = 3 for times + v_sky + b_sky
-@inbounds for itbv=1:ntbv, for i=1:n, j=1:count[i]
+@inbounds for itbv=1:ntbv, i=1:n, j=1:count[i]
   if j <= ntt_max
   # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
     @inbounds for k=1:n, l=1:7
@@ -418,7 +418,7 @@ jac_error_prior = zeros(T,7*n,7*n)
 jac_transit = zeros(T,7*n,7*n)
 jac_trans_err= zeros(T,7*n,7*n)
 # Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
-dtdq = zeros(T,7,n)
+dtdq = zeros(T,1,7,n)
 # Initialize the Jacobian to the identity matrix:
 #jac_step = eye(T,7*n)
 jac_step = Matrix{T}(I,7*n,7*n)
@@ -468,7 +468,7 @@ while t < (t0+tmax) && param_real
         tt[i,count[i]],stmp = comp_sum(t,s2,dt)
         # Save for posterity:
         for k=1:7, p=1:n
-          dtdq0[i,count[i],k,p] = dtdq[k,p]
+          dtdq0[i,count[i],k,p] = dtdq[1,k,p]
         end
       end
     end
@@ -633,9 +633,9 @@ s2 = 0.0
 # Set step counter to zero:
 istep = 0
 # Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
-dtdqbig = zeros(BigFloat,7,n)
-dtdq = zeros(Float64,7,n)
-dtdq3 = zeros(Float64,7,n)
+dtdqbig = zeros(BigFloat,1,7,n)
+dtdq = zeros(Float64,1,7,n)
+dtdq3 = zeros(Float64,1,7,n)
 # Initialize the Jacobian to the identity matrix:
 jac_prior = zeros(Float64,7*n,7*n)
 #jac_step = eye(Float64,7*n)
@@ -697,7 +697,7 @@ while t < t0+tmax && param_real
         tt[i,count[i]],stmp = comp_sum(t,s2,dt)
         for k=1:7, p=1:n
 #          dtdq0[i,count[i],k,p] = dtdq[k,p]
-          dtdq0[i,count[i],k,p] = dtdq3[k,p]
+          dtdq0[i,count[i],k,p] = dtdq3[1,k,p]
           # Compute numerical approximation of dtdq:
           dt_plus = big(dt)  # Starting estimate
 #          dt_plus = dtbig  # Starting estimate
