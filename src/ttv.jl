@@ -497,6 +497,11 @@ if fout != ""
   # Open file for output:
   file_handle =open(fout,"a")
 end
+# Output initial conditions:
+if mod(istep,iout) == 0 && iout > 0
+  # Write to file:
+  writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
+end
 
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
@@ -607,6 +612,11 @@ if fout != ""
   # Open file for output:
   file_handle =open(fout,"a")
 end
+# Output initial conditions:
+if mod(istep,iout) == 0 && iout > 0
+  # Write to file:
+  writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
+end
 
 # Save the g function, which computes the relative sky velocity dotted with relative position
 # between the planets and star:
@@ -666,14 +676,14 @@ while t < (t0+tmax) && param_real
   jac_error_prior .= jac_error
   xerr_prior .= xerror
   verr_prior .= verror
-  if mod(istep,iout) == 0 && iout > 0
-    # Write to file:
-    writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n));convert(Array{Float64,1},reshape(jac_step,49n^2))]') # Transpose to write each line
-  end
   # Increment time by the time step using compensated summation:
   #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
   #t = tmp
   t,s2 = comp_sum(t,s2,h)
+  if mod(istep,iout) == 0 && iout > 0
+    # Write to file:
+    writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n));convert(Array{Float64,1},reshape(jac_step,49n^2))]') # Transpose to write each line
+  end
   # t += h <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -1023,6 +1033,11 @@ if fout != ""
   # Open file for output:
   file_handle =open(fout,"a")
 end
+# Output initial conditions:
+if mod(istep,iout) == 0 && iout > 0
+  # Write to file:
+  writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
+end
 while t < t0+tmax && param_real
   # Carry out a phi^2 mapping step:
 #  phi2!(x,v,h,m,n)
@@ -1065,14 +1080,14 @@ while t < t0+tmax && param_real
   vprior .= v
   xerr_prior .= xerror
   verr_prior .= verror
-  if mod(istep,iout) == 0 && iout > 0
-    # Write to file:
-    writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
-  end
   # Increment time by the time step using compensated summation:
   #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
   #t = tmp
   t,s2 = comp_sum(t,s2,h)
+  if mod(istep,iout) == 0 && iout > 0
+    # Write to file:
+    writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
+  end
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
@@ -1126,6 +1141,11 @@ if fout != ""
   # Open file for output:
   file_handle =open(fout,"a")
 end
+# Output initial conditions:
+if mod(istep,iout) == 0 && iout > 0
+  # Write to file:
+  writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
+end
 while t < t0+tmax && param_real
   # Carry out a phi^2 mapping step:
 #  phi2!(x,v,h,m,n)
@@ -1170,14 +1190,14 @@ while t < t0+tmax && param_real
   vprior .= v
   xerr_prior .= xerror
   verr_prior .= verror
-  if mod(istep,iout) == 0 && iout > 0
-    # Write to file:
-    writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
-  end
   # Increment time by the time step using compensated summation:
   #s2 += h; tmp = t + s2; s2 = (t - tmp) + s2
   #t = tmp
   t,s2 = comp_sum(t,s2,h)
+  if mod(istep,iout) == 0 && iout > 0
+    # Write to file:
+    writedlm(file_handle,[convert(Float64,t);convert(Array{Float64,1},reshape(x,3n));convert(Array{Float64,1},reshape(v,3n))]') # Transpose to write each line
+  end
   # t += h  <- this leads to loss of precision
   # Increment counter by one:
   istep +=1
