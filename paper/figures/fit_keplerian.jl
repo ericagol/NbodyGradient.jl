@@ -10,6 +10,8 @@
 # Fits a 2D Keplerian to a set of data
 using PyPlot
 using Optim
+using DelimitedFiles
+using Statistics
 
 # Kepler solver:
 include("../../src/kepler.jl")
@@ -43,17 +45,19 @@ function fit_keplerian(t,x,y,elements0)
       xmod,ymod = return_xy(t[i],elements)
       chisq += (x[i]-xmod)^2+(y[i]-ymod)^2
     end
-#    println("elements: ",elements," chi^2: ",chisq)
+    #println("elements: ",elements," chi^2: ",chisq)
   return chisq
   end
    
   # Optimize the fit:
   result =  optimize(chi_square,elements0,LBFGS(),autodiff=:forward)
 #  result =  optimize(chi_square,elements0,LBFGS())
+#  result =  optimize(chi_square,elements0)
   elements_best = result.minimizer
-  xmod = zeros(t)
-  ymod = zeros(t)
-  for i=1:length(t)
+  nt = length(t)
+  xmod = zeros(nt)
+  ymod = zeros(nt)
+  for i=1:nt
      xmod[i],ymod[i] = return_xy(t[i],elements_best)
   end
 return xmod,ymod, result
@@ -67,13 +71,15 @@ elements_best = zeros(5)
 chi_best = Inf
 chisq = zeros(20,20)
 tobs = data_hr[:,1]; xobs  = data_hr[:,5]-data_hr[:,2]; yobs = -(data_hr[:,7]-data_hr[:,4])
-xmod = zeros(tobs)
-ymod = zeros(tobs)
+nobs = length(tobs)
+xmod = zeros(nobs)
+ymod = zeros(nobs)
 k=1
 for j=1:20
   tp = elements_all[2,3]+(j-0.5)/20*elements_all[2,2]
   M = (tobs[1]-tp)*2*pi/period
-  omega = atan2(-(yobs[1]*cos(M)-xobs[1]*sin(M))/semi,(yobs[1]*sin(M)+xobs[1]*cos(M))/semi)
+#  omega = atan2(-(yobs[1]*cos(M)-xobs[1]*sin(M))/semi,(yobs[1]*sin(M)+xobs[1]*cos(M))/semi)
+  omega = atan(-(yobs[1]*cos(M)-xobs[1]*sin(M))/semi,(yobs[1]*sin(M)+xobs[1]*cos(M))/semi)
   for k=1:20
     omega = (k-0.5)/20*2*pi
     elements = [period,sqrt(elements_all[2,4]^2+elements_all[2,5]^2),tp,semi,omega]
@@ -83,9 +89,9 @@ for j=1:20
     end
     chisq[j,k] =sum((xobs .- xmod).^2+(yobs .- ymod).^2)
     if chisq[j,k] < chi_best
-      chi_best = chisq[j,k]
+      global chi_best = chisq[j,k]
       ibest = j
-      elements_best = elements
+      global elements_best = elements
       println(j," chi_best: ",chi_best," elements_best: ",elements_best)
       clf()
       plot(xobs,xmod)
@@ -108,10 +114,12 @@ clf()
 #plot(tobs,yobs-ymod)
 
 # Plot the difference in angle between the n-body and Keplerian angles:
-dtheta = atan2(yobs.*xmod .- ymod.*xobs,xobs.*xmod+yobs.*ymod)
+#dtheta = atan2(yobs.*xmod .- ymod.*xobs,xobs.*xmod+yobs.*ymod)
+dtheta = atan.(yobs.*xmod .- ymod.*xobs,xobs.*xmod+yobs.*ymod)
 xdot = data_hr[:,14]-data_hr[:,11]; ydot = -(data_hr[:,16]-data_hr[:,13])
 # Compute the change in theta as a function of time:
-dthetadt = (ydot.*xobs.-yobs.*xdot)./(xobs.^2.+yobs.^2)
+dthetadt = (ydot.*xobs .-yobs.*xdot)./(xobs.^2 .+yobs.^2)
 plot(tobs,-dtheta./dthetadt*24*3600)
-dtheta_big = atan2(yobs_big.*xmod_big .- ymod_big.*xobs_big,xobs_big.*xmod_big+yobs_big.*ymod_big)
+#dtheta_big = atan2(yobs_big.*xmod_big .- ymod_big.*xobs_big,xobs_big.*xmod_big .+yobs_big.*ymod_big)
+dtheta_big = atan.(yobs_big.*xmod_big .- ymod_big.*xobs_big,xobs_big.*xmod_big .+yobs_big.*ymod_big)
 plot(tobs,-dtheta_big./dthetadt*24*3600)
