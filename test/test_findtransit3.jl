@@ -13,6 +13,7 @@
 
 #n = 8
 n = 3
+H = [3,1,1]
 t0 = 7257.93115525
 #h  = 0.12
 h  = 0.05
@@ -42,10 +43,10 @@ dtdq0_num = zeros(BigFloat,n,maximum(ntt),7,n)
 dlnq = big(1e-10)
 # Make radius of star large:
 rstar = 1e12
-dtdelements_num = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,dtdq0_num,dlnq,rstar)
+dtdelements_num = ttv_elements!(H,t0,h,tmax,elements,tt,count,dtdq0,dtdq0_num,dlnq,rstar)
 # Now do computation in BigFloat precision:
 dtdq0_big = big.(dtdq0)
-dtdelements_num = ttv_elements!(n,big(t0),big(h),big(tmax),big.(elements),big.(tt),count,dtdq0_big,big(rstar))
+dtdelements_num = ttv_elements!(H,big(t0),big(h),big(tmax),big.(elements),big.(tt),count,dtdq0_big,big(rstar))
 
 dtdq0_num = convert(Array{Float64,4},dtdq0_num)
 dtdq0_big = convert(Array{Float64,4},dtdq0_big)

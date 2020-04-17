@@ -57,7 +57,7 @@ if ~@isdefined pxpr0
 end
 
 # Computes TTVs as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
-function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,n,n)) where {T <: Real}
+function ttv_elements!(H::Array{Int64,1},t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,H[1],H[1])) where {T <: Real}
 # 
 # Input quantities:
 # n     = number of bodies
@@ -77,6 +77,7 @@ function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Arra
 #
 #fcons = open("fcons.txt","w");
 # Set up mass, position & velocity arrays.  NDIM =3
+n = H[1]
 m=zeros(T,n)
 x=zeros(T,NDIM,n)
 v=zeros(T,NDIM,n)
@@ -96,9 +97,11 @@ if iq == 7 && dlnq != 0.0
   m[jq] += dq
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-x,v = init_nbody(elements,t0,n)
+init = ElementsIC(elements,H,t0)
+x,v,_ = init_nbody(init)
 elements_big=big.(elements); t0big = big(t0)
-xbig,vbig = init_nbody(elements_big,t0big,n)
+init_big = ElementsIC(elements_big,H,t0big)
+xbig,vbig,_ = init_nbody(init_big)
 #if T != BigFloat
 #  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (dlnq version)")
 #end
@@ -127,7 +130,7 @@ return dq
 end
 
 # Computes TTVs, v_sky & b_sky^2 as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
-function ttvbv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::Array{T,3},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,n,n)) where {T <: Real}
+function ttvbv_elements!(H::Array{Int64,1},t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::Array{T,3},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,H[1],H[1])) where {T <: Real}
 # 
 # Input quantities:
 # n     = number of bodies
@@ -147,6 +150,8 @@ function ttvbv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::
 #
 #fcons = open("fcons.txt","w");
 # Set up mass, position & velocity arrays.  NDIM =3
+H = [3,1,1]
+n = H[1]
 m=zeros(T,n)
 x=zeros(T,NDIM,n)
 v=zeros(T,NDIM,n)
@@ -166,9 +171,11 @@ if iq == 7 && dlnq != 0.0
   m[jq] += dq
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-x,v = init_nbody(elements,t0,n)
+init = ElementsIC(elements,H,t0)
+x,v,_ = init_nbody(init)
 elements_big=big.(elements); t0big = big(t0)
-xbig,vbig = init_nbody(elements_big,t0big,n)
+init_big = ElementsIC(elements_big,H,t0big)
+xbig,vbig,_ = init_nbody(init_big)
 #if T != BigFloat
 #  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (dlnq version)")
 #end
@@ -198,7 +205,7 @@ end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
 # This version is used to test/debug findtransit2 by computing finite difference derivative of findtransit2.
-function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64;pair=zeros(Bool,n,n))
+function ttv_elements!(H::Array{Int64,1},t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64;pair=zeros(Bool,H[1],H[1]))
 # 
 # Input quantities:
 # n     = number of bodies
@@ -222,6 +229,7 @@ function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::A
 # Example: see test_ttv_elements.jl in test/ directory
 #
 # Define initial mass, position & velocity arrays:
+n = H[1]
 m=zeros(Float64,n)
 x=zeros(Float64,NDIM,n)
 v=zeros(Float64,NDIM,n)
@@ -237,10 +245,12 @@ for i=1:n
   m[i] = elements[i,1]
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-jac_init     = zeros(Float64,7*n,7*n)
-x,v = init_nbody(elements,t0,n,jac_init)
-elements_big=big.(elements); t0big = big(t0); jac_init_big = zeros(BigFloat,7*n,7*n)
-xbig,vbig = init_nbody(elements_big,t0big,n,jac_init_big)
+#jac_init     = zeros(Float64,7*n,7*n)
+init = ElementsIC(elements,H,t0)
+x,v,jac_init = init_nbody(init)
+elements_big=big.(elements); t0big = big(t0); #jac_init_big = zeros(BigFloat,7*n,7*n)
+init_big = ElementsIC(elements_big,H,t0big)
+xbig,vbig,jac_init_big = init_nbody(init_big)
 println("Difference in x,v init: ",x-convert(Array{Float64,2},xbig)," ",v-convert(Array{Float64,2},vbig)," (transit derivative version)")
 # x = convert(Array{Float64,2},xbig); v = convert(Array{Float64,2},vbig); jac_init=convert(Array{Float64,2},jac_init_big)
 #x,v = init_nbody(elements,t0,n)
@@ -264,8 +274,8 @@ end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
 # This version is used to test/debug findtransit2 by computing finite difference derivative of findtransit2.
-function ttvbv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},ttbv::Array{Float64,3},
-count::Array{Int64,1},dtbvdq0::Array{Float64,5},dtbvdq0_num::Array{BigFloat,5},dlnq::BigFloat,rstar::Float64;pair=zeros(Bool,n,n))
+function ttvbv_elements!(H::Array{Int64,1},t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},ttbv::Array{Float64,3},
+                         count::Array{Int64,1},dtbvdq0::Array{Float64,5},dtbvdq0_num::Array{BigFloat,5},dlnq::BigFloat,rstar::Float64;pair=zeros(Bool,H[1],H[1]))
 #
 # Input quantities:
 # n     = number of bodies
@@ -288,6 +298,7 @@ count::Array{Int64,1},dtbvdq0::Array{Float64,5},dtbvdq0_num::Array{BigFloat,5},d
 # Example: see test_ttvbv_elements.jl in test/ directory
 #
 # Define initial mass, position & velocity arrays:
+n = H[1]
 m=zeros(Float64,n)
 x=zeros(Float64,NDIM,n)
 v=zeros(Float64,NDIM,n)
@@ -303,10 +314,12 @@ for i=1:n
   m[i] = elements[i,1]
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-jac_init     = zeros(Float64,7*n,7*n)
-x,v = init_nbody(elements,t0,n,jac_init)
-elements_big=big.(elements); t0big = big(t0); jac_init_big = zeros(BigFloat,7*n,7*n)
-xbig,vbig = init_nbody(elements_big,t0big,n,jac_init_big)
+#jac_init     = zeros(Float64,7*n,7*n)
+init = ElementsIC(elements,H,t0)
+x,v,jac_init = init_nbody(init)
+elements_big=big.(elements); t0big = big(t0); #jac_init_big = zeros(BigFloat,7*n,7*n)
+init_big = ElementsIC(elements_big,H,t0big)
+xbig,vbig,jac_init_big = init_nbody(init)
 println("Difference in x,v init: ",x-convert(Array{Float64,2},xbig)," ",v-convert(Array{Float64,2},vbig)," (transit derivative version)")
 # x = convert(Array{Float64,2},xbig); v = convert(Array{Float64,2},vbig); jac_init=convert(Array{Float64,2},jac_init_big)
 #x,v = init_nbody(elements,t0,n)
@@ -329,8 +342,7 @@ end
 return dtbvdelements
 end
 
-function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},
-count::Array{Int64,1},dtdq0::Array{T,4},rstar::T;fout="",iout=-1,pair=zeros(Bool,n,n)) where {T <: Real}
+function ttv_elements!(H::Array{Int64,1},t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dtdq0::Array{T,4},rstar::T;fout="",iout=-1,pair=zeros(Bool,H[1],H[1])) where {T <: Real}
 # 
 # Input quantities:
 # n     = number of bodies
@@ -354,6 +366,7 @@ count::Array{Int64,1},dtdq0::Array{T,4},rstar::T;fout="",iout=-1,pair=zeros(Bool
 # Example: see test_ttv_elements.jl in test/ directory
 #
 # Define initial mass, position & velocity arrays:
+n = H[1]
 m=zeros(T,n)
 x=zeros(T,NDIM,n)
 v=zeros(T,NDIM,n)
@@ -368,10 +381,12 @@ for i=1:n
   m[i] = elements[i,1]
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-jac_init     = zeros(T,7*n,7*n)
-x,v = init_nbody(elements,t0,n,jac_init)
-elements_big=big.(elements); t0big = big(t0); jac_init_big = zeros(BigFloat,7*n,7*n)
-xbig,vbig = init_nbody(elements_big,t0big,n,jac_init_big)
+#jac_init     = zeros(T,7*n,7*n)
+init = ElementsIC(elements,H,t0)
+x,v,jac_init = init_nbody(init)
+elements_big=big.(elements); t0big = big(t0); #jac_init_big = zeros(BigFloat,7*n,7*n)
+init_big = ElementsIC(elements_big,H,t0big)
+xbig,vbig,jac_init_big = init_nbody(init_big)
 #if T != BigFloat
 #  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (Jacobian version)")
 #  println("Difference in Jacobian: ",jac_init-convert(Array{T,2},jac_init_big)," (Jacobian version)")
@@ -397,8 +412,8 @@ return dtdelements
 end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
-function ttvbv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::Array{T,3},
-count::Array{Int64,1},dtbvdq0::Array{T,5},rstar::T;fout="",iout=-1,pair=zeros(Bool,n,n)) where {T <: Real}
+function ttvbv_elements!(H::Array{Int64,1},t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::Array{T,3},
+                         count::Array{Int64,1},dtbvdq0::Array{T,5},rstar::T;fout="",iout=-1,pair=zeros(Bool,H[1],H[1])) where {T <: Real}
 # 
 # Input quantities:
 # n     = number of bodies
@@ -422,6 +437,7 @@ count::Array{Int64,1},dtbvdq0::Array{T,5},rstar::T;fout="",iout=-1,pair=zeros(Bo
 # Example: see test_ttvbv_elements.jl in test/ directory
 #
 # Define initial mass, position & velocity arrays:
+n = H[1]
 m=zeros(T,n)
 x=zeros(T,NDIM,n)
 v=zeros(T,NDIM,n)
@@ -436,10 +452,12 @@ for i=1:n
   m[i] = elements[i,1]
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-jac_init     = zeros(T,7*n,7*n)
-x,v = init_nbody(elements,t0,n,jac_init)
+#jac_init     = zeros(T,7*n,7*n)
+init = ElementsIC(elements,H,t0)
+x,v,jac_init = init_nbody(init)
 elements_big=big.(elements); t0big = big(t0); jac_init_big = zeros(BigFloat,7*n,7*n)
-xbig,vbig = init_nbody(elements_big,t0big,n,jac_init_big)
+init_big = ElementsIC(elements_big,H,t0big)
+xbig,vbig,jac_init_big = init_nbody(init_big)
 #if T != BigFloat
 #  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (Jacobian version)")
 #  println("Difference in Jacobian: ",jac_init-convert(Array{T,2},jac_init_big)," (Jacobian version)")

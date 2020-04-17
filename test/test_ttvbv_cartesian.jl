@@ -10,6 +10,7 @@ using JLD2
 # impact parameter squared with respect to the initial cartesian coordinates of bodies. [x]
 #n = 8
 n = 3
+H =[3,1,1]
 t0 = 7257.93115525-7300.0
 #h  = 0.12
 h  = 0.04
@@ -40,15 +41,15 @@ count = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
 rstar = 1e12
-dq = ttvbv_elements!(n,t0,h,tmax,elements,ttbv1,count1,0.0,0,0,rstar)
+dq = ttvbv_elements!(H,t0,h,tmax,elements,ttbv1,count1,0.0,0,0,rstar)
 # Now call with half the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
-dq = ttvbv_elements!(n,t0,h/2,tmax,elements,ttbv2,count2,0.0,0,0,rstar)
+dq = ttvbv_elements!(H,t0,h/2,tmax,elements,ttbv2,count2,0.0,0,0,rstar)
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtbvdq0 = zeros(ntbv,n,maximum(ntt),7,n)
-dtbvdelements = ttvbv_elements!(n,t0,h,tmax,elements,ttbv,count,dtbvdq0,rstar)
+dtbvdelements = ttvbv_elements!(H,t0,h,tmax,elements,ttbv,count,dtbvdq0,rstar)
 
 # Compute derivatives numerically:
 # Compute the numerical derivative:
@@ -58,9 +59,9 @@ hbig = big(h); t0big = big(t0); tmaxbig=big(tmax); ttbv2big = big.(ttbv2); ttbv3
 for jq=1:n
   for iq=1:7
     elements2  = big.(elements)
-    dq_plus = ttvbv_elements!(n,t0big,hbig,tmaxbig,elements2,ttbv2big,count2,dlnq,iq,jq,big(rstar))
+    dq_plus = ttvbv_elements!(H,t0big,hbig,tmaxbig,elements2,ttbv2big,count2,dlnq,iq,jq,big(rstar))
     elements3  = big.(elements)
-    dq_minus = ttvbv_elements!(n,t0big,hbig,tmaxbig,elements3,ttbv3big,count3,-dlnq,iq,jq,big(rstar))
+    dq_minus = ttvbv_elements!(H,t0big,hbig,tmaxbig,elements3,ttbv3big,count3,-dlnq,iq,jq,big(rstar))
     for i=1:n
       for k=1:count2[i]
         # Compute double-sided derivative for more accuracy:
@@ -91,16 +92,16 @@ for i=2:n, j=1:count[i], k=1:7, l=1:n
 end
 
 ttbv_big = big.(ttbv); elementsbig = big.(elements); rstarbig = big(rstar)
-dqbig = ttvbv_elements!(n,t0big,hbig,tmaxbig,elementsbig,ttbv_big,count,big(0.0),0,0,rstarbig)
+dqbig = ttvbv_elements!(H,t0big,hbig,tmaxbig,elementsbig,ttbv_big,count,big(0.0),0,0,rstarbig)
 # Now halve the time steps:
 ttbv_big_half = copy(ttbv_big)
-dqbig = ttvbv_elements!(n,t0big,hbig/2,tmaxbig,elementsbig,ttbv_big_half,count1,big(0.0),0,0,rstarbig)
+dqbig = ttvbv_elements!(H,t0big,hbig/2,tmaxbig,elementsbig,ttbv_big_half,count1,big(0.0),0,0,rstarbig)
 
 # Compute the derivatives in BigFloat precision to see whether finite difference
 # derivatives or Float64 derivatives are imprecise at the start:
 dtbvdq0_big = zeros(BigFloat,ntbv,n,maximum(ntt),7,n)
 hbig = big(h); ttbv_big = big.(ttbv); elementsbig = big.(elements); rstarbig = big(rstar)
-dtbvdelements_big = ttvbv_elements!(n,t0big,hbig,tmaxbig,elementsbig,ttbv_big,count,dtbvdq0_big,rstarbig)
+dtbvdelements_big = ttvbv_elements!(H,t0big,hbig,tmaxbig,elementsbig,ttbv_big,count,dtbvdq0_big,rstarbig)
 
 using PyPlot
 

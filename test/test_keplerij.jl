@@ -14,6 +14,7 @@ hbig  = big(h)
 tmax = 600.0
 #dlnq = 1e-8
 dlnq = 1e-20
+H = [3,1,1]
 
 elements = readdlm("elements.txt",',')
 #elements[2,1] = 0.75
@@ -30,7 +31,8 @@ end
 
 for iter = 1:2
 
-x0,v0 = init_nbody(elements,t0,n)
+init = ElementsIC(elements,H,t0)
+x0,v0,_ = init_nbody(init)
  if iter == 2
    # Reduce masses to trigger hyperbolic routine:
     m[1:n] *= 1e-1

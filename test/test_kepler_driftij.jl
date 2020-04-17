@@ -5,6 +5,7 @@ for drift_first in [true,false]
 # Next, try computing two-body Keplerian Jacobian:
 
 n = 3
+H = [3,1,1]
 t0 = 7257.93115525
 #t0 = -300.0
 h  = 0.0000005
@@ -27,7 +28,8 @@ for k=1:n
 end
 for iter = 1:2
 
-x0,v0 = init_nbody(elements,t0,n)
+init = ElementsIC(elements,H,t0)
+x0,v0,_ = init_nbody(init)
  if iter == 2
    # Reduce masses to trigger hyperbolic routine:
     m[1:n] *= 1e-1
