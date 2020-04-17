@@ -48,7 +48,7 @@ r0big = sqrt(x0big[1]*x0big[1]+x0big[2]*x0big[2]+x0big[3]*x0big[3])
 beta0big = 2*kbig/r0big-dot(v0big,v0big)
 jacobian_big =zeros(BigFloat,7,7)
 iter = kep_drift_ell_hyp!(x0big,v0big,kbig,hbig,s0big,statebig,jacobian_big,drift_first)
-jac_frac = jacobian./convert(Array{Float64,2},jacobian_big)-1.0
+jac_frac = jacobian./convert(Array{Float64,2},jacobian_big).-1.0
 println("Fractional Jacobian difference: ",maxabs(jac_frac[.~isnan.(jac_frac)]))
 
 # Now, compute the Jacobian numerically:
@@ -104,7 +104,7 @@ for j=1:3
 end
 println("Maximum jac_big-jac_num: ",maxabs(convert(Array{Float64,2},jacobian_big-jac_num)))
 #println(convert(Array{Float64,2},jacobian_big))
-#println(convert(Array{Float64,2},jacobian_big./jac_num-1.0))
+#println(convert(Array{Float64,2},jacobian_big./jac_num.-1.0))
 return xsave,jac_num,jacobian
 end
 

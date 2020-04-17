@@ -7,11 +7,11 @@ using ForwardDiff
 #const cH1 = 1./[12.0,-180.0,6720.0,-453600.0,47900160.0,-7264857600.0]
 
 # Define a dummy function for automatic differentiation: 
-function g3(param::Array{T,1}) where {T <: Real}
-return g3(param[1],param[2])
+function G3(param::Array{T,1}) where {T <: Real}
+return G3(param[1],param[2])
 end
 
-function g3(s::T,beta::T) where {T <: Real}
+function G3(s::T,beta::T) where {T <: Real}
 sqb = sqrt(abs(beta))
 x = sqb*s
 if beta >= 0 
@@ -118,8 +118,8 @@ return h1::T
 end
 
 nx = 10001
-s = linspace(-3.0,3.0,nx)
-#s = linspace(-0.5,0.5,nx)
+s = linearspace(-3.0,3.0,nx)
+#s = linearspace(-0.5,0.5,nx)
 
 beta = -rand(); epsilon = eps(beta)
 sqb = sqrt(abs(beta))

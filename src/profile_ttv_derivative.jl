@@ -84,4 +84,5 @@ println(maximum(abs.(asinh.(dtdelements2)-asinh.(dtdelements_kick2))))
 Profile.clear()
 Profile.init(10^7,0.01)
 #@profile dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar);
-#Profile.print()
+@profile dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq1,rstar);
+Profile.print()

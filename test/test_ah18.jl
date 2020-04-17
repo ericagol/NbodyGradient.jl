@@ -1,10 +1,11 @@
+
 # Tests the routine ah18 jacobian:
 
 #include("../src/ttv.jl")
 
 # Next, try computing three-body Keplerian Jacobian:
 
-#@testset "ah18" begin
+@testset "ah18" begin
 
 
 #n = 8
@@ -17,7 +18,8 @@ tmax = 600.0
 dlnq = big(1e-20)
 
 #nstep = 8000
-nstep = 500
+#nstep = 5000
+nstep = 100
 #nstep = 1
 
 elements = readdlm("elements.txt",',')
@@ -33,7 +35,7 @@ v0=zeros(3,n)
 pair = zeros(Bool,n,n)
 
 # Initialize with identity matrix:
-jac_step = eye(Float64,7*n)
+jac_step = Matrix{Float64}(I,7*n,7*n)
 
 for k=1:n
   m[k] = elements[k,1]
@@ -50,23 +52,39 @@ v0[2,1] = 5e-1*sqrt(v0[1,1]^2+v0[3,1]^2)
 v0[2,2] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 v0[2,3] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 xbig = big.(x0); vbig = big.(v0)
+xtest = copy(x0); vtest=copy(v0)
 # Take a single step (so that we aren't at initial coordinates):
-@time for i=1:nstep; ah18!(x0,v0,h,m,n,pair); end
+x = copy(x0); v = copy(v0)
+xerror = zeros(3,n); verror = zeros(3,n)
+@time for i=1:nstep; ah18!(x,v,xerror,verror,h,m,n,pair); end
 # Take a step with big precision:
 ah18!(xbig,vbig,big(h),big.(m),n,pair)
+# Take a single DH17 step:
+xerror = zeros(3,n); verror = zeros(3,n)
+@time for i=1:nstep; dh17!(xtest,vtest,xerror,verror,h,m,n,pair);end
+println("AH18 vs. DH17 x/v difference: ",x-xtest,v-vtest)
+# Compute x & v in BigFloat precision:
+xbig = big.(x0)
+vbig = big.(v0)
+mbig = big.(m0)
+xerr_big = zeros(BigFloat,3,n); verr_big = zeros(BigFloat,3,n)
+jac_step_big = Matrix{BigFloat}(I,7*n,7*n)
+jac_err_big = zeros(BigFloat,7*n,7*n)
+@time for i=1:nstep; ah18!(xbig,vbig,xerr_big,verr_big,hbig,mbig,n,jac_step_big,jac_err_big,pair);end
+println("AH18 vs. AH18 BigFloat x/v difference: ",x-convert(Array{Float64,2},xbig),v-convert(Array{Float64,2},vbig))
 
 # Now, copy these to compute Jacobian (so that I don't step
 # x0 & v0 forward in time):
 x = copy(x0)
 v = copy(v0)
 m = copy(m0)
-xbig = big.(x0)
-vbig = big.(v0)
-mbig = big.(m0)
+xerror = zeros(3,n); verror = zeros(3,n); jac_error = zeros(7*n,7*n)
 # Compute jacobian exactly over nstep steps:
 for istep=1:nstep
-  ah18!(x,v,h,m,n,jac_step,pair)
+  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
 end
+
+println("AH18 vs. AH18 BigFloat jac_step difference: ",jac_step-convert(Array{Float64,2},jac_step_big))
 #println(typeof(h)," ",jac_step)
 #read(STDIN,Char)
 
@@ -75,8 +93,6 @@ end
 # misaligned or shifted when returned.  If I modify ah18! to output
 # jac_step, then it works.
 # Initialize with identity matrix:
-#jac_big= eye(BigFloat,7*n)
-#jac_copy = eye(BigFloat,7*n)
 ## Compute jacobian exactly over nstep steps:
 #for istep=1:nstep
 #  jac_copy = ah18!(xbig,vbig,hbig,mbig,n,jac_big,pair)
@@ -223,37 +239,39 @@ end
 println("Maximum fractional error: ",jac_diff," ",imax," ",jmax," ",kmax," ",lmax," ",jacmax)
 #println(jac_step./jac_step_num)
 println("Maximum error jac_step:   ",maximum(abs.(jac_step-jac_step_num)))
+println("Maximum error jac_step_big vs. jac_step_num:   ",maximum(abs.(asinh.(jac_step_big)-asinh.(jac_step_num))))
 println("Maximum diff asinh(jac_step):   ",maximum(abs.(asinh.(jac_step)-asinh.(jac_step_num))))
 
 # Compute dqdt:
 
-#dqdt = zeros(7*n)
-#dqdt_num = zeros(BigFloat,7*n)
-#x = copy(x0)
-#v = copy(v0)
-#m = copy(m0)
-#ah18!(x,v,h,m,n,dqdt,pair)
-#xm= big.(x0)
-#vm= big.(v0)
-#mm= big.(m0)
-#dq = hbig*dlnq
-#hbig -= dq
-#ah18!(xm,vm,hbig,mm,n,pair)
-#xp= big.(x0)
-#vp= big.(v0)
-#mp= big.(m0)
-#hbig += 2dq
-#ah18!(xp,vp,hbig,mp,n,pair)
-#for i=1:n, k=1:3
-#  dqdt_num[(i-1)*7+  k] = .5*(xp[k,i]-xm[k,i])/dq
-#  dqdt_num[(i-1)*7+3+k] = .5*(vp[k,i]-vm[k,i])/dq
-#end
-#dqdt_num = convert(Array{Float64,1},dqdt_num)
-##println("dqdt: ",dqdt," ",dqdt_num," diff: ",dqdt-dqdt_num)
-#println("dqdt-dqdt_num: ",maxabs(dqdt-convert(Array{Float64,1},dqdt_num)))
+dqdt = zeros(7*n)
+dqdt_num = zeros(BigFloat,7*n)
+x = copy(x0)
+v = copy(v0)
+m = copy(m0)
+xerror = zeros(3,n); verror = zeros(3,n)
+ah18!(x,v,xerror,verror,h,m,n,dqdt,pair)
+xm= big.(x0)
+vm= big.(v0)
+mm= big.(m0)
+dq = hbig*dlnq
+hbig -= dq
+ah18!(xm,vm,hbig,mm,n,pair)
+xp= big.(x0)
+vp= big.(v0)
+mp= big.(m0)
+hbig += 2dq
+ah18!(xp,vp,hbig,mp,n,pair)
+for i=1:n, k=1:3
+  dqdt_num[(i-1)*7+  k] = .5*(xp[k,i]-xm[k,i])/dq
+  dqdt_num[(i-1)*7+3+k] = .5*(vp[k,i]-vm[k,i])/dq
+end
+dqdt_num = convert(Array{Float64,1},dqdt_num)
+println("dqdt:     ",dqdt); println("dqdt_num: ",dqdt_num); println(" diff: ",dqdt-dqdt_num)
+println("dqdt-dqdt_num: ",maxabs(dqdt-convert(Array{Float64,1},dqdt_num)))
 
 #@test isapprox(jac_step,jac_step_num)
 #@test isapprox(jac_step,jac_step_num;norm=maxabs)
 @test isapprox(asinh.(jac_step),asinh.(jac_step_num);norm=maxabs)
-#@test isapprox(dqdt,dqdt_num;norm=maxabs)
-#end
+@test isapprox(dqdt,dqdt_num;norm=maxabs)
+end

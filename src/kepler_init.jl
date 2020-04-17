@@ -1,3 +1,4 @@
+
 include("kepler.jl")
 
 #function kepler_init(time::Float64,mass::Float64,elements::Array{Float64,1})
@@ -10,14 +11,17 @@ period = elements[1]
 # Compute the semi-major axis in AU (or other units specified by GNEWT):
 semi = cbrt(GNEWT*mass*period^2/4/pi^2)
 # Convert to eccentricity & longitude of periastron:
-ecc=sqrt(elements[3]^2+elements[4]^2)
-omega = atan2(elements[4],elements[3])
+ecc2=elements[3]^2+elements[4]^2
+ecc=sqrt(ecc2)
+#omega = atan2(elements[4],elements[3])
+omega = atan(elements[4],elements[3])
 # The true anomaly at the time of transit:
 f1 = 1.5*pi-omega
 # Compute the time of periastron passage:
 sqrt1mecc2 = sqrt(1.0-ecc^2)
 tp=(elements[2]+period*sqrt1mecc2/2.0/pi*(ecc*sin(f1)/(1.0+ecc*cos(f1))
-    -2.0/sqrt1mecc2*atan2(sqrt1mecc2*tan(0.5*f1),1.0+ecc)))
+#    -2.0/sqrt1mecc2*atan2(sqrt1mecc2*tan(0.5*f1),1.0+ecc)))
+    -2.0/sqrt1mecc2*atan(sqrt1mecc2*tan(0.5*f1),1.0+ecc)))
 # Compute the mean anomaly
 n = 2pi/period
 m=n*(time-tp)
@@ -63,7 +67,7 @@ v[3]=x[3]*rdotonr+rfdot*cosomegapf*sininc
 return x,v
 end
 
-function kepler_init(time::Float64,mass::Float64,elements::Array{Float64,1},jac_init::Array{Float64,2})
+function kepler_init(time::T,mass::T,elements::Array{T,1},jac_init::Array{T,2}) where {T <: Real}
 # Takes orbital elements of a single Keplerian; returns positions & velocities.
 # This is 3D), so 6 orbital elements specified, the code returns 3D.  For
 # Inclination = pi/2, motion is in X-Z plane; sky plane is X-Y.
@@ -92,7 +96,8 @@ sqrt1mecc2 = sqrt(1.0-ecc^2)
 #    -2.0/sqrt1mecc2*atan2(sqrt1mecc2*tan(0.5*f1),1.0+ecc)))
 den1 = esinomega-ecosomega-ecc
 tp = (t0 - sqrt1mecc2/n*ecosomega/(1.0-esinomega)-2/n*
-     atan2(sqrt(1.0-ecc)*(esinomega+ecosomega+ecc),sqrt(1.0+ecc)*den1))
+#     atan2(sqrt(1.0-ecc)*(esinomega+ecosomega+ecc),sqrt(1.0+ecc)*den1))
+     atan(sqrt(1.0-ecc)*(esinomega+ecosomega+ecc),sqrt(1.0+ecc)*den1))
 dtpdp = (tp-t0)/period
 fac = sqrt((1.0-ecc)/(1.0+ecc))
 den2 = 1.0/den1^2
@@ -139,7 +144,9 @@ x = P321*xplane
 dxda = x/semi
 dxdekep = P321*semi*vplane
 P32 = P3*P2
-dxdecc  = -x/ecc + P321*semi*[-1.0; -ecc/sqrt1mecc2*sinekep; 0.0]
+#dxdecc  = -x/ecc + P321*semi*[-1.0; -ecc/sqrt1mecc2*sinekep; 0.0]
+# Get rid of cancellations in the prior expression:
+dxdecc  = -P321*semi/ecc*[cosekep; sinekep/sqrt1mecc2; zero(T)]
 # These may need to be rewritten to flag ecc = 0.0 case:
 dxdecos = dxdecc*deccdecos + P32/ecc*xplane
 dxdesin = dxdecc*deccdesin + P32/ecc*[-xplane[2]; xplane[1]; 0.0]
@@ -165,16 +172,34 @@ dvdcom  = [-sincapomega -coscapomega 0.0; coscapomega -sincapomega 0.0; 0.0 0.0 
 # Elements are given by: period, t0, e*cos(omega), e*sin(omega), Inclination, Omega
 fill!(jac_init,0.0)
 jac_init[1:3,1] = dxda*dsemidp + dxdekep*dekepdm*(dmdp+dmdtp*dtpdp)
+#if  T != BigFloat
+#  println("position vs. period: term 1 ",dxda*dsemidp," term 2: ",dxdekep*dekepdm*dmdp," term 3: ",dxdekep*dekepdm*dmdtp*dtpdp," sum: ",jac_init[1:3,1])
+#end
 jac_init[1:3,2] = dxdekep*dekepdm*dmdtp*dtpdt0
 jac_init[1:3,3] = dxdecos + dxdekep*(dekepdm*dmdtp*dtpdecos + dekepdecos)
+#if  T != BigFloat
+#  println("position vs. ecosom : term 1 ",dxdecos," term 2: ",dxdekep*dekepdm*dmdtp*dtpdecos," term 3: ",dxdekep*dekepdm*dekepdecos," sum: ",jac_init[1:3,3])
+#end
 jac_init[1:3,4] = dxdesin + dxdekep*(dekepdm*dmdtp*dtpdesin + dekepdesin)
+#if  T != BigFloat
+#  println("position vs. esinom : term 1 ",dxdesin," term 2: ",dxdekep*dekepdm*dmdtp*dtpdesin," term 3: ",dxdekep*dekepdm*dekepdesin," sum: ",jac_init[1:3,4])
+#end
 jac_init[1:3,5] = dxdinc
 jac_init[1:3,6] = dxdcom
 jac_init[1:3,7] = dxda*dsemidm
 jac_init[4:6,1] = dvdp + dvda*dsemidp +  dvdekep*dekepdm*(dmdp+dmdtp*dtpdp)
+#if  T != BigFloat
+#  println("velocity vs. period: term 1 ",dvdp," term 2: ",dvda*dsemidp," term 3: ",dvdekep*dekepdm*dmdp," term 4: ",dvdekep*dekepdm*dmdtp*dtpdp," sum: ",jac_init[4:6,1])
+#end
 jac_init[4:6,2] = dvdekep*dekepdm*dmdtp*dtpdt0
 jac_init[4:6,3] = dvdecos + dvdekep*(dekepdm*dmdtp*dtpdecos + dekepdecos)
+#if  T != BigFloat
+#  println("velocity vs. ecosom : term 1 ",dvdecos," term 2: ",dvdekep*dekepdm*dmdtp*dtpdecos," term 3: ",dvdekep*dekepdm*dekepdecos," sum: ",jac_init[4:6,3])
+#end
 jac_init[4:6,4] = dvdesin + dvdekep*(dekepdm*dmdtp*dtpdesin + dekepdesin)
+#if  T != BigFloat
+#  println("velocity vs. esinom : term 1 ",dvdesin," term 2: ",dvdekep*dekepdm*dmdtp*dtpdesin," term 3: ",dvdekep*dekepdm*dekepdesin," sum: ",jac_init[4:6,4])
+#end
 jac_init[4:6,5] = dvdinc
 jac_init[4:6,6] = dvdcom
 jac_init[4:6,7] = dvda*dsemidm

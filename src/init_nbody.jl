@@ -1,3 +1,4 @@
+
 include("kepler_init.jl")
 
 # Initializes N-body integration for a plane-parallel hierarchical system 
@@ -38,17 +39,17 @@ indices = get_indices_planetary(n_body)
 # Set up "A" matrix (Hamers & Portegies-Zwart 2016) which transforms from
 # cartesian coordinates to Keplerian orbits (we are using opposite sign
 # convention of HPZ16, for example, r_1 = R_2-R_1).
-amat = zeros(eltype(elements),n_body,n_body)
+amat = zeros(T,n_body,n_body)
 # Mass vector:
 mass = vcat(elements[:,1])
 # Set up array for orbital positions of each Keplerian:
-rkepler = zeros(eltype(elements),n_body,NDIM)
-rdotkepler = zeros(eltype(elements),n_body,NDIM)
+rkepler = zeros(T,n_body,NDIM)
+rdotkepler = zeros(T,n_body,NDIM)
 # Fill in the A matrix & compute the Keplerian elements:
 for i=1:n_body-1
   # Sums of masses for two components of Keplerian:
-  m1 = 0.0
-  m2 = 0.0
+  m1 = zero(T)
+  m2 = zero(T)
   for j=1:n_body
     if indices[i,j] == 1
       m1 += mass[j]
@@ -61,6 +62,8 @@ for i=1:n_body-1
   # For now set inclination to Inclination = pi/2 and longitude of nodes to Omega = pi:
 #  r,rdot = kepler_init(t0,m1+m2,[elements[i+1,2:5];pi/2;pi])
   r,rdot = kepler_init(t0,m1+m2,elements[i+1,2:7])
+#  rbig,rdotbig = kepler_init(big(t0),big(m1+m2),big.(elements[i+1,2:7]))
+#  r = convert(Array{T,1},rbig); rdot = convert(Array{T,1},rdotbig)
   for j=1:NDIM
     rkepler[i,j] = r[j]
     rdotkepler[i,j] = rdot[j]
@@ -84,8 +87,8 @@ end
 # to Cartesian coordinates:
 ainv = inv(amat)
 # Now, compute the Cartesian coordinates (eqn A6 from HPZ16):
-x = zeros(eltype(elements),NDIM,n_body)
-v = zeros(eltype(elements),NDIM,n_body)
+x = zeros(T,NDIM,n_body)
+v = zeros(T,NDIM,n_body)
 #for i=1:n_body
 #  for j=1:NDIM
 #    for k=1:n_body
@@ -94,15 +97,17 @@ v = zeros(eltype(elements),NDIM,n_body)
 #    end
 #  end
 #end
-x = transpose(*(ainv,rkepler))
-v = transpose(*(ainv,rdotkepler))
+#x = transpose(*(ainv,rkepler))
+x = permutedims(*(ainv,rkepler))
+#v = transpose(*(ainv,rdotkepler))
+v = permutedims(*(ainv,rdotkepler))
 # Return the cartesian position & velocity matrices:
 #return x,v,amat,ainv
 return x,v
 end
 
 # Version including derivatives:
-function init_nbody(elements::Array{Float64,2},t0::Float64,n_body::Int64,jac_init::Array{Float64,2})
+function init_nbody(elements::Array{T,2},t0::T,n_body::Int64,jac_init::Array{T,2}) where {T <: Real}
 
 # the "_plane" is to remind us that this is currently plane-parallel, so inclination & Omega are zero
 n_level = n_body-1
@@ -114,7 +119,7 @@ n_level = n_body-1
 # jac_init: derivative of cartesian coordinates, (x,v,m) for each body, with respect to initial conditions
 #  n_body x (period, t0, e*cos(omega), e*sin(omega), inclination, Omega, mass) for each Keplerian, with
 #  the first body having orbital elements set to zero, so the first six derivatives are zero.
-#jac_init = zeros(Float64,7*n_body,7*n_body)
+#jac_init = zeros(T,7*n_body,7*n_body)
 fill!(jac_init,0.0)
 # 
 # Read in the orbital elements:
@@ -126,19 +131,19 @@ indices = get_indices_planetary(n_body)
 # Set up "A" matrix (Hamers & Portegies-Zwart 2016) which transforms from
 # cartesian coordinates to Keplerian orbits (we are using opposite sign
 # convention of HPZ16, for example, r_1 = R_2-R_1).
-amat = zeros(eltype(elements),n_body,n_body)
+amat = zeros(T,n_body,n_body)
 # Derivative of i,jth element of A matrix with respect to mass of body k:
-damatdm = zeros(eltype(elements),n_body,n_body,n_body)
+damatdm = zeros(T,n_body,n_body,n_body)
 # Mass vector:
 mass = vcat(elements[:,1])
 # Set up array for orbital positions of each Keplerian:
-rkepler = zeros(eltype(elements),n_body,NDIM)
-rdotkepler = zeros(eltype(elements),n_body,NDIM)
+rkepler = zeros(T,n_body,NDIM)
+rdotkepler = zeros(T,n_body,NDIM)
 # Set up Jacobian for transformation from n_body-1 Keplerian elements & masses
 # to (x,v,m) - the last is center-of-mass, which is taken to be zero.
-jac_21 = zeros(Float64,7,7)
+jac_21 = zeros(T,7,7)
 # jac_kepler saves jac_21 for each set of bodies:
-jac_kepler = zeros(Float64,n_body*6,n_body*7)
+jac_kepler = zeros(T,n_body*6,n_body*7)
 # Fill in the A matrix & compute the Keplerian elements:
 for i=1:n_body-1  # i labels the row of matrix, which weights masses in current Keplerian
   # Sums of masses for two components of Keplerian:
@@ -153,6 +158,8 @@ for i=1:n_body-1  # i labels the row of matrix, which weights masses in current 
   end
   # Compute Kepler problem: r is a vector of positions of "body" 2 with respect to "body" 1; rdot is velocity vector:
   r,rdot = kepler_init(t0,m1+m2,elements[i+1,2:7],jac_21)
+#  rbig,rdotbig = kepler_init(big(t0),big(m1+m2),big.(elements[i+1,2:7]))
+#  r = convert(Array{T,1},rbig); rdot = convert(Array{T,1},rdotbig)
   for j=1:NDIM
     rkepler[i,j] = r[j]
     rdotkepler[i,j] = rdot[j]
@@ -202,11 +209,11 @@ for j=1:n_body
 end
 ainv = inv(amat)
 # Propagate mass uncertainties (11/17/17 notes):
-dainvdm = zeros(Float64,n_body,n_body,n_body)
-#dainvdm_num = zeros(Float64,n_body,n_body,n_body)
-#damatdm_num = zeros(Float64,n_body,n_body,n_body)
+dainvdm = zeros(T,n_body,n_body,n_body)
+#dainvdm_num = zeros(T,n_body,n_body,n_body)
+#damatdm_num = zeros(T,n_body,n_body,n_body)
 #dlnq = 2e-3
-#elements_tmp = zeros(Float64,n_body,7)
+#elements_tmp = zeros(T,n_body,7)
 for k=1:n_body
   dainvdm[:,:,k]=-ainv*damatdm[:,:,k]*ainv
 # Compute derivatives numerically:
@@ -228,8 +235,8 @@ end
 #println("dainvdm: ",abs.(dainvdm))
 #println("dainvdm_num: ",abs.(dainvdm_num))
 # Now, compute the Cartesian coordinates (eqn A6 from HPZ16):
-x = zeros(Float64,NDIM,n_body)
-v = zeros(Float64,NDIM,n_body)
+x = zeros(T,NDIM,n_body)
+v = zeros(T,NDIM,n_body)
 #for i=1:n_body
 #  for j=1:NDIM
 #    for k=1:n_body
@@ -238,11 +245,13 @@ v = zeros(Float64,NDIM,n_body)
 #    end
 #  end
 #end
-x = transpose(*(ainv,rkepler))
-v = transpose(*(ainv,rdotkepler))
+#x = transpose(*(ainv,rkepler))
+x = permutedims(*(ainv,rkepler))
+#v = transpose(*(ainv,rdotkepler))
+v = permutedims(*(ainv,rdotkepler))
 # Finally, compute the overall Jacobian.
 # First, compute it for the orbital elements:
-dxdm = zeros(Float64,3,n_body); dvdm = zeros(Float64,3,n_body)
+dxdm = zeros(T,3,n_body); dvdm = zeros(T,3,n_body)
 for i=1:n_body
   # Propagate derivatives of Kepler coordinates with respect to
   # orbital elements to the Cartesian coordinates:
@@ -259,8 +268,10 @@ for i=1:n_body
   # Cartesian coordinates of all of the bodies can depend on the masses 
   # of all the others so we need to loop over indices of each body, k:
   for k=1:n_body
-    dxdm = transpose(dainvdm[:,:,k]*rkepler)
-    dvdm = transpose(dainvdm[:,:,k]*rdotkepler)
+#    dxdm = transpose(dainvdm[:,:,k]*rkepler)
+    dxdm = permutedims(dainvdm[:,:,k]*rkepler)
+#    dvdm = transpose(dainvdm[:,:,k]*rdotkepler)
+    dvdm = permutedims(dainvdm[:,:,k]*rdotkepler)
     jac_init[(i-1)*7+1:(i-1)*7+3,k*7] += dxdm[1:3,i]
     jac_init[(i-1)*7+4:(i-1)*7+6,k*7] += dvdm[1:3,i]
   end

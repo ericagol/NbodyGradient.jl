@@ -33,7 +33,6 @@ end
 
 function solve_kepler!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},beta0::T,
    r0::T,s0::T,state::Array{T,1}) where {T <: Real}
-zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 # Solves elliptic Kepler's equation for both elliptic and hyperbolic cases.
 # Initial guess (if s0 = 0):
 r0inv = inv(r0)
@@ -43,16 +42,16 @@ sqb = sqrt(signb*beta0)
 zeta = k-r0*beta0
 eta = dot(x0,v0)
 sguess = 0.0
-if s0 == zero
+if s0 == zero(T)
   # Use cubic estimate:
-  if zeta != zero
+  if zeta != zero(T)
     sguess = cubic1(3eta/zeta,6r0/zeta,-6h/zeta)
   else
-    if eta != zero
+    if eta != zero(T)
       reta = r0/eta
-      disc = reta^2+8h/eta
-      if disc > zero
-        s=-reta+sqrt(disc)
+      disc = reta^2+2h/eta
+      if disc > zero(T)
+        sguess =-reta+sqrt(disc)
       else
        sguess = h*r0inv
       end
@@ -65,10 +64,9 @@ else
   s = copy(s0)
 end
 s0 = copy(s)
-y = zero; yp = one
+y = zero(T); yp = one(T)
 iter = 0
 ds = Inf
-#KEPLER_TOL = sqrt(eps(one))
 KEPLER_TOL = sqrt(eps(h))
 ITMAX = 20
 while iter == 0 || (abs(ds) > KEPLER_TOL && iter < ITMAX)
@@ -103,9 +101,9 @@ else
   cx = cosh(xx); sx = exp(xx)-cx
 end
 # Now, compute final values:
-g1bs = 2.*sx*cx/sqb
-g2bs = 2.*signb*sx^2*beta0inv
-f = one - k*r0inv*g2bs # eqn (25)
+g1bs = 2.0*sx*cx/sqb
+g2bs = 2.0*signb*sx^2*beta0inv
+f = one(T) - k*r0inv*g2bs # eqn (25)
 g = r0*g1bs + eta*g2bs # eqn (27)
 for j=1:3
 # Position is components 2-4 of state:
@@ -125,16 +123,15 @@ end
 function kep_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,k::T,h::T,
   beta0::T,s0::T,state::Array{T,1}) where {T <: Real}
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
-zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 # Now, solve for s in elliptical Kepler case:
-f = zero; g=zero; dfdt=zero; dgdt=zero; cx=zero;sx=zero;g1bs=zero;g2bs=zero
-s=zero; ds = zero; r = zero;rinv=zero; iter=0
-if beta0 > zero || beta0 < zero
+f = zero(T); g=zero(T); dfdt=zero(T); dgdt=zero(T); cx=zero(T);sx=zero(T);g1bs=zero(T);g2bs=zero(T)
+s=zero(T); ds = zero(T); r = zero(T);rinv=zero(T); iter=0
+if beta0 > zero(T) || beta0 < zero(T)
    s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r,rinv,ds,iter = solve_kepler!(h,k,x0,v0,beta0,r0,
     s0,state)
 else
   println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
-  r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
+  r= zero(T); fill!(state,zero(T)); rinv=zero(T); s=zero(T); ds=zero(T); iter = 0
 end
 state[8]= r
 state[9] = (state[2]*state[5]+state[3]*state[6]+state[4]*state[7])*rinv
@@ -152,22 +149,21 @@ function kep_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,k::T,h::T,
   beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2}) where {T <: Real}
 # Computes the Jacobian as well
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
-zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
 r0inv = inv(r0)
 beta0inv = inv(beta0)
 # Now, solve for s in elliptical Kepler case:
-f = zero; g=zero; dfdt=zero; dgdt=zero; cx=zero;sx=zero;g1bs=zero;g2bs=zero
-s=zero; ds=zero; r = zero;rinv=zero; iter=0
-if beta0 > zero || beta0 < zero
+f = zero(T); g=zero(T); dfdt=zero(T); dgdt=zero(T); cx=zero(T);sx=zero(T);g1bs=zero(T);g2bs=zero(T)
+s=zero(T); ds=zero(T); r = zero(T);rinv=zero(T); iter=0
+if beta0 > zero(T) || beta0 < zero(T)
    s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r,rinv,ds,iter = solve_kepler!(h,k,x0,v0,beta0,r0,
     s0,state)
 # Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
 # with respect to initial state variable q0[j], where q = {x,v} & q0 = {x0,v0}.
-  fill!(jacobian,zero)
+  fill!(jacobian,zero(T))
   compute_jacobian!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r0,r,jacobian)
 else
   println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
-  r= zero; fill!(state,zero); rinv=zero; s=zero; ds=zero; iter = 0
+  r= zero(T); fill!(state,zero(T)); rinv=zero(T); s=zero(T); ds=zero(T); iter = 0
 end
 # recompute beta:
 state[8]= r
@@ -186,8 +182,7 @@ function compute_jacobian!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},beta0::T,s::T
 # Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
 # with respect to initial state variable q0[j], where q = {x,v,k} & q0 = {x0,v0,k}.
 # Now, compute the Jacobian: (9/18/2017 notes)
-zero = convert(typeof(h),0.0); one = convert(typeof(h),1.0)
-g0 = one-beta0*g2
+g0 = one(T)-beta0*g2
 g3 = (s-g1)/beta0
 eta = dot(x0,v0)  # unnecessary to divide by r0 for multiply for \dot\alpha_0
 absv0 = sqrt(dot(v0,v0))
@@ -255,6 +250,6 @@ for j=1:3
     jacobian[3+i,3+j] += dvdv0[i]*v0[j]/absv0 + dvda0[i]*x0[j]
   end
 end
-jacobian[7,7]=one
+jacobian[7,7]=one(T)
 return
 end
