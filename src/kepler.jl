@@ -32,7 +32,7 @@ if m != zero(T)
     end
   end
   if iter >= ITMAX && !(T == BigFloat && minimum([abs(de0-de1),abs(de0-de2)]) < eps(one(T)))
-    println("iterations in ekepler: ",iter," de0: ",de0," de1-de0: ",de1-de0," de2-de0: ",de2-de0)
+#    println("iterations in ekepler: ",iter," de0: ",de0," de1-de0: ",de1-de0," de2-de0: ",de2-de0)
   end
   ekep=de0+m
 else
@@ -71,7 +71,7 @@ if m != 0.0
     end
   end
   if iter >= ITMAX
-    println("iterations in ekepler2: ",iter," de0: ",de0," de1-de0: ",de1-de0," de2-de0: ",de2-de0)
+#    println("iterations in ekepler2: ",iter," de0: ",de0," de1-de0: ",de1-de0," de2-de0: ",de2-de0)
   end 
   ekep=e0+m-ms
 else
