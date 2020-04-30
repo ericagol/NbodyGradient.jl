@@ -8,6 +8,7 @@
 # to the initial orbital elements.
 #n = 8
 n = 3
+H = [3,1,1]
 n_body = n
 t0 = 7257.93115525-7300.0
 #h  = 0.12
@@ -43,11 +44,11 @@ count = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
 rstar = 1e12
-dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
+dq = ttv_elements!(H,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
 # Now call with half the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
-dq = ttv_elements!(n,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0,rstar)
+dq = ttv_elements!(H,t0,h/10.,tmax,elements,tt2,count2,0.0,0,0,rstar)
 
 mask = zeros(Bool, size(dtdq0))
 for jq=1:n_body
@@ -66,16 +67,16 @@ end
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtdelements0 = zeros(n,maximum(ntt),7,n)
-dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
+dtdelements0 = ttv_elements!(H,t0,h,tmax,elements,tt,count,dtdq0,rstar)
 dtdq2 = zeros(n,maximum(ntt),7,n)
 dtdelements2 = zeros(n,maximum(ntt),7,n)
-dtdelements2 = ttv_elements!(n,t0,h/2.,tmax,elements,tt2,count,dtdq2,rstar)
+dtdelements2 = ttv_elements!(H,t0,h/2.,tmax,elements,tt2,count,dtdq2,rstar)
 dtdq4 = zeros(n,maximum(ntt),7,n)
 dtdelements4 = zeros(n,maximum(ntt),7,n)
-dtdelements4 = ttv_elements!(n,t0,h/4.,tmax,elements,tt4,count,dtdq4,rstar)
+dtdelements4 = ttv_elements!(H,t0,h/4.,tmax,elements,tt4,count,dtdq4,rstar)
 dtdq8 = zeros(n,maximum(ntt),7,n)
 dtdelements8 = zeros(n,maximum(ntt),7,n)
-dtdelements8 = ttv_elements!(n,t0,h/8.,tmax,elements,tt8,count,dtdq8,rstar)
+dtdelements8 = ttv_elements!(H,t0,h/8.,tmax,elements,tt8,count,dtdq8,rstar)
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements0-dtdelements2)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements2-dtdelements4)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements4-dtdelements8)))
@@ -109,7 +110,7 @@ t0big = big(t0); tmaxbig = big(tmax); hbig = big(h)
 zilch = big(0.0)
 # Compute the transit times in BigFloat precision:
 tt_big = big.(tt); elementsbig = big.(elements0); rstarbig = big(rstar)
-dqbig = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt_big,count,big(0.0),0,0,rstarbig)
+dqbig = ttv_elements!(H,t0big,hbig,tmaxbig,elementsbig,tt_big,count,big(0.0),0,0,rstarbig)
 
 mask = zeros(Bool, size(dtdq0))
 for jq=1:n_body
@@ -128,16 +129,16 @@ end
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtdelements0 = zeros(n,maximum(ntt),7,n)
-dtdelements0 = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
+dtdelements0 = ttv_elements!(H,t0,h,tmax,elements,tt,count,dtdq0,rstar)
 dtdq2 = zeros(n,maximum(ntt),7,n)
 dtdelements2 = zeros(n,maximum(ntt),7,n)
-dtdelements2 = ttv_elements!(n,t0,h/2.,tmax,elements,tt2,count,dtdq2,rstar)
+dtdelements2 = ttv_elements!(H,t0,h/2.,tmax,elements,tt2,count,dtdq2,rstar)
 dtdq4 = zeros(n,maximum(ntt),7,n)
 dtdelements4 = zeros(n,maximum(ntt),7,n)
-dtdelements4 = ttv_elements!(n,t0,h/4.,tmax,elements,tt4,count,dtdq4,rstar)
+dtdelements4 = ttv_elements!(H,t0,h/4.,tmax,elements,tt4,count,dtdq4,rstar)
 dtdq8 = zeros(n,maximum(ntt),7,n)
 dtdelements8 = zeros(n,maximum(ntt),7,n)
-dtdelements8 = ttv_elements!(n,t0,h/8.,tmax,elements,tt8,count,dtdq8,rstar)
+dtdelements8 = ttv_elements!(H,t0,h/8.,tmax,elements,tt8,count,dtdq8,rstar)
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements0-dtdelements2)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements2-dtdelements4)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements4-dtdelements8)))
@@ -180,9 +181,9 @@ for jq=1:n_body
 #    dq0 = delement[iq]; if jq==1 && iq==7 ; dq0 = big(1e-10); end  # Vary mass of star by a larger factor
     if iq == 7; ivary = 1; else; ivary = iq+1; end  # Shift mass variation to end
     elementsbig[jq,ivary] += dq0
-    dq_plus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt2,count2,zilch,0,0,big(rstar))
+    dq_plus = ttv_elements!(H,t0big,hbig,tmaxbig,elementsbig,tt2,count2,zilch,0,0,big(rstar))
     elementsbig[jq,ivary] -= 2dq0
-    dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt3,count2,zilch,0,0,big(rstar))
+    dq_minus = ttv_elements!(H,t0big,hbig,tmaxbig,elementsbig,tt3,count2,zilch,0,0,big(rstar))
     #xm,vm = init_nbody(elements,t0,n_body)
     for i=2:n
       for k=1:count2[i]
