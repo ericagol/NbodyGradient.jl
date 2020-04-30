@@ -175,6 +175,7 @@ end
 
 println("Max diff asinh(dtbvdelements): ",maximum(abs.(asinh.(dtbvdelements0[mask])-asinh.(dtbvdelements0_num[mask]))))
 
+#=
 using PyPlot
 
 # Make a plot of the fractional errors:
@@ -204,6 +205,7 @@ end
 loglog([1.0,1024.0],1e-09*[1,2^15],":")
 loglog([1.0,1024.0],1e-12*[1,2^15],":")
 loglog([1.0,1024.0],1e-15*[1,2^15],":")
+=#
 
 @test isapprox(asinh.(dtbvdelements0[mask]),asinh.(dtbvdelements0_num[mask]);norm=maxabs)
 dtbvdelements0_num = convert(Array{Float64,5},dtbvdelements0_num)

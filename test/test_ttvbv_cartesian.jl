@@ -103,6 +103,7 @@ dtbvdq0_big = zeros(BigFloat,ntbv,n,maximum(ntt),7,n)
 hbig = big(h); ttbv_big = big.(ttbv); elementsbig = big.(elements); rstarbig = big(rstar)
 dtbvdelements_big = ttvbv_elements!(H,t0big,hbig,tmaxbig,elementsbig,ttbv_big,count,dtbvdq0_big,rstarbig)
 
+#=
 using PyPlot
 
 clf()
@@ -154,7 +155,7 @@ end
 
 loglog([1.0,1024.0],1e-12*[1,2^15],":",linewidth=3)
 
-
+=#
 println("Max diff asinh(dtbvdq0): ",maximum(abs.(asinh.(dtbvdq0_num[mask]).-asinh.(dtbvdq0[mask]))))
 @test isapprox(asinh.(dtbvdq0[mask]),asinh.(convert(Array{Float64,5},dtbvdq0_num)[mask]);norm=maxabs)
 #@save "test_ttbv.jld2" dtbvdq0 dtbvdq0_num

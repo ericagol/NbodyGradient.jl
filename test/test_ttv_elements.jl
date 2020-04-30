@@ -217,6 +217,7 @@ println("Max diff asinh(dtdelements): ",maximum(abs.(asinh.(dtdelements0[mask])-
 #loglog(abs.(reshape(dtdelements0,nderiv)),abs.(reshape(diff_dtdelements0,nderiv)),".")
 #println("Maximum error: ",maximum(diff_dtdelements0))
 
+#=
 using PyPlot
 
 # Make a plot of the fractional errors:
@@ -247,7 +248,7 @@ end
 loglog([1.0,1024.0],1e-09*[1,2^15],":")
 loglog([1.0,1024.0],1e-12*[1,2^15],":")
 loglog([1.0,1024.0],1e-15*[1,2^15],":")
-
+=#
 #@test isapprox(dtdelements0[mask],dtdelements0_num[mask];norm=maxabs)
 @test isapprox(asinh.(dtdelements0[mask]),asinh.(dtdelements0_num[mask]);norm=maxabs)
 #unit = ones(dtdelements0[mask])

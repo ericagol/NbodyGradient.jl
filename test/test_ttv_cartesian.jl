@@ -108,6 +108,7 @@ dtdq0_big = zeros(BigFloat,n,maximum(ntt),7,n)
 hbig = big(h); tt_big = big.(tt); elementsbig = big.(elements); rstarbig = big(rstar)
 dtdelements_big = ttv_elements!(H,t0big,hbig,tmaxbig,elementsbig,tt_big,count,dtdq0_big,rstarbig)
 
+#=
 using PyPlot
 
 clf()
@@ -159,7 +160,7 @@ end
 
 loglog([1.0,1024.0],1e-12*[1,2^15],":",linewidth=3)
 
-
+=#
 #println("Max diff log(dtdq0): ",maximum(abs.(dtdq0_num[mask]./dtdq0[mask].-1.0)))
 println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_num[mask]).-asinh.(dtdq0[mask]))))
 #unit = ones(dtdq0[mask])
