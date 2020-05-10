@@ -44,7 +44,8 @@ beta0 = 2.0*k/r0-dot(v0,v0)
 xsave[10,1]=beta0
 # First, compute it with the old version:
 jacobian_old =zeros(Float64,7,7)
-iter = kep_drift_ell_hyp!(x0,v0,k,h,s0,state,jacobian_old,drift_first)
+d_old = Derivatives(Float64)
+iter = kep_drift_ell_hyp!(x0,v0,k,h,s0,state,jacobian_old,drift_first,d_old)
 #println("s old: ",state[11])
 
 # Check that old and new are giving the same answer:

@@ -72,7 +72,8 @@ mbig = big.(m0)
 xerr_big = zeros(BigFloat,3,n); verr_big = zeros(BigFloat,3,n)
 jac_step_big = Matrix{BigFloat}(I,7*n,7*n)
 jac_err_big = zeros(BigFloat,7*n,7*n)
-@time for i=1:nstep; ah18!(xbig,vbig,xerr_big,verr_big,hbig,mbig,n,jac_step_big,jac_err_big,pair);end
+dBig = Derivatives(BigFloat)
+@time for i=1:nstep; ah18!(xbig,vbig,xerr_big,verr_big,hbig,mbig,n,jac_step_big,jac_err_big,pair,dBig);end
 println("AH18 vs. AH18 BigFloat x/v difference: ",x-convert(Array{Float64,2},xbig),v-convert(Array{Float64,2},vbig))
 
 # Now, copy these to compute Jacobian (so that I don't step
@@ -81,9 +82,10 @@ x = copy(x0)
 v = copy(v0)
 m = copy(m0)
 xerror = zeros(3,n); verror = zeros(3,n); jac_error = zeros(7*n,7*n)
+d = Derivatives(Float64)
 # Compute jacobian exactly over nstep steps:
 for istep=1:nstep
-  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
+  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair,d)
 end
 
 println("AH18 vs. AH18 BigFloat jac_step difference: ",jac_step-convert(Array{Float64,2},jac_step_big))
@@ -252,7 +254,7 @@ x = copy(x0)
 v = copy(v0)
 m = copy(m0)
 xerror = zeros(3,n); verror = zeros(3,n)
-ah18!(x,v,xerror,verror,h,m,n,dqdt,pair)
+ah18!(x,v,xerror,verror,h,m,n,dqdt,pair,d)
 xm= big.(x0)
 vm= big.(v0)
 mm= big.(m0)

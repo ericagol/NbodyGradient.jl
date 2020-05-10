@@ -6,6 +6,7 @@ An N-body itegrator that computes derivatives with respect to initial conditions
 
 module NbodyGradient
 
+include("PreAllocArrays.jl")
 include("ttv.jl")
 
 export ttv_elements!, ttvbv_elements!
