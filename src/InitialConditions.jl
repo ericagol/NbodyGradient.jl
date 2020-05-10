@@ -11,8 +11,12 @@ mutable struct ElementsIC{T<:AbstractFloat} <: InitialConditions
     t0::T
     der::Bool
 
-    function ElementsIC(elems::Union{String,Array{T,2}},H::Array{Int64,1},t0::T;
-            NDIM::Int64 = 3,der::Bool=true) where T <: AbstractFloat
+    function ElementsIC(elems::Union{String,Array{T,2}},H::Union{Array{Int64,1},Int64},
+                        t0::T;NDIM::Int64 = 3,der::Bool=true) where T <: AbstractFloat
+        # Check if only number of bodies was passed. Assumes fully nested.
+        if typeof(H) == Int64
+            H::Vector{Int64} = [H,ones(H-1)...]
+        end
         ϵ = convert(Array{T},hierarchy(H))
         if typeof(elems) == String
             elements = convert(Array{T},readdlm(elems,',',comments=true))
@@ -20,17 +24,12 @@ mutable struct ElementsIC{T<:AbstractFloat} <: InitialConditions
             elements = elems
         end
         nbody = H[1]
-        m = reshape(vcat(elements[:,1])[1:nbody],nbody,1)
+        m = reshape(vcat(elements[:,1])[1:nbody],nbody,1) # There's probably a better way to do this...
         amat = amatrix(ϵ,m)
         return new{T}(elements,ϵ,amat,NDIM,nbody,m,t0,der);
     end
 end
 
-#function ElementsIC(sys::System,H::Array{Int64,1},t0::T;
-#        NDIM::Int64 = 3,der::Bool=true) where T <: AbstractFloat
-#    elements::Array{Float64,2} = make_elements_array(sys)
-#    return ElementsIC(elements,H,t0;NDIM=3,der=true)
-#end     
 
 mutable struct CartesianIC{T<:AbstractFloat} <: InitialConditions
     x::Array{T,2}

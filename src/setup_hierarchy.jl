@@ -1,4 +1,4 @@
-using Distributed: clear!
+# using Distributed: clear!
 # Functions to generate ϵ matrix.
 
 ################################################################################
@@ -6,23 +6,25 @@ using Distributed: clear!
 # of the form "test.txt" (included in "test/" directory), or in a 2d array of
 # the form file = [x ; "x,y,z,..."] where x,y,z are Int64
 ################################################################################
-function hierarchy(file::Array{Int64,1})
+function hierarchy(ic_vec::Array{Int64,1})
 
     # Separates the initial array into variables
-    nbody = file[1]
-    bins = file[2:end]
+    nbody = ic_vec[1]
+    bins = ic_vec[2:end]
     #bins = replace(bins,"," => " ")
     #bins = readdlm(IOBuffer(bins),Int64)
-    level = length(bins)
 
+    
     # checks that the hierarchy can be created
-    @assert bins[1] <= nbody/2 && bins[1] <= 2^level
-
+    bins[end] == 1 ? level = length(bins) : level = length(bins) - 1 
+    @assert bins[1] <= nbody/2 && bins[1] <= 2^level "Invalid hierarchy."
+    @assert sum(bins[1:level]) == nbody - 1 "Invalid hierarchy. Total # of binaries should = N-1"
+    
     # Creates an empty array of the proper size
     h = zeros(Float64,nbody,nbody)
     # Starts filling the array and returns it
     bottom_level(nbody,bins,h,1)
-    h[end,1:end] .= -1
+    h[end,:] .= -1
     return h
 end
 
@@ -35,27 +37,25 @@ function bottom_level(nbody::Int64,bins::Array{Int64,1},h::Array{Float64},iter::
     h[1,1] = -1.0
     h[1,2] = 1.0
     if bins[1] > 1
+        bins[end] == 1 ? j = 1 : j::Int64 = nbody/2 - 1  
         for i=1:bins[1]-1
-            if !(@isdefined j) || isa(j,Nothing)
-                global j = i
-            elseif (@isdefined j) && i == 1
-                global j = 1
-            end
             if (j+3) <= nbody
                 h[i+1,j+2] = -1
                 h[i+1,j+3] = 1
+                j += 2
             end
-            j = +(j,2)
         end
     end
-    clear!(:j)
     binsp = bins[1]
     row = binsp[1] + 1
     bodies = bins[1] * 2
 
     # checks whether the desired hierarchy is symmetric and calls appropriate
     # filling functions
-    if 2*binsp == nbody
+    if bins[end] > 1
+        bins = bins[1:end-1]
+        symmetric_nest(nbody,bodies,bins,binsp,row,h,iter+1)
+    elseif 2*binsp == nbody
         symmetric(nbody,bodies,bins,binsp,row,h,iter+1)
     else
         nlevel(nbody,bodies,bins,binsp,row,h,iter+1)
@@ -149,7 +149,8 @@ end
 # bodies on the bottom level). Fills the remaining rows.
 ################################################################################
 function symmetric(nbody::Int64,bodies::Int64,bins::Array{Int64,1},binsp::Int64,row::Int64,h::Array{Float64},iter::Int64)
-    global j = 0
+    #global j = 0
+    j = 0
     while row < nbody-1
         h[row,1+j:2+j] .= -1
         h[row,j+3:j+4] .= 1
@@ -158,5 +159,21 @@ function symmetric(nbody::Int64,bodies::Int64,bins::Array{Int64,1},binsp::Int64,
     end
     h[row,1:binsp] .= -1
     h[row,binsp+1:nbody] .= 1
-    clear!(:j)
+    #clear!(:j)
+end
+
+function symmetric_nest(nbody,bodies,bins,binsp,row,h,iter)
+    hlf::Int64 = nbody/2
+    j = 0
+    while row < nbody-1
+        println(j)
+        h[row,1:2+j] .= -1.0
+        h[row,3+j] =  1.0
+        h[row+1,hlf+1:hlf+2+j] .= -1.0
+        h[row+1,hlf+3+j]  = 1.0
+        j += 1
+        row += 2
+    end
+    h[row,1:hlf] .= -1
+    h[row,hlf+1:nbody] .= 1
 end
