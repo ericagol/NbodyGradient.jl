@@ -5,6 +5,7 @@
 
 @testset "kickfast" begin
 n = 3
+H = [3,1,1]
 t0 = 7257.93115525
 h  = 0.05
 tmax = 600.0
@@ -34,7 +35,8 @@ for k=1:n
 end
 m0 = copy(m)
 
-x0,v0 = init_nbody(elements,t0,n)
+init = ElementsIC(elements,H,t0)
+x0,v0,_ = init_nbody(init)
 
 # Tilt the orbits a bit:
 x0[2,1] = 5e-1*sqrt(x0[1,1]^2+x0[3,1]^2)

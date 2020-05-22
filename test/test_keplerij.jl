@@ -14,6 +14,7 @@ hbig  = big(h)
 tmax = 600.0
 #dlnq = 1e-8
 dlnq = 1e-20
+H = [3,1,1]
 
 elements = readdlm("elements.txt",',')
 #elements[2,1] = 0.75
@@ -30,7 +31,8 @@ end
 
 for iter = 1:2
 
-x0,v0 = init_nbody(elements,t0,n)
+init = ElementsIC(elements,H,t0)
+x0,v0,_ = init_nbody(init)
  if iter == 2
    # Reduce masses to trigger hyperbolic routine:
     m[1:n] *= 1e-1
@@ -51,18 +53,20 @@ x = copy(x0) ; v=copy(v0)
 # Predict values of s:
 #println("Before first step: ",x," ",v)
 xerror = zeros(NDIM,n); verror = zeros(NDIM,n)
-keplerij!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij)
+d = Derivatives(Float64)
+keplerij!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,d)
 #println("After first step: ",x," ",v)
 x0 = copy(x) ; v0 = copy(v)
 xbig = big.(x) ; vbig=big.(v); mbig = big.(m)
 xerr_big = zeros(BigFloat,NDIM,n) ; verr_big= zeros(BigFloat,NDIM,n)
 xerror = zeros(NDIM,n); verror = zeros(NDIM,n)
-keplerij!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij)
+keplerij!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,d)
 # Now compute Jacobian with BigFloat precision:
 jac_ij_big = zeros(BigFloat,14,14)
 dqdt_ij_big = zeros(BigFloat,14)
 KEPLER_TOL = sqrt(eps(big(1.0)))
-keplerij!(mbig,xbig,vbig,xerr_big,verr_big,i,j,hbig,jac_ij_big,dqdt_ij_big)
+dBig = Derivatives(BigFloat)
+keplerij!(mbig,xbig,vbig,xerr_big,verr_big,i,j,hbig,jac_ij_big,dqdt_ij_big,dBig)
 #println("jac_ij: ",convert(Array{Float64,2},jac_ij_big))
 #println("jac_ij - jac_ij_big: ",convert(Array{Float64,2},jac_ij_big)-jac_ij)
 println("max(jac_ij - jac_ij_big): ",maxabs(convert(Array{Float64,2},jac_ij_big)-jac_ij))

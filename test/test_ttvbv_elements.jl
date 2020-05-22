@@ -8,6 +8,7 @@
 # to the initial orbital elements.
 #n = 8
 n = 3
+H = [3,1,1]
 n_body = n
 t0 = 7257.93115525-7300.0
 #h  = 0.12
@@ -43,11 +44,11 @@ count = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
 rstar = 1e12
-dq = ttvbv_elements!(n,t0,h,tmax,elements,ttbv1,count1,0.0,0,0,rstar)
+dq = ttvbv_elements!(H,t0,h,tmax,elements,ttbv1,count1,0.0,0,0,rstar)
 # Now call with half the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
-dq = ttvbv_elements!(n,t0,h/10.,tmax,elements,ttbv2,count2,0.0,0,0,rstar)
+dq = ttvbv_elements!(H,t0,h/10.,tmax,elements,ttbv2,count2,0.0,0,0,rstar)
 
 mask = zeros(Bool, size(dtbvdq0))
 for itbv=1:3, jq=1:n_body
@@ -66,16 +67,16 @@ end
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtbvdelements0 = zeros(3,n,maximum(ntt),7,n)
-dtbvdelements0 = ttvbv_elements!(n,t0,h,tmax,elements,ttbv,count,dtbvdq0,rstar)
+dtbvdelements0 = ttvbv_elements!(H,t0,h,tmax,elements,ttbv,count,dtbvdq0,rstar)
 dtbvdq2 = zeros(3,n,maximum(ntt),7,n)
 dtbvdelements2 = zeros(3,n,maximum(ntt),7,n)
-dtbvdelements2 = ttvbv_elements!(n,t0,h/2.,tmax,elements,ttbv2,count,dtbvdq2,rstar)
+dtbvdelements2 = ttvbv_elements!(H,t0,h/2.,tmax,elements,ttbv2,count,dtbvdq2,rstar)
 dtbvdq4 = zeros(3,n,maximum(ntt),7,n)
 dtbvdelements4 = zeros(3,n,maximum(ntt),7,n)
-dtbvdelements4 = ttvbv_elements!(n,t0,h/4.,tmax,elements,ttbv4,count,dtbvdq4,rstar)
+dtbvdelements4 = ttvbv_elements!(H,t0,h/4.,tmax,elements,ttbv4,count,dtbvdq4,rstar)
 dtbvdq8 = zeros(3,n,maximum(ntt),7,n)
 dtbvdelements8 = zeros(3,n,maximum(ntt),7,n)
-dtbvdelements8 = ttvbv_elements!(n,t0,h/8.,tmax,elements,ttbv8,count,dtbvdq8,rstar)
+dtbvdelements8 = ttvbv_elements!(H,t0,h/8.,tmax,elements,ttbv8,count,dtbvdq8,rstar)
 println("Maximum error on derivative: ",maximum(abs.(asinh.(dtbvdelements0[mask])-asinh.(dtbvdelements2[mask]))))
 println("Maximum error on derivative: ",maximum(abs.(asinh.(dtbvdq0)-asinh.(dtbvdq2))))
 println("Maximum error on derivative: ",maximum(abs.(asinh.(dtbvdelements2[mask])-asinh.(dtbvdelements4[mask]))))
@@ -96,7 +97,7 @@ t0big = big(t0); tmaxbig = big(tmax); hbig = big(h)
 zilch = big(0.0)
 # Compute the transit times in BigFloat precision:
 ttbv_big = big.(ttbv); elementsbig = big.(elements0); rstarbig = big(rstar)
-dqbig = ttvbv_elements!(n,t0big,hbig,tmaxbig,elementsbig,ttbv_big,count,big(0.0),0,0,rstarbig)
+dqbig = ttvbv_elements!(H,t0big,hbig,tmaxbig,elementsbig,ttbv_big,count,big(0.0),0,0,rstarbig)
 
 mask = zeros(Bool, size(dtbvdq0))
 for itbv=1:3, jq=1:n_body
@@ -115,16 +116,16 @@ end
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtbvdelements0 = zeros(3,n,maximum(ntt),7,n)
-dtbvdelements0 = ttvbv_elements!(n,t0,h,tmax,elements,ttbv,count,dtbvdq0,rstar)
+dtbvdelements0 = ttvbv_elements!(H,t0,h,tmax,elements,ttbv,count,dtbvdq0,rstar)
 dtbvdq2 = zeros(3,n,maximum(ntt),7,n)
 dtbvdelements2 = zeros(3,n,maximum(ntt),7,n)
-dtbvdelements2 = ttvbv_elements!(n,t0,h/2.,tmax,elements,ttbv2,count,dtbvdq2,rstar)
+dtbvdelements2 = ttvbv_elements!(H,t0,h/2.,tmax,elements,ttbv2,count,dtbvdq2,rstar)
 dtbvdq4 = zeros(3,n,maximum(ntt),7,n)
 dtbvdelements4 = zeros(3,n,maximum(ntt),7,n)
-dtbvdelements4 = ttvbv_elements!(n,t0,h/4.,tmax,elements,ttbv4,count,dtbvdq4,rstar)
+dtbvdelements4 = ttvbv_elements!(H,t0,h/4.,tmax,elements,ttbv4,count,dtbvdq4,rstar)
 dtbvdq8 = zeros(3,n,maximum(ntt),7,n)
 dtbvdelements8 = zeros(3,n,maximum(ntt),7,n)
-dtbvdelements8 = ttvbv_elements!(n,t0,h/8.,tmax,elements,ttbv8,count,dtbvdq8,rstar)
+dtbvdelements8 = ttvbv_elements!(H,t0,h/8.,tmax,elements,ttbv8,count,dtbvdq8,rstar)
 println("Maximum error on derivative: ",maximum(abs.(asinh.(dtbvdelements0[mask])-asinh.(dtbvdelements2[mask]))))
 println("Maximum error on derivative: ",maximum(abs.(asinh.(dtbvdq0)-asinh.(dtbvdq2))))
 println("Maximum error on derivative: ",maximum(abs.(asinh.(dtbvdelements2[mask])-asinh.(dtbvdelements4[mask]))))
@@ -153,9 +154,9 @@ for jq=1:n_body
     elementsbig = big.(elements0)
     if iq == 7; ivary = 1; else; ivary = iq+1; end  # Shift mass variation to end
     elementsbig[jq,ivary] += dq0
-    dq_plus = ttvbv_elements!(n,t0big,hbig,tmaxbig,elementsbig,ttbv2,count2,zilch,0,0,big(rstar))
+    dq_plus = ttvbv_elements!(H,t0big,hbig,tmaxbig,elementsbig,ttbv2,count2,zilch,0,0,big(rstar))
     elementsbig[jq,ivary] -= 2dq0
-    dq_minus = ttvbv_elements!(n,t0big,hbig,tmaxbig,elementsbig,ttbv3,count2,zilch,0,0,big(rstar))
+    dq_minus = ttvbv_elements!(H,t0big,hbig,tmaxbig,elementsbig,ttbv3,count2,zilch,0,0,big(rstar))
     #xm,vm = init_nbody(elements,t0,n_body)
     for i=2:n
       for k=1:count2[i]
@@ -174,6 +175,7 @@ end
 
 println("Max diff asinh(dtbvdelements): ",maximum(abs.(asinh.(dtbvdelements0[mask])-asinh.(dtbvdelements0_num[mask]))))
 
+#=
 using PyPlot
 
 # Make a plot of the fractional errors:
@@ -203,6 +205,7 @@ end
 loglog([1.0,1024.0],1e-09*[1,2^15],":")
 loglog([1.0,1024.0],1e-12*[1,2^15],":")
 loglog([1.0,1024.0],1e-15*[1,2^15],":")
+=#
 
 @test isapprox(asinh.(dtbvdelements0[mask]),asinh.(dtbvdelements0_num[mask]);norm=maxabs)
 dtbvdelements0_num = convert(Array{Float64,5},dtbvdelements0_num)

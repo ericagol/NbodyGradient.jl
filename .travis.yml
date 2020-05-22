@@ -1,0 +1,13 @@
+language: julia
+julia:
+    - 1
+    - 0.7
+
+# Should allow build to succeed even if nightly or v0.7 fail.
+matrix:
+    allow_failures:
+        - julia: 0.7
+    fast_finish: true
+
+notifications:
+    email: false

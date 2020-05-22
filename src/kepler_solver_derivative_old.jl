@@ -146,7 +146,7 @@ return iter
 end
 
 function kep_ell_hyp!(x0::Array{T,1},v0::Array{T,1},r0::T,k::T,h::T,
-  beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2},d::Derivatives{T}) where {T <: Real}
+  beta0::T,s0::T,state::Array{T,1},jacobian::Array{T,2}) where {T <: Real}
 # Computes the Jacobian as well
 # Solves equation (35) from Wisdom & Hernandez for the elliptic case.
 r0inv = inv(r0)
@@ -160,7 +160,7 @@ if beta0 > zero(T) || beta0 < zero(T)
 # Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
 # with respect to initial state variable q0[j], where q = {x,v} & q0 = {x0,v0}.
   fill!(jacobian,zero(T))
-  compute_jacobian!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r0,r,jacobian,d)
+  compute_jacobian!(h,k,x0,v0,beta0,s,f,g,dfdt,dgdt,cx,sx,g1bs,g2bs,r0,r,jacobian)
 else
   println("Not elliptic or hyperbolic ",beta0," x0 ",x0)
   r= zero(T); fill!(state,zero(T)); rinv=zero(T); s=zero(T); ds=zero(T); iter = 0
@@ -178,8 +178,7 @@ return iter
 end
 
 function compute_jacobian!(h::T,k::T,x0::Array{T,1},v0::Array{T,1},beta0::T,s::T,
-  f::T,g::T,dfdt::T,dgdt::T,cx::T,sx::T,g1::T,g2::T,r0::T,r::T,jacobian::Array{T,2},
-  d::Derivatives{T}) where {T <: Real}
+  f::T,g::T,dfdt::T,dgdt::T,cx::T,sx::T,g1::T,g2::T,r0::T,r::T,jacobian::Array{T,2}) where {T <: Real}
 # Compute the Jacobian.  jacobian[i,j] is derivative of final state variable q[i]
 # with respect to initial state variable q0[j], where q = {x,v,k} & q0 = {x0,v0,k}.
 # Now, compute the Jacobian: (9/18/2017 notes)
@@ -197,16 +196,16 @@ dbetadv0 = -2absv0
 dbetadk  = 2/r0
 # "p" for partial derivative:
 for i=1:3
-  d.pxpr0[i] = k/r0^2*g2*x0[i]+g1*v0[i]
-  d.pxpa0[i] = g2*v0[i]
-  d.pxpk[i]  = -g2/r0*x0[i]
-  d.pxps[i]  = -k/r0*g1*x0[i]+(r0*g0+eta*g1)*v0[i]
-  d.pxpbeta[i] = -k/(2beta0*r0)*(s*g1-2g2)*x0[i]+1/(2beta0)*(s*r0*g0-r0*g1+s*eta*g1-2*eta*g2)*v0[i]
-  d.prvpr0[i] = k*g1/r0^2*x0[i]+g0*v0[i]
-  d.prvpa0[i] = g1*v0[i]
-  d.prvpk[i] = -g1/r0*x0[i]
-  d.prvps[i] = -k*g0/r0*x0[i]+(-beta0*r0*g1+eta*g0)*v0[i]
-  d.prvpbeta[i] = -k/(2beta0*r0)*(s*g0-g1)*x0[i]+1/(2beta0)*(-s*r0*beta0*g1+eta*s*g0-eta*g1)*v0[i]
+  pxpr0[i] = k/r0^2*g2*x0[i]+g1*v0[i]
+  pxpa0[i] = g2*v0[i]
+  pxpk[i]  = -g2/r0*x0[i]
+  pxps[i]  = -k/r0*g1*x0[i]+(r0*g0+eta*g1)*v0[i]
+  pxpbeta[i] = -k/(2beta0*r0)*(s*g1-2g2)*x0[i]+1/(2beta0)*(s*r0*g0-r0*g1+s*eta*g1-2*eta*g2)*v0[i]
+  prvpr0[i] = k*g1/r0^2*x0[i]+g0*v0[i]
+  prvpa0[i] = g1*v0[i]
+  prvpk[i] = -g1/r0*x0[i]
+  prvps[i] = -k*g0/r0*x0[i]+(-beta0*r0*g1+eta*g0)*v0[i]
+  prvpbeta[i] = -k/(2beta0*r0)*(s*g0-g1)*x0[i]+1/(2beta0)*(-s*r0*beta0*g1+eta*s*g0-eta*g1)*v0[i]
 end
 prpr0 = g0
 prpa0 = g1
@@ -214,25 +213,25 @@ prpk  = g2
 prps = (k-beta0*r0)*g1+eta*g0
 prpbeta = 1/(2beta0)*(s*(k-beta0*r0)*g1+eta*s*g0-eta*g1-2k*g2)
 for i=1:3
-  d.dxdr0[i] = d.pxps[i]*dsdr0 + d.pxpbeta[i]*dbetadr0 + d.pxpr0[i]
-  d.dxda0[i] = d.pxps[i]*dsda0 + d.pxpa0[i]
-  d.dxdv0[i] = d.pxps[i]*dsdv0 + d.pxpbeta[i]*dbetadv0
-  d.dxdk[i]  = d.pxps[i]*dsdk  + d.pxpbeta[i]*dbetadk + d.pxpk[i]
-  d.drvdr0[i] = d.prvps[i]*dsdr0 + d.prvpbeta[i]*dbetadr0 + d.prvpr0[i]
-  d.drvda0[i] = d.prvps[i]*dsda0 + d.prvpa0[i]
-  d.drvdv0[i] = d.prvps[i]*dsdv0 + d.prvpbeta[i]*dbetadv0
-  d.drvdk[i]  = d.prvps[i]*dsdk  + d.prvpbeta[i]*dbetadk +d.prvpk[i]
+  dxdr0[i] = pxps[i]*dsdr0 + pxpbeta[i]*dbetadr0 + pxpr0[i]
+  dxda0[i] = pxps[i]*dsda0 + pxpa0[i]
+  dxdv0[i] = pxps[i]*dsdv0 + pxpbeta[i]*dbetadv0
+  dxdk[i]  = pxps[i]*dsdk  + pxpbeta[i]*dbetadk + pxpk[i]
+  drvdr0[i] = prvps[i]*dsdr0 + prvpbeta[i]*dbetadr0 + prvpr0[i]
+  drvda0[i] = prvps[i]*dsda0 + prvpa0[i]
+  drvdv0[i] = prvps[i]*dsdv0 + prvpbeta[i]*dbetadv0
+  drvdk[i]  = prvps[i]*dsdk  + prvpbeta[i]*dbetadk +prvpk[i]
 end
 drdr0 = prpr0 + prps*dsdr0 + prpbeta*dbetadr0
 drda0 = prpa0 + prps*dsda0
 drdv0 = prps*dsdv0 + prpbeta*dbetadv0
 drdk  = prpk + prps*dsdk + prpbeta*dbetadk
 for i=1:3
-  d.vtmp[i] = dfdt*x0[i]+dgdt*v0[i]
-  d.dvdr0[i] = (d.drvdr0[i]-drdr0*d.vtmp[i])/r
-  d.dvda0[i] = (d.drvda0[i]-drda0*d.vtmp[i])/r
-  d.dvdv0[i] = (d.drvdv0[i]-drdv0*d.vtmp[i])/r
-  d.dvdk[i]  = (d.drvdk[i] -drdk *d.vtmp[i])/r
+  vtmp[i] = dfdt*x0[i]+dgdt*v0[i]
+  dvdr0[i] = (drvdr0[i]-drdr0*vtmp[i])/r
+  dvda0[i] = (drvda0[i]-drda0*vtmp[i])/r
+  dvdv0[i] = (drvdv0[i]-drdv0*vtmp[i])/r
+  dvdk[i]  = (drvdk[i] -drdk *vtmp[i])/r
 end
 # Now, compute Jacobian:
 for i=1:3
@@ -240,15 +239,15 @@ for i=1:3
   jacobian[  i,3+i] = g
   jacobian[3+i,  i] = dfdt
   jacobian[3+i,3+i] = dgdt
-  jacobian[  i,7] = d.dxdk[i]
-  jacobian[3+i,7] = d.dvdk[i]
+  jacobian[  i,7] = dxdk[i]
+  jacobian[3+i,7] = dvdk[i]
 end
 for j=1:3
   for i=1:3
-    jacobian[  i,  j] += d.dxdr0[i]*x0[j]/r0 + d.dxda0[i]*v0[j]
-    jacobian[  i,3+j] += d.dxdv0[i]*v0[j]/absv0 + d.dxda0[i]*x0[j]
-    jacobian[3+i,  j] += d.dvdr0[i]*x0[j]/r0 + d.dvda0[i]*v0[j]
-    jacobian[3+i,3+j] += d.dvdv0[i]*v0[j]/absv0 + d.dvda0[i]*x0[j]
+    jacobian[  i,  j] += dxdr0[i]*x0[j]/r0 + dxda0[i]*v0[j]
+    jacobian[  i,3+j] += dxdv0[i]*v0[j]/absv0 + dxda0[i]*x0[j]
+    jacobian[3+i,  j] += dvdr0[i]*x0[j]/r0 + dvda0[i]*v0[j]
+    jacobian[3+i,3+j] += dvdv0[i]*v0[j]/absv0 + dvda0[i]*x0[j]
   end
 end
 jacobian[7,7]=one(T)
