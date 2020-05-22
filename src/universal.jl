@@ -480,7 +480,7 @@ function new_guess(r0::T, eta::T, zeta::T, dt::T) where {T <: Real}
     s = cubic1(3eta/zeta, 6r0/zeta, -6dt/zeta)
   elseif (eta != nil)
     reta = r0/eta
-    disc = reta*reta + 8dt/eta
+    disc = reta*reta + 2dt/eta
     if (disc >= nil) 
       s = -reta + sqrt(disc)
     else

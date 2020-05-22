@@ -8,6 +8,7 @@
 
 #n = 8
 n = 3
+H = [3,1,1]
 #n = 2
 t0 = 7257.93115525
 h  = 0.05
@@ -39,14 +40,16 @@ pair = zeros(Bool,n,n)
 #end
 
 # Initialize with identity matrix:
-jac_step = eye(Float64,7*n)
+jac_step = Matrix{Float64}(I,7*n,7*n)
+jac_error = zeros(7*n,7*n)
 
 for k=1:n
   m[k] = elements[k,1]
 end
 m0 = copy(m)
 
-x0,v0 = init_nbody(elements,t0,n)
+init = ElementsIC(elements,H,t0)
+x0,v0,_ = init_nbody(init)
 
 # Tilt the orbits a bit:
 x0[2,1] = 5e-1*sqrt(x0[1,1]^2+x0[3,1]^2)
@@ -70,12 +73,15 @@ println("AH18 vs. DH17 x/v difference: ",x0-xtest,v0-vtest)
 x = copy(x0)
 v = copy(v0)
 m = copy(m0)
+xerror = zeros(3,n); verror = zeros(3,n)
 xbig = big.(x0)
 vbig = big.(v0)
 mbig = big.(m0)
+xerr_big = zeros(BigFloat,3,n); verr_big=zeros(BigFloat,3,n);
+
 # Compute jacobian exactly over nstep steps:
 for istep=1:nstep
-  dh17!(x,v,h,m,n,jac_step,pair)
+  dh17!(x,v,xerror,verror,h,m,n,jac_step,pair)
 end
 #println(typeof(h)," ",jac_step)
 #read(STDIN,Char)
@@ -85,8 +91,6 @@ end
 # misaligned or shifted when returned.  If I modify dh17! to output
 # jac_step, then it works.
 # Initialize with identity matrix:
-#jac_big= eye(BigFloat,7*n)
-#jac_copy = eye(BigFloat,7*n)
 ## Compute jacobian exactly over nstep steps:
 #for istep=1:nstep
 #  jac_copy = dh17!(xbig,vbig,hbig,mbig,n,jac_big,pair)
@@ -243,7 +247,8 @@ dqdt_num = zeros(BigFloat,7*n)
 x = copy(x0)
 v = copy(v0)
 m = copy(m0)
-dh17!(x,v,h,m,n,dqdt,pair)
+xerror = zeros(3,n); verror = zeros(3,n)
+dh17!(x,v,xerror,verror,h,m,n,dqdt,pair)
 xm= big.(x0)
 vm= big.(v0)
 mm= big.(m0)

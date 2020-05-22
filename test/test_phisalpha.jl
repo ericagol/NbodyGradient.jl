@@ -11,14 +11,15 @@
 
 @testset "phisalpha" begin
 n = 3
+H = [3,1,1]
 t0 = 7257.93115525
 h  = 0.05
 tmax = 600.0
 dlnq = big(1e-15)
 
 elements = readdlm("elements.txt",',')
-elements[2,1] = 1.0
-elements[3,1] = 1.0
+#elements[2,1] = 1.0
+#elements[3,1] = 1.0
 
 m =zeros(n)
 x0=zeros(3,n)
@@ -36,14 +37,15 @@ pair = zeros(Bool,n,n)
 #end
 println("pair: ",pair)
 
-jac_step = eye(7*n)
+jac_step = Matrix{Float64}(I,7*n,7*n)
 
 for k=1:n
   m[k] = elements[k,1]
 end
 m0 = copy(m)
 
-x0,v0 = init_nbody(elements,t0,n)
+init = ElementsIC(elements,H,t0)
+x0,v0,_ = init_nbody(init)
 
 # Tilt the orbits a bit:
 x0[2,1] = 5e-1*sqrt(x0[1,1]^2+x0[3,1]^2)
@@ -61,7 +63,8 @@ dh17!(x0,v0,h,m,n,pair)
 x = copy(x0); v = copy(v0); m = copy(m0)
 # Compute jacobian exactly:
 dqdt_phi = zeros(7*n)
-phisalpha!(x,v,h,m,alpha,n,jac_step,dqdt_phi,pair)
+xerror = zeros(3,n); verror = zeros(3,n)
+phisalpha!(x,v,xerror,verror,h,m,alpha,n,jac_step,dqdt_phi,pair)
 
 
 # Now compute numerical derivatives, using BigFloat to avoid
@@ -168,11 +171,13 @@ end
 
 jacmax = 0.0
 for i=1:7, j=1:3, k=1:7, l=1:3
-  if jac_step[(j-1)*7+i,(l-1)*7+k] != 0
+  if jac_step[(j-1)*7+i,(l-1)*7+k] != 0 && jac_step_num[(j-1)*7+i,(l-1)*7+k] != 0
     # Compute the fractional error and absolute error, and take the minimum of the two:
-    diff = minimum([abs(float(jac_step_num[(j-1)*7+i,(l-1)*7+k])/jac_step[(j-1)*7+i,(l-1)*7+k]-1.0);float(jac_step_num[(j-1)*7+i,(l-1)*7+k])-jac_step[(j-1)*7+i,(l-1)*7+k]])
+#    diff = minimum([abs(float(jac_step_num[(j-1)*7+i,(l-1)*7+k])/jac_step[(j-1)*7+i,(l-1)*7+k]-1.0);float(jac_step_num[(j-1)*7+i,(l-1)*7+k])-jac_step[(j-1)*7+i,(l-1)*7+k]])
+    diff = abs(float(jac_step_num[(j-1)*7+i,(l-1)*7+k])/jac_step[(j-1)*7+i,(l-1)*7+k]-1.0)
     if diff > jacmax
       jacmax = diff
+      println(i," ",j," ",k," ",l," ",jacmax," ",convert(Float64,jac_step_num[(j-1)*7+i,(l-1)*7+k])," ",jac_step[(j-1)*7+i,(l-1)*7+k])
     end
   end
 end

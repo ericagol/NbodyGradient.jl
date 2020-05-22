@@ -2,7 +2,7 @@
 include("../../src/ttv.jl")
 include("/Users/ericagol/Computer/Julia/regress.jl")
 
-# Turn of fastkicks:
+# Turn off fastkicks:
 nopair = false
 
 elements = readdlm("elements_rebound.txt",',')
