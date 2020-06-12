@@ -1,4 +1,8 @@
-NbodyGradient is a set of Julia routines for computing gradients of N-body integrations.
+# NbodyGradient
+
+![Travis (.org)](https://img.shields.io/travis/ericagol/NbodyGradient)
+
+A set of Julia routines for computing gradients of N-body integrations.
 
 Under development by Eric Agol, David Hernandez and Zach Langford
 
