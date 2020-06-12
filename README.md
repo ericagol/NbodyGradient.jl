@@ -1,6 +1,6 @@
 # NbodyGradient
 
-![Travis (.org)](https://img.shields.io/travis/ericagol/NbodyGradient)
+[![Build Status](https://travis-ci.org/ericagol/NbodyGradient.svg?branch=master)](https://travis-ci.org/ericagol/NbodyGradient)
 
 A set of Julia routines for computing gradients of N-body integrations.
 
