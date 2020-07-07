@@ -43,7 +43,8 @@ dtdq0_num = zeros(BigFloat,n,maximum(ntt),7,n)
 dlnq = big(1e-10)
 # Make radius of star large:
 rstar = 1e12
-dtdelements_num = ttv_elements!(H,t0,h,tmax,elements,tt,count,dtdq0,dtdq0_num,dlnq,rstar)
+# Not sure why this call is here.
+#dtdelements_num = ttv_elements!(H,t0,h,tmax,elements,tt,count,dtdq0,dtdq0_num,dlnq,rstar)
 # Now do computation in BigFloat precision:
 dtdq0_big = big.(dtdq0)
 dtdelements_num = ttv_elements!(H,big(t0),big(h),big(tmax),big.(elements),big.(tt),count,dtdq0_big,big(rstar))
@@ -56,8 +57,8 @@ for i=2:n, j=1:count[i], k=1:5, l=1:n
   mask[i,j,k,l] = true
 end
 #println("Max diff log(dtdq0): ",maximum(abs.(dtdq0_num[mask]./dtdq0[mask]-1.0)))
-println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_num[mask])-asinh.(dtdq0[mask]))))
-println("Max diff     dtdq0 : ",maximum((dtdq0_num[mask]-dtdq0[mask])))
+#println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_num[mask])-asinh.(dtdq0[mask]))))
+#println("Max diff     dtdq0 : ",maximum((dtdq0_num[mask]-dtdq0[mask])))
 #@test isapprox(dtdq0[mask],convert(Array{Float64,4},dtdq0_num)[mask];norm=maxabs)
 @test isapprox(asinh.(dtdq0[mask]),asinh.(convert(Array{Float64,4},dtdq0_num)[mask]);norm=maxabs)
 #unit = ones(dtdq0[mask])

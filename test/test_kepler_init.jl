@@ -37,7 +37,7 @@ jac_init_num = zeros(BigFloat,7,7)
 delements = big.([1e-15,1e-15,1e-15,1e-15,1e-15,1e-15,1e-15])
 elements_name = ["P","t0","ecosom","esinom","inc","Omega","Mass"]
 cartesian_name = ["x","y","z","vx","vy","vz","mass"]
-println("Elements: ",elements)
+#println("Elements: ",elements)
 massbig=big(mass)
 for i=1:ntime
   x,v = kepler_init(timebig[i],massbig,big.(elements))
@@ -73,7 +73,8 @@ for i=1:ntime
       end
     end
     jac_init_num[7,7]=1.0
-    for j=1:7, k=1:7
+    #= Dont need for CI Testing
+    #for j=1:7, k=1:7
       if abs(jac_init[k,j]-jac_init_num[k,j]) > 1e-8
         println(elements_name[j]," ",cartesian_name[k]," ",jac_init[k,j]," ",jac_init_num[k,j]," ",jac_init[k,j]-jac_init_num[k,j])
       end
@@ -83,6 +84,7 @@ for i=1:ntime
     end
     println("Jacobians: difference ",maximum(abs.(jac_init-jac_init_num)))
     println("Jacobians: log diff   ",maximum(abs.(jac_init[jac_init_num .!= 0.0]./jac_init_num[jac_init_num .!= 0.0].-1)))
+    =#
   end
   xvec[:,i]=x
   vvec[:,i]=v
@@ -119,11 +121,11 @@ for i=2:ntime
   dAdt[i] = norm(dAvec)/(time[i]-time[i-1])
   Atot += norm(dAvec)
 end  
-println("Total area: ",Atot," ",pi*sqrt(1-ecc^2)*semi^2," ratio: ",Atot/pi/semi^2/sqrt(1-ecc^2))
+#println("Total area: ",Atot," ",pi*sqrt(1-ecc^2)*semi^2," ratio: ",Atot/pi/semi^2/sqrt(1-ecc^2))
 #using PyPlot
 #plot(time,dAdt)
 #axis([minimum(time),maximum(time),0.,1.5*maximum(dAdt)])
-println("Scatter in dAdt: ",std(dAdt))
+#println("Scatter in dAdt: ",std(dAdt))
 
 #plot(time,vvec[1,:])
 #plot(time,vfvec[1,:],".")

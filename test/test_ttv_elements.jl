@@ -80,12 +80,13 @@ dtdelements8 = ttv_elements!(H,t0,h/8.,tmax,elements,tt8,count,dtdq8,rstar)
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements0-dtdelements2)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements2-dtdelements4)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements4-dtdelements8)))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements0[mask])-asinh.(dtdelements2[mask]))))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq0)-asinh.(dtdq2))))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements2[mask])-asinh.(dtdelements4[mask]))))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq2)-asinh.(dtdq4))))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements4[mask])-asinh.(dtdelements8[mask]))))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq4)-asinh.(dtdq8))))
+
+#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements0[mask])-asinh.(dtdelements2[mask]))))
+#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq0)-asinh.(dtdq2))))
+#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements2[mask])-asinh.(dtdelements4[mask]))))
+#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq2)-asinh.(dtdq4))))
+#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements4[mask])-asinh.(dtdelements8[mask]))))
+#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq4)-asinh.(dtdq8))))
 #read(STDIN,Char)
 
 # Check that this is working properly:
@@ -142,12 +143,12 @@ dtdelements8 = ttv_elements!(H,t0,h/8.,tmax,elements,tt8,count,dtdq8,rstar)
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements0-dtdelements2)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements2-dtdelements4)))
 #println("Maximum error on derivative: ",maximum(abs.(dtdelements4-dtdelements8)))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements0[mask])-asinh.(dtdelements2[mask]))))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq0)-asinh.(dtdq2))))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements2[mask])-asinh.(dtdelements4[mask]))))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq2)-asinh.(dtdq4))))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements4[mask])-asinh.(dtdelements8[mask]))))
-println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq4)-asinh.(dtdq8))))
+#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements0[mask])-asinh.(dtdelements2[mask]))))
+#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq0)-asinh.(dtdq2))))
+#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements2[mask])-asinh.(dtdelements4[mask]))))
+#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq2)-asinh.(dtdq4))))
+#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdelements4[mask])-asinh.(dtdelements8[mask]))))
+#println("Maximum error on derivative: ",maximum(abs.(asinh.(dtdq4)-asinh.(dtdq8))))
 #read(STDIN,Char)
 
 # Check that this is working properly:
@@ -199,7 +200,7 @@ for jq=1:n_body
 end
 
 #println("Max diff dtdelements: ",maximum(abs.(dtdelements0[mask]./dtdelements0_num[mask].-1.0)))
-println("Max diff asinh(dtdelements): ",maximum(abs.(asinh.(dtdelements0[mask])-asinh.(dtdelements0_num[mask]))))
+#println("Max diff asinh(dtdelements): ",maximum(abs.(asinh.(dtdelements0[mask])-asinh.(dtdelements0_num[mask]))))
 
 #ntot = 0
 #diff_dtdelements0 = zeros(n,maximum(ntt),7,n)

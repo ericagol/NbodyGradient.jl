@@ -1,10 +1,12 @@
-
 # This code tests the function kepler_driftij_gamma
+import NbodyGradient: kepler_driftij_gamma!
+
 
 @testset "kepler_driftij_gamma" begin
 for drift_first in [true,false]
 # Next, try computing two-body Keplerian Jacobian:
 
+NDIM = 3
 n = 3
 H = [3,1,1]
 t0 = 7257.93115525
@@ -48,8 +50,8 @@ jac_ij = zeros(Float64,14,14)
 dqdt_ij = zeros(Float64,14)
 dqdt_num = zeros(BigFloat,14)
 
-println("Initial values: ",x0,v0)
-println("masses: ",m)
+#println("Initial values: ",x0,v0)
+#println("masses: ",m)
 i=1 ; j=2
 x = copy(x0) ; v=copy(v0)
 xerror = zeros(NDIM,n); verror = zeros(NDIM,n)
@@ -67,7 +69,7 @@ KEPLER_TOL = sqrt(eps(big(1.0)))
 kepler_driftij_gamma!(mbig,xbig,vbig,xerr_big,verr_big,i,j,hbig,jac_ij_big,dqdt_ij_big,drift_first)
 #println("jac_ij: ",convert(Array{Float64,2},jac_ij_big))
 #println("jac_ij - jac_ij_big: ",convert(Array{Float64,2},jac_ij_big)-jac_ij)
-println("max(jac_ij - jac_ij_big): ",maxabs(convert(Array{Float64,2},jac_ij_big)-jac_ij))
+#println("max(jac_ij - jac_ij_big): ",maxabs(convert(Array{Float64,2},jac_ij_big)-jac_ij))
 
 
 # Now, compute the derivatives numerically:
@@ -291,7 +293,8 @@ for i=1:14, j=1:14
     end
   end
 end
-println("Maximum fractional error: ",emax," ",imax," ",jmax)
+# Dont need for CI
+#=println("Maximum fractional error: ",emax," ",imax," ",jmax)
 for i=1:14
   println("jac_ij: i      ",i," ",jac_ij[i,:])
   println("jac_ij_num: i  ",i," ",convert(Array{Float64,1},jac_ij_num[i,:]))
@@ -306,7 +309,7 @@ println("Maximum fractional error big: ",emax_big," ",imax_big," ",jmax_big)
 println("Maximum jac_ij error:   ",maxabs(convert(Array{Float64,2},asinh.(jac_ij_num))-asinh.(jac_ij)))
 println("Maximum jac_ij_big-jac_ij_num:   ",maxabs(convert(Array{Float64,2},asinh.(jac_ij_num)-asinh.(jac_ij_big))))
 println("Max dqdt error: ",maxabs(dqdt_ij-convert(Array{Float64,1},dqdt_num)))
-
+=#
 @test isapprox(jac_ij_num,jac_ij;norm=maxabs)
 @test isapprox(dqdt_ij,convert(Array{Float64,1},dqdt_num);norm=maxabs)
 

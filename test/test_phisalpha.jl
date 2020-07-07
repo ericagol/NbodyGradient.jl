@@ -1,6 +1,7 @@
 # Tests the routine phisalpha jacobian.  This routine
 # computes the force gradient correction after Dehnen & Hernandez (2017).
 
+import NbodyGradient: phisalpha!
 #include("../src/ttv.jl")
 
 #function phisalpha!(x::Array{Float64,2},v::Array{Float64,2},h::Float64,m::Array{Float64,1},alpha::Float64,n::Int64,jac_step::Array{Float64,4})
@@ -35,7 +36,7 @@ pair = zeros(Bool,n,n)
 #  # We don't need to define this, but let's anyways:
 #  pair[i,1] = false
 #end
-println("pair: ",pair)
+#println("pair: ",pair)
 
 jac_step = Matrix{Float64}(I,7*n,7*n)
 
@@ -46,6 +47,8 @@ m0 = copy(m)
 
 init = ElementsIC(elements,H,t0)
 x0,v0,_ = init_nbody(init)
+xerror = zeros(Float64,size(x0))
+verror = zeros(Float64,size(v0))
 
 # Tilt the orbits a bit:
 x0[2,1] = 5e-1*sqrt(x0[1,1]^2+x0[3,1]^2)
@@ -56,7 +59,7 @@ v0[2,2] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 v0[2,3] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 
 # Take a step:
-dh17!(x0,v0,h,m,n,pair)
+ah18!(x0,v0,xerror,verror,h,m,n,pair)
 
 # Now, copy these to compute Jacobian (so that I don't step
 # x0 & v0 forward in time):
@@ -66,7 +69,6 @@ dqdt_phi = zeros(7*n)
 xerror = zeros(3,n); verror = zeros(3,n)
 phisalpha!(x,v,xerror,verror,h,m,alpha,n,jac_step,dqdt_phi,pair)
 
-
 # Now compute numerical derivatives, using BigFloat to avoid
 # round-off errors:
 jac_step_num = zeros(BigFloat,7*n,7*n)
@@ -74,25 +76,31 @@ jac_step_num = zeros(BigFloat,7*n,7*n)
 xsave = big.(x0)
 vsave = big.(v0)
 msave = big.(m0)
+big_xerror = zeros(BigFloat,size(xsave))
+big_verror = zeros(BigFloat,size(xsave))
 hbig = big(h)
 abig = big(alpha)
 # Carry out step using BigFloat for extra precision:
-phisalpha!(xsave,vsave,hbig,msave,abig,n,pair)
+phisalpha!(xsave,vsave,big_xerror,big_verror,hbig,msave,abig,n,pair)
 xbig = big.(x0)
 vbig = big.(v0)
 mbig = big.(m0)
+fill!(big_xerror,0.0)
+fill!(big_verror,0.0)
 # Compute numerical derivatives wrt time:
 dqdt_num = zeros(BigFloat,7*n)
 # Vary time:
-phisalpha!(xbig,vbig,hbig,mbig,abig,n,pair)
+phisalpha!(xbig,vbig,big_xerror,big_verror,hbig,mbig,abig,n,pair)
 # Initial positions, velocities & masses:
 xbig .= big.(x0)
 vbig .= big.(v0)
 mbig .= big.(m0)
+fill!(big_xerror,0.0)
+fill!(big_verror,0.0)
 hbig = big(h)
 dq = dlnq * hbig
 hbig += dq
-phisalpha!(xbig,vbig,hbig,mbig,abig,n,pair)
+phisalpha!(xbig,vbig,big_xerror,big_verror,hbig,mbig,abig,n,pair)
 # Now x & v are final positions & velocities after time step
 for i=1:n, k=1:3
   dqdt_num[(i-1)*7+  k] = (xbig[k,i]-xsave[k,i])/dq
@@ -107,6 +115,8 @@ for j=1:n
     xbig .= big.(x0)
     vbig .= big.(v0)
     mbig .= big.(m0)
+    fill!(big_xerror,0.0)
+    fill!(big_verror,0.0)
     dq = dlnq * xbig[jj,j]
     if xbig[jj,j] != 0.0
       xbig[jj,j] +=  dq
@@ -114,7 +124,7 @@ for j=1:n
       dq = dlnq
       xbig[jj,j] = dq
     end
-    phisalpha!(xbig,vbig,hbig,mbig,abig,n,pair)
+    phisalpha!(xbig,vbig,big_xerror,big_verror,hbig,mbig,abig,n,pair)
   # Now x & v are final positions & velocities after time step
     for i=1:n
       for k=1:3
@@ -125,6 +135,8 @@ for j=1:n
     xbig .= big.(x0)
     vbig .= big.(v0)
     mbig .= big.(m0)
+    fill!(big_xerror,0.0)
+    fill!(big_verror,0.0)
     dq = dlnq * vbig[jj,j]
     if vbig[jj,j] != 0.0
       vbig[jj,j] +=  dq
@@ -132,7 +144,7 @@ for j=1:n
       dq = dlnq
       vbig[jj,j] = dq
     end
-    phisalpha!(xbig,vbig,hbig,mbig,abig,n,pair)
+    phisalpha!(xbig,vbig,big_xerror,big_verror,hbig,mbig,abig,n,pair)
     for i=1:n
       for k=1:3
         jac_step_num[(i-1)*7+  k,(j-1)*7+3+jj] = (xbig[k,i]-xsave[k,i])/dq
@@ -144,9 +156,11 @@ for j=1:n
   xbig .= big.(x0)
   vbig .= big.(v0)
   mbig .= big.(m0)
+  fill!(big_xerror,0.0)
+  fill!(big_verror,0.0)
   dq = mbig[j]*dlnq
   mbig[j] += dq
-  phisalpha!(xbig,vbig,hbig,mbig,abig,n,pair)
+  phisalpha!(xbig,vbig,big_xerror,big_verror,hbig,mbig,abig,n,pair)
   for i=1:n
     for k=1:3
       jac_step_num[(i-1)*7+  k,j*7] = (xbig[k,i]-xsave[k,i])/dq
@@ -168,7 +182,7 @@ end
 #    end
 #  end
 #end
-
+#=
 jacmax = 0.0
 for i=1:7, j=1:3, k=1:7, l=1:3
   if jac_step[(j-1)*7+i,(l-1)*7+k] != 0 && jac_step_num[(j-1)*7+i,(l-1)*7+k] != 0
@@ -183,8 +197,9 @@ for i=1:7, j=1:3, k=1:7, l=1:3
 end
 
 println("Maximum jac_step phisalpha error: ",convert(Float64,jacmax))
+=#
 dqdt_num = convert(Array{Float64,1},dqdt_num)
-println("Maximum dqdt_phi phisalpha error: ",maximum(abs.(dqdt_phi-dqdt_num)))
+#println("Maximum dqdt_phi phisalpha error: ",maximum(abs.(dqdt_phi-dqdt_num)))
 
 @test isapprox(jac_step,jac_step_num;norm=maxabs)
 @test isapprox(dqdt_phi,dqdt_num;norm=maxabs)
