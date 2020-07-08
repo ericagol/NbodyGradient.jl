@@ -7,7 +7,7 @@ The AH18 integrator top level function. Carries out the AH18 mapping and compute
 function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},jac_error::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
     zilch = zero(T); uno = one(T); half = convert(T,0.5); two = convert(T,2.0)
     h2 = half*h; sevn = 7*n
-    
+
     ## Replace with PreAllocArrays
     jac_phi = zeros(T,sevn,sevn)
     jac_kick = zeros(T,sevn,sevn)
@@ -20,7 +20,7 @@ function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2}
     jac_tmp2 = zeros(T,14,sevn)
     jac_err1 = zeros(T,14,sevn)
     ##
-    
+
     drift!(x,v,xerror,verror,h2,n,jac_step,jac_error)
     kickfast!(x,v,xerror,verror,h/6,m,n,jac_kick,dqdt_kick,pair)
     # Multiply Jacobian from kick step:
@@ -113,7 +113,21 @@ function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2}
             end
         end
     end
+    #kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
+    kickfast!(x,v,xerror,verror,h/6,m,n,jac_kick,dqdt_kick,pair)
+    # Multiply Jacobian from kick step:
+    if T == BigFloat
+        jac_copy .= *(jac_kick,jac_step)
+    else
+        BLAS.gemm!('N','N',uno,jac_kick,jac_step,zilch,jac_copy)
+    end
+    # Add back in the identity portion of the Jacobian with compensated summation:
+    comp_sum_matrix!(jac_step,jac_error,jac_copy)
+    # Edit this routine to do compensated summation for Jacobian [x]
+    drift!(x,v,xerror,verror,h2,n,jac_step,jac_error)
+    return
 end
+
 
 """
 
