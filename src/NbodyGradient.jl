@@ -21,7 +21,7 @@ const alpha0 = 0.0
 export Elements, ElementsIC, CartesianIC
 
 # Output Methods
-export ttv_elements!, ttvbv_elements!
+export ttv_elements!#, ttvbv_elements!
 
 # Integrator methods
 export ah18!, dh17!
@@ -32,6 +32,7 @@ include("ics/InitialConditions.jl")
 include("integrator/Integrator.jl")
 include("ttvs/TTVs.jl")
 
+# wrapper for testing new ics.
 function ttv_elements!(elems::ElementsIC{T},t0::T,h::T,tmax::T,tt::Array{T,2},count::Array{Int64,1},rstar::T) where T <: AbstractFloat
     elements = elems.elements
     H = elems.H
