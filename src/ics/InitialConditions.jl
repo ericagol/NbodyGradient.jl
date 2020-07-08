@@ -1,6 +1,6 @@
-abstract type InitialConditions end
+abstract type AbstractInitialConditions end
 
-struct Elements{T<:AbstractFloat} <: InitialConditions 
+struct Elements{T<:AbstractFloat} <: AbstractInitialConditions 
     m::T
     P::T
     t0::T
@@ -15,7 +15,7 @@ struct Elements{T<:AbstractFloat} <: InitialConditions
     end
 end
 
-mutable struct ElementsIC{T<:AbstractFloat} <: InitialConditions
+mutable struct ElementsIC{T<:AbstractFloat} <: AbstractInitialConditions
     elements::Array{T,2}
     H::Array{Int64,1}
     ϵ::Array{T,2}
@@ -44,6 +44,7 @@ mutable struct ElementsIC{T<:AbstractFloat} <: InitialConditions
         return new{T}(elements,H,ϵ,amat,NDIM,nbody,m,t0,der);
     end
 end
+
 
 function ElementsIC(t0::T,elems::Elements{T}...;H::Vector{Int64}) where T <: AbstractFloat
     
