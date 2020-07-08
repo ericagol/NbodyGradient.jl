@@ -1,5 +1,3 @@
-include("InitialConditions.jl")
-include("kepler_init.jl")
 """
     init_nbody(init,t0)
 

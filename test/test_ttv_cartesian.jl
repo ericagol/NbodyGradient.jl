@@ -1,5 +1,3 @@
-
-
 #include("../src/ttv.jl")
 #include("/Users/ericagol/Computer/Julia/regress.jl")
 
@@ -29,7 +27,7 @@ ntt = zeros(Int64,n)
 for i=2:n
   ntt[i] = ceil(Int64,tmax/elements[i,2])+3
 end
-println("ntt: ",ntt)
+#println("ntt: ",ntt)
 tt  = zeros(n,maximum(ntt))
 tt1 = zeros(n,maximum(ntt))
 tt2 = zeros(n,maximum(ntt))
@@ -39,7 +37,7 @@ count = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
 rstar = 1e12
-dq = ttv_elements!(H,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
+#dq = ttv_elements!(H,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
 # Now call with half the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
@@ -162,7 +160,7 @@ loglog([1.0,1024.0],1e-12*[1,2^15],":",linewidth=3)
 
 =#
 #println("Max diff log(dtdq0): ",maximum(abs.(dtdq0_num[mask]./dtdq0[mask].-1.0)))
-println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_num[mask]).-asinh.(dtdq0[mask]))))
+#println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_num[mask]).-asinh.(dtdq0[mask]))))
 #unit = ones(dtdq0[mask])
 #@test isapprox(dtdq0[mask]./convert(Array{Float64,4},dtdq0_num)[mask],unit;norm=maxabs)
 #@test isapprox(dtdq0[mask],convert(Array{Float64,4},dtdq0_num)[mask];norm=maxabs)

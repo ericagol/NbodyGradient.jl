@@ -1,6 +1,8 @@
 # Tests the routine kickfast jacobian.  This routine
 # computes the impulse gradient after Dehnen & Hernandez (2017).
 
+import NbodyGradient: kickfast!
+
 # Next, try computing three-body Keplerian Jacobian:
 
 @testset "kickfast" begin
@@ -37,6 +39,8 @@ m0 = copy(m)
 
 init = ElementsIC(elements,H,t0)
 x0,v0,_ = init_nbody(init)
+xerror = zeros(Float64,size(x0))
+verror = zeros(Float64,size(v0))
 
 # Tilt the orbits a bit:
 x0[2,1] = 5e-1*sqrt(x0[1,1]^2+x0[3,1]^2)
@@ -47,7 +51,7 @@ v0[2,2] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 v0[2,3] = -5e-1*sqrt(v0[1,2]^2+v0[3,2]^2)
 
 # Take a step:
-dh17!(x0,v0,h,m,n,pair)
+ah18!(x0,v0,xerror,verror,h,m,n,pair)
 
 # Now, copy these to compute Jacobian (so that I don't step
 # x0 & v0 forward in time):
@@ -69,16 +73,18 @@ xsave = big.(x0)
 vsave = big.(v0)
 msave = big.(m0)
 hbig = big(h)
-xerror = zeros(3,n); verror = zeros(3,n)
+big_xerror = zeros(BigFloat,3,n); big_verror = zeros(BigFloat,3,n)
 # Carry out step using BigFloat for extra precision:
-kickfast!(xsave,vsave,hbig,msave,n,pair)
+kickfast!(xsave,vsave,big_xerror,big_verror,hbig,msave,n,pair)
 xbig = big.(x0)
 vbig = big.(v0)
 mbig = big.(m0)
+fill!(big_xerror,0.0)
+fill!(big_verror,0.0)
 # Compute numerical derivatives wrt time:
 dqdt_num = zeros(BigFloat,7*n)
 # Vary time:
-kickfast!(xbig,vbig,hbig,mbig,n,pair)
+kickfast!(xbig,vbig,big_xerror,big_verror,hbig,mbig,n,pair)
 # Initial positions, velocities & masses:
 xbig .= big.(x0)
 vbig .= big.(v0)
@@ -86,7 +92,8 @@ mbig .= big.(m0)
 hbig = big(h)
 dq = dlnq * hbig
 hbig += dq
-kickfast!(xbig,vbig,hbig,mbig,n,pair)
+fill!(big_xerror,0.0); fill!(big_verror,0.0);
+kickfast!(xbig,vbig,big_xerror,big_verror,hbig,mbig,n,pair)
 # Now x & v are final positions & velocities after time step
 for i=1:n, k=1:3
   dqdt_num[(i-1)*7+  k] = (xbig[k,i]-xsave[k,i])/dq
@@ -101,6 +108,8 @@ for j=1:n
     xbig .= big.(x0)
     vbig .= big.(v0)
     mbig .= big.(m0)
+    fill!(big_xerror,0.0)
+    fill!(big_verror,0.0)
     dq = dlnq * xbig[jj,j]
     if xbig[jj,j] != 0.0
       xbig[jj,j] +=  dq
@@ -108,7 +117,7 @@ for j=1:n
       dq = dlnq
       xbig[jj,j] = dq
     end
-    kickfast!(xbig,vbig,hbig,mbig,n,pair)
+    kickfast!(xbig,vbig,big_xerror,big_verror,hbig,mbig,n,pair)
   # Now x & v are final positions & velocities after time step
     for i=1:n
       for k=1:3
@@ -119,6 +128,8 @@ for j=1:n
     xbig .= big.(x0)
     vbig .= big.(v0)
     mbig .= big.(m0)
+    fill!(big_xerror,0.0)
+    fill!(big_verror,0.0)
     dq = dlnq * vbig[jj,j]
     if vbig[jj,j] != 0.0
       vbig[jj,j] +=  dq
@@ -126,7 +137,7 @@ for j=1:n
       dq = dlnq
       vbig[jj,j] = dq
     end
-    kickfast!(xbig,vbig,hbig,mbig,n,pair)
+    kickfast!(xbig,vbig,big_xerror,big_verror,hbig,mbig,n,pair)
     for i=1:n
       for k=1:3
         jac_step_num[(i-1)*7+  k,(j-1)*7+3+jj] = (xbig[k,i]-xsave[k,i])/dq
@@ -138,9 +149,11 @@ for j=1:n
   xbig .= big.(x0)
   vbig .= big.(v0)
   mbig .= big.(m0)
+  fill!(big_xerror,0.0)
+  fill!(big_verror,0.0)
   dq = mbig[j]*dlnq
   mbig[j] += dq
-  kickfast!(xbig,vbig,hbig,mbig,n,pair)
+  kickfast!(xbig,vbig,big_xerror,big_verror,hbig,mbig,n,pair)
   for i=1:n
     for k=1:3
       jac_step_num[(i-1)*7+  k,j*7] = (xbig[k,i]-xsave[k,i])/dq
@@ -164,9 +177,9 @@ for i=1:7, j=1:3, k=1:7, l=1:3
 end
 #println("jac_step: ",jac_step," jac_step-jac_step_num: ",jac_step-jac_step_num)
 
-println("Maximum jac_step kickfast error: ",jacmax)
+#println("Maximum jac_step kickfast error: ",jacmax)
 dqdt_num = convert(Array{Float64,1},dqdt_num)
-println("Maximum dqdt_kick kickdfast error: ",maximum(abs.(dqdt_kick-dqdt_num)))
+#println("Maximum dqdt_kick kickdfast error: ",maximum(abs.(dqdt_kick-dqdt_num)))
 
 @test isapprox(jac_step,jac_step_num;norm=maxabs)
 @test isapprox(dqdt_kick,dqdt_num;norm=maxabs)

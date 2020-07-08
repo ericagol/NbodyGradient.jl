@@ -15,13 +15,13 @@ function NeumaierSum(input)
 end
 
 
-include("../src/ttv.jl")
-
+#include("../src/ttv.jl")
+include("../src/utils.jl")
 
 # Testing compensated summation:
 
-Base.rand(::Type{BigFloat}) =  get(tryparse(BigFloat, "0." .* join(rand(['0','1'], precision(BigFloat))), 2))
-
+#Base.rand(::Type{BigFloat}) =  get(tryparse(BigFloat, "0." .* join(rand(['0','1'], precision(BigFloat)));base= 2))
+function test_comp_sum()
 # Create random numbers in BigFloat precision:
 nrand = 1000000
 summand_big = zeros(BigFloat,nrand)
@@ -61,3 +61,6 @@ diff_neum = sum_neum-sum_big+corr_neum
 println("Error: ",corr_neum," Neum - Big +err: ",sum_neum-sum_big+corr_neum," Big - (Comp + err): ",sum_big-sum_neum-corr_neum)
 println("Improve Kahan: ",abs(diff)/abs(sum_flt-sum_big))
 println("Improve Neum:  ",abs(diff_neum)/abs(sum_flt-sum_big))
+end
+
+test_comp_sum()

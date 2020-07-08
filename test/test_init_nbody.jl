@@ -1,12 +1,12 @@
 
-const YEAR  = 365.242
-const GNEWT = 39.4845/YEAR^2  # Units of MSUN*AU^3/YEAR^2
-const NDIM  = 3
-const third = 1.0/3.0
+#const YEAR  = 365.242
+#const GNEWT = 39.4845/YEAR^2  # Units of MSUN*AU^3/YEAR^2
+#const NDIM  = 3
+#const third = 1.0/3.0
 
-include("../src/init_nbody.jl")
+#include("../src/init_nbody.jl")
 
-#@testset "init_nbody" begin
+@testset "init_nbody" begin
 
 elements = "elements.txt"
 H = [3,1,1]
@@ -59,24 +59,24 @@ for j=1:n_body
       end
       jac_init_num[i1,  j1] = (xp[p,l]-xm[p,l])/dq0*.5
       jac1 = jac_init[i1,j1]; jac2 = jac_init_num[i1,j1]
-      if abs(jac1-jac2) > 1e-4*abs(jac1+jac2) && abs(jac1+jac2) > 1e-14
-        println(l," ",p," ",j," ",k," ",jac_init_num[i1,j1]," ",jac_init[i1,j1]," ",jac_init_num[i1,j1]/jac_init[i1,j1])
-      end
+      #if abs(jac1-jac2) > 1e-4*abs(jac1+jac2) && abs(jac1+jac2) > 1e-14
+      #  println(l," ",p," ",j," ",k," ",jac_init_num[i1,j1]," ",jac_init[i1,j1]," ",jac_init_num[i1,j1]/jac_init[i1,j1])
+      #end
       jac_init_num[i1+3,j1] = (vp[p,l]-vm[p,l])/dq0*.5
       jac1 = jac_init[i1+3,j1]; jac2 = jac_init_num[i1+3,j1]
-      if abs(jac1-jac2) > 1e-4*abs(jac1+jac2) && abs(jac1+jac2) > 1e-14
-        println(l," ",p+3," ",j," ",k," ",jac_init_num[i1+3,j1]," ",jac_init[i1+3,j1]," ",jac_init_num[i1+3,j1]/jac_init[i1+3,j1])
-      end
+      #if abs(jac1-jac2) > 1e-4*abs(jac1+jac2) && abs(jac1+jac2) > 1e-14
+      #  println(l," ",p+3," ",j," ",k," ",jac_init_num[i1+3,j1]," ",jac_init[i1+3,j1]," ",jac_init_num[i1+3,j1]/jac_init[i1+3,j1])
+      #end
     end
   end
   jac_init_num[j*7,j*7]=1.0
 end
 
 #println("Maximum jac_init-jac_init_num: ",maximum(abs.(jac_init-jac_init_num)))
-println("Maximum jac_init-jac_init_num: ",maximum(abs.(asinh.(jac_init)-asinh.(jac_init_num))))
-println("Maximum jac_init-jac_init_big: ",maximum(abs.(asinh.(jac_init)-asinh.(jac_init_big))))
-println("Maximum jac_init/jac_init_big-1: ",maximum(abs.(jac_init[jac_init_big .!= 0.0]./jac_init_big[jac_init_big .!= 0.0].-1)))
-println("Maximum jac_init_big-jac_init_num: ",maximum(abs.(asinh.(jac_init_num)-asinh.(jac_init_big))))
+#println("Maximum jac_init-jac_init_num: ",maximum(abs.(asinh.(jac_init)-asinh.(jac_init_num))))
+#println("Maximum jac_init-jac_init_big: ",maximum(abs.(asinh.(jac_init)-asinh.(jac_init_big))))
+#println("Maximum jac_init/jac_init_big-1: ",maximum(abs.(jac_init[jac_init_big .!= 0.0]./jac_init_big[jac_init_big .!= 0.0].-1)))
+#println("Maximum jac_init_big-jac_init_num: ",maximum(abs.(asinh.(jac_init_num)-asinh.(jac_init_big))))
 #println(convert(Array{Float64,2},jac_init_big-jac_init_num))
 #@test isapprox(jac_init_num,jac_init)
 @test isapprox(jac_init_num,jac_init;norm=maxabs)
@@ -91,4 +91,5 @@ for i=1:21, j=1:21
       println(i," ",j," ",convert(Float64,jac_max)," ",jac_init[i,j]," ",convert(Float64,jac_init_big[i,j])," ",convert(Float64,jac_init[i,j]-jac_init_big[i,j]))
     end
   end
+end
 end
