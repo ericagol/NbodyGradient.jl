@@ -1,10 +1,11 @@
 
 # Runs a simple test of kepler_init.jl
 
+# Not sure why this test can't see these from the module...
 const GNEWT = 39.4845/365.242^2
 const third = 1.0/3.0
 
-include("../src/kepler_init.jl")
+#include("../src/kepler_init.jl")
 
 @testset "kepler_init" begin
 

@@ -2,7 +2,6 @@
 # Tests the routine ah18 jacobian:
 
 #include("../src/ttv.jl")
-
 # Next, try computing three-body Keplerian Jacobian:
 
 @testset "ah18" begin
@@ -58,16 +57,15 @@ xtest = copy(x0); vtest=copy(v0)
 # Take a single step (so that we aren't at initial coordinates):
 x = copy(x0); v = copy(v0)
 xerror = zeros(3,n); verror = zeros(3,n)
-big_xerror = copy(big.(xerror))
-big_verror = copy(big.(verror))
+big_xerror = zeros(BigFloat,3,n)
+big_verror = zeros(BigFloat,3,n)
 for i=1:nstep; ah18!(x,v,xerror,verror,h,m,n,pair); end
 # Take a step with big precision:
 ah18!(xbig,vbig,big_xerror,big_verror,big(h),big.(m),n,pair)
-#= Take a single DH17 step:
+# Take a single DH17 step:
 xerror = zeros(3,n); verror = zeros(3,n)
-@time for i=1:nstep; dh17!(xtest,vtest,xerror,verror,h,m,n,pair);end
-println("AH18 vs. DH17 x/v difference: ",x-xtest,v-vtest)
-=#
+#@time for i=1:nstep; dh17!(xtest,vtest,xerror,verror,h,m,n,pair);end
+#println("AH18 vs. DH17 x/v difference: ",x-xtest,v-vtest)
 # Compute x & v in BigFloat precision:
 xbig = big.(x0)
 vbig = big.(v0)

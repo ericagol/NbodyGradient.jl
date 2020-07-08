@@ -1,12 +1,12 @@
 
-const YEAR  = 365.242
-const GNEWT = 39.4845/YEAR^2  # Units of MSUN*AU^3/YEAR^2
-const NDIM  = 3
-const third = 1.0/3.0
+#const YEAR  = 365.242
+#const GNEWT = 39.4845/YEAR^2  # Units of MSUN*AU^3/YEAR^2
+#const NDIM  = 3
+#const third = 1.0/3.0
 
-include("../src/init_nbody.jl")
+#include("../src/init_nbody.jl")
 
-#@testset "init_nbody" begin
+@testset "init_nbody" begin
 
 elements = "elements.txt"
 H = [3,1,1]
@@ -91,4 +91,5 @@ for i=1:21, j=1:21
       println(i," ",j," ",convert(Float64,jac_max)," ",jac_init[i,j]," ",convert(Float64,jac_init_big[i,j])," ",convert(Float64,jac_init[i,j]-jac_init_big[i,j]))
     end
   end
+end
 end

@@ -1,5 +1,5 @@
 using NbodyGradient
-import NbodyGradient: Derivatives
+import NbodyGradient: kepler_init, init_nbody
 
 maxabs(x) = maximum(abs.(x))
 
@@ -14,7 +14,7 @@ else
   using Base.Test
 end
 
-@testset "NbodyGradient Main" begin
+@testset "NbodyGradient" begin
     print("Initial Conditions... ")
     @testset "Initial Conditions" begin
         include("test_kepler_init.jl")

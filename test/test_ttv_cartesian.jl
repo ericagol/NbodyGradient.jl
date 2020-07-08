@@ -1,5 +1,3 @@
-
-
 #include("../src/ttv.jl")
 #include("/Users/ericagol/Computer/Julia/regress.jl")
 
@@ -29,7 +27,7 @@ ntt = zeros(Int64,n)
 for i=2:n
   ntt[i] = ceil(Int64,tmax/elements[i,2])+3
 end
-println("ntt: ",ntt)
+#println("ntt: ",ntt)
 tt  = zeros(n,maximum(ntt))
 tt1 = zeros(n,maximum(ntt))
 tt2 = zeros(n,maximum(ntt))

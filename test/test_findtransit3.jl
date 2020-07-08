@@ -9,7 +9,7 @@
 #KEPLER_TOL  = 1e-15
 #TRANSIT_TOL = 1e-15
 
-#@testset "findtransit3" begin
+@testset "findtransit3" begin
 
 #n = 8
 n = 3
@@ -63,4 +63,4 @@ end
 @test isapprox(asinh.(dtdq0[mask]),asinh.(convert(Array{Float64,4},dtdq0_num)[mask]);norm=maxabs)
 #unit = ones(dtdq0[mask])
 #@test isapprox(dtdq0[mask]./convert(Array{Float64,4},dtdq0_num)[mask],unit;norm=maxabs)
-#end
+end
