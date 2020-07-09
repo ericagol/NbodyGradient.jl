@@ -1,5 +1,9 @@
 abstract type AbstractInitialConditions end
 
+"""
+
+Holds orbital elements of a single body.
+"""
 struct Elements{T<:AbstractFloat} <: AbstractInitialConditions 
     m::T
     P::T
@@ -9,12 +13,24 @@ struct Elements{T<:AbstractFloat} <: AbstractInitialConditions
     i::T
     Ω::T
 
-    function Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,e::T=0.0,ϖ::T=0.0,i::T=0.0,Ω::T=0.0) where T<:AbstractFloat
+    function Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,e::T=0.0,ϖ::T=0.0,i::T=0.0,Ω::T=0.0) where T<:Real
+        esinϖ,ecosϖ = e .* sincos(ϖ)
+        return new{T}(m,P,t0,ecosϖ,esinϖ,i,Ω)
+    end
+    function Elements(m::T=0.0,P::T=0.0,t0::T=0.0,e::T=0.0,ϖ::T=0.0,i::T=0.0,Ω::T=0.0) where T<:Real
         esinϖ,ecosϖ = e .* sincos(ϖ)
         return new{T}(m,P,t0,ecosϖ,esinϖ,i,Ω)
     end
 end
 
+
+"""Promotion to (atleast) floats"""
+Elements(m::Real=0.0,P::Real=0.0,t0::Real=0.0,e::Real=0.0,ϖ::Real=0.0,i::Real=0.0,Ω::Real=0.0) = Elements(promote(m,P,t0,e,ϖ,i,Ω)...)
+
+"""
+
+Holds relevant initial conditions arrays. Uses orbital elements.
+"""
 mutable struct ElementsIC{T<:AbstractFloat} <: AbstractInitialConditions
     elements::Array{T,2}
     H::Array{Int64,1}
@@ -45,6 +61,10 @@ mutable struct ElementsIC{T<:AbstractFloat} <: AbstractInitialConditions
     end
 end
 
+"""
+
+Collects `Elements` and produces an `ElementsIC` struct.
+"""
 function ElementsIC(t0::T,elems::Elements{T}...;H::Vector{Int64}) where T <: AbstractFloat
     
     # Not sure if this is a good spot for this...
@@ -67,6 +87,10 @@ function ElementsIC(t0::T,elems::Elements{T}...;H::Vector{Int64}) where T <: Abs
     return ElementsIC(elements,H,t0)
 end
 
+"""
+
+Holds relevant initial conditions arrays. Uses Cartesian coordinates. 
+"""
 mutable struct CartesianIC{T<:AbstractFloat} <: AbstractInitialConditions
     x::Array{T,2}
     v::Array{T,2}
