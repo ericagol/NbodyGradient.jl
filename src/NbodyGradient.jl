@@ -33,10 +33,8 @@ include("integrator/Integrator.jl")
 include("ttvs/TTVs.jl")
 
 # wrapper for testing new ics.
-function ttv_elements!(elems::ElementsIC{T},t0::T,h::T,tmax::T,tt::Array{T,2},count::Array{Int64,1},rstar::T) where T <: AbstractFloat
-    elements = elems.elements
-    H = elems.H
-    return ttv_elements!(H,t0,h,tmax,elements,tt,count,0.0,0,0,rstar)
+@inline function ttv_elements!(el::ElementsIC{T},t0::T,h::T,tmax::T,tt::Array{T,2},count::Array{Int64,1},rstar::T) where T <: Real
+    return ttv_elements!(el.H,t0,h,tmax,el.elements,tt,count,0.0,0,0,rstar)
 end
 
 end
