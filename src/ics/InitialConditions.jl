@@ -13,20 +13,26 @@ struct Elements{T<:AbstractFloat} <: AbstractInitialConditions
     i::T
     Ω::T
 
-    function Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,e::T=0.0,ϖ::T=0.0,i::T=0.0,Ω::T=0.0) where T<:Real
-        esinϖ,ecosϖ = e .* sincos(ϖ)
-        return new{T}(m,P,t0,ecosϖ,esinϖ,i,Ω)
-    end
-    function Elements(m::T=0.0,P::T=0.0,t0::T=0.0,e::T=0.0,ϖ::T=0.0,i::T=0.0,Ω::T=0.0) where T<:Real
+    function Elements(m::T,P::T,t0::T,e::T,ϖ::T,i::T,Ω::T) where T<:Real
         esinϖ,ecosϖ = e .* sincos(ϖ)
         return new{T}(m,P,t0,ecosϖ,esinϖ,i,Ω)
     end
 end
 
+function Base.show(io::IO, ::MIME"text/plain" ,elems::Elements{T}) where T <: Real
+    names = ["m","P","t0","ecosϖ","esinϖ","i","Ω"]
+    vals = [elems.m,elems.P,elems.t0,elems.ecosϖ,elems.esinϖ,elems.i,elems.Ω]
+    println(io, "Elements{$T}")
+    println.(Ref(io), names,": ",vals)
+end
 
+"""Allow keywargs"""
+Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,e::T=0.0,ϖ::T=0.0,i::T=0.0,Ω::T=0.0) where T<:Real = Elements(m,P,t0,e,ϖ,i,Ω)
+
+#= This overwrites the main constructor... Maybe not needed. I don't see folks using integers here.
 """Promotion to (atleast) floats"""
 Elements(m::Real=0.0,P::Real=0.0,t0::Real=0.0,e::Real=0.0,ϖ::Real=0.0,i::Real=0.0,Ω::Real=0.0) = Elements(promote(m,P,t0,e,ϖ,i,Ω)...)
-
+=#
 """
 
 Holds relevant initial conditions arrays. Uses orbital elements.
@@ -86,6 +92,10 @@ function ElementsIC(t0::T,elems::Elements{T}...;H::Vector{Int64}) where T <: Abs
     elements = parse_system(elems...)
     return ElementsIC(elements,H,t0)
 end
+
+"""Shows the elements array."""
+Base.show(io::IO,::MIME"text/plain",ic::ElementsIC{T}) where {T} = begin
+println(io,"ElementsIC{$T}\nOribital Elements: "); show(io,"text/plain",ic.elements); end;
 
 """
 
