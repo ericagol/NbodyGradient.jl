@@ -45,7 +45,6 @@ mutable struct ElementsIC{T<:AbstractFloat} <: AbstractInitialConditions
     end
 end
 
-
 function ElementsIC(t0::T,elems::Elements{T}...;H::Vector{Int64}) where T <: AbstractFloat
     
     # Not sure if this is a good spot for this...
@@ -68,7 +67,7 @@ function ElementsIC(t0::T,elems::Elements{T}...;H::Vector{Int64}) where T <: Abs
     return ElementsIC(elements,H,t0)
 end
 
-mutable struct CartesianIC{T<:AbstractFloat} <: InitialConditions
+mutable struct CartesianIC{T<:AbstractFloat} <: AbstractInitialConditions
     x::Array{T,2}
     v::Array{T,2}
     jac_init::Array{T,2}
