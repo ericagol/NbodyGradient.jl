@@ -158,7 +158,7 @@ Creates the A matrix presented in Hamers & Portegies Zwart 2016 (HPZ16).
 # Outputs
 - `A::Array{<:Real,2}`: A matrix.
 """
-function amatrix(ϵ::Array{T,2},m::Array{T,2}) where T<:AbstractFloat
+function amatrix(ϵ::Array{T,2},m::Array{T,1}) where T<:AbstractFloat
     A = zeros(T,size(ϵ)) # Empty A matrix
     N = length(ϵ[:,1]) # Number of bodies in system
 
@@ -185,10 +185,10 @@ Sums masses in current Keplerian.
 # Outputs
 - `m<:Real`: Sum of the masses.
 """
-function Σm(masses::Array{T,2},i::Integer,j::Integer,
+function Σm(masses::Array{T,1},i::Integer,j::Integer,
             ϵ::Array{T,2}) where T <: AbstractFloat
     m = 0.0
-    for l in 1:size(masses)[1]
+    for l in 1:length(masses)
         m += masses[l]*δ_(ϵ[i,j],ϵ[i,l])
     end
     return m

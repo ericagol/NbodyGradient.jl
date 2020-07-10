@@ -1,10 +1,9 @@
 abstract type AbstractInitialConditions end
-
 """
 
 Holds orbital elements of a single body.
 """
-struct Elements{T<:AbstractFloat} <: AbstractInitialConditions 
+struct Elements{T<:AbstractFloat} <: AbstractInitialConditions
     m::T
     P::T
     t0::T
@@ -33,27 +32,27 @@ Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,e::T=0.0,ϖ::T=0.0,i::T=0.0,Ω::T=0.0) whe
 """Promotion to (atleast) floats"""
 Elements(m::Real=0.0,P::Real=0.0,t0::Real=0.0,e::Real=0.0,ϖ::Real=0.0,i::Real=0.0,Ω::Real=0.0) = Elements(promote(m,P,t0,e,ϖ,i,Ω)...)
 =#
+
+abstract type InitialConditions{T} end
 """
 
 Holds relevant initial conditions arrays. Uses orbital elements.
 """
-mutable struct ElementsIC{T<:AbstractFloat} <: AbstractInitialConditions
-    elements::Array{T,2}
-    H::Array{Int64,1}
-    ϵ::Array{T,2}
-    amat::Array{T,2}
+mutable struct ElementsIC{T<:AbstractFloat,V<:AbstractVector,M<:AbstractMatrix} <: InitialConditions{T}
+    elements::M
+    H::Vector{Int64}
+    ϵ::M
+    amat::M
     NDIM::Int64
     nbody::Int64
-    m::Array{T,2}
+    m::V
     t0::T
     der::Bool
 
     function ElementsIC(elems::Union{String,Array{T,2}},H::Union{Array{Int64,1},Int64},
                         t0::T;NDIM::Int64 = 3,der::Bool=true) where T <: AbstractFloat
         # Check if only number of bodies was passed. Assumes fully nested.
-        if typeof(H) == Int64
-            H::Vector{Int64} = [H,ones(H-1)...]
-        end
+        if typeof(H) == Int64; H::Vector{Int64} = [H,ones(H-1)...]; end
         ϵ = convert(Array{T},hierarchy(H))
         if typeof(elems) == String
             elements = convert(Array{T},readdlm(elems,',',comments=true))
@@ -61,9 +60,9 @@ mutable struct ElementsIC{T<:AbstractFloat} <: AbstractInitialConditions
             elements = elems
         end
         nbody = H[1]
-        m = reshape(vcat(elements[:,1])[1:nbody],nbody,1) # There's probably a better way to do this...
+        m = elements[1:nbody,1]
         amat = amatrix(ϵ,m)
-        return new{T}(elements,H,ϵ,amat,NDIM,nbody,m,t0,der);
+        return new{T,Vector{T},Matrix{T}}(elements,H,ϵ,amat,NDIM,nbody,m,t0,der);
     end
 end
 
@@ -101,11 +100,11 @@ println(io,"ElementsIC{$T}\nOribital Elements: "); show(io,"text/plain",ic.eleme
 
 Holds relevant initial conditions arrays. Uses Cartesian coordinates. 
 """
-mutable struct CartesianIC{T<:AbstractFloat} <: AbstractInitialConditions
+mutable struct CartesianIC{T<:AbstractFloat} <: InitialConditions{T}
     x::Array{T,2}
     v::Array{T,2}
     jac_init::Array{T,2}
-    m::Array{T,2}
+    m::Array{T,1}
     t0::T
     nbody::Int64
     NDIM::Int64
