@@ -19,6 +19,8 @@ const alpha0 = 0.0
 
 # Types
 export Elements, ElementsIC, CartesianIC
+export State
+export Integrator
 
 # Output Methods
 export ttv_elements!#, ttvbv_elements!
