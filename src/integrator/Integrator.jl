@@ -28,7 +28,7 @@ abstract type AbstractState end
 
 Current state of simulation.
 """
-mutable struct State{T<:AbstractFloat,V<:AbstractVector,M<:AbstractMatrix} <: AbstractState
+mutable struct State{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: AbstractState
     x::M
     v::M
     t::T
@@ -52,11 +52,13 @@ end
 #========== Other Methods ==========#
 #Should let this be called without `ic`?
 """Callable `Integrator` method. Integrates to `i.tmax`."""
-function (i::Integrator)(s::State{T,Vector{T},Matrix{T}}) where T<:AbstractFloat 
+function (i::Integrator)(s::State{T}) where T<:AbstractFloat 
     s2 = zero(T) # For compensated summation
+    d = Derivatives(T,s.n) 
+    pair = zeros(Bool,s.n,s.n)
     while s.t < (i.t0 + i.tmax)
         # Take integration step and advance time
-        i.scheme(s.x,s.v,s.xerror,s.verror,i.h,s.m,s.n,s.jac_step,s.jac_error,zeros(Bool,s.n,s.n))
+        i.scheme(s,d,i.h,pair)
         s.t,s2 = comp_sum(s.t,s2,i.h)
     end
     return

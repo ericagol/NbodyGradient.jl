@@ -21,6 +21,7 @@ const alpha0 = 0.0
 export Elements, ElementsIC, CartesianIC
 export State
 export Integrator
+export Derivatives
 
 # Output Methods
 export ttv_elements!#, ttvbv_elements!
@@ -30,9 +31,13 @@ export ah18!, dh17!
 
 # Source code
 include("utils.jl")
+include("PreAllocArrays.jl")
 include("ics/InitialConditions.jl")
 include("integrator/Integrator.jl")
 include("ttvs/TTVs.jl")
+
+# For testing
+include("integrator/ah18_new.jl")
 
 # wrapper for testing new ics.
 @inline function ttv_elements!(el::ElementsIC{T},t0::T,h::T,tmax::T,tt::Array{T,2},count::Array{Int64,1},rstar::T) where T <: Real

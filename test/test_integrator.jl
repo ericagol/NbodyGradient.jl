@@ -1,8 +1,7 @@
-"""
-
+#=
 To run interface check: `$ julia test_integrator.jl test`
 To run benchmark: `$ julia test_integrator.jl benchmark`
-"""
+=#
 using NbodyGradient, LinearAlgebra, BenchmarkTools, Profile, Test
 import NbodyGradient: init_nbody, comp_sum
 

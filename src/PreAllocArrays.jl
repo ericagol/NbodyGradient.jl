@@ -1,37 +1,26 @@
 abstract type PreAllocArrays end
+abstract type AbstractDerivatives{T} <: PreAllocArrays end
 
-struct Derivatives{T<:AbstractFloat} 
+mutable struct Derivatives{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: AbstractDerivatives{T}
+   
+    jac_phi::M 
+    jac_kick::M
+    jac_copy::M
+    jac_ij::M
+    jac_tmp1::M 
+    jac_tmp2::M
+    jac_err1::M
+    dqdt_ij::V
+    dqdt_phi::V
+    dqdt_kick::V
 
-    pxpr0::Vector{T}
-    pxpa0::Vector{T} 
-    pxpk::Vector{T}
-    pxps::Vector{T} 
-    pxpbeta::Vector{T}
-  
-    dxdr0::Vector{T}
-    dxda0::Vector{T}  
-    dxdk::Vector{T}
-    dxdv0::Vector{T}
-
-    prvpr0::Vector{T}
-    prvpa0::Vector{T}
-    prvpk::Vector{T}
-    prvps::Vector{T}
-    prvpbeta::Vector{T}
-
-    drvdr0::Vector{T}
-    drvda0::Vector{T}
-    drvdk::Vector{T}
-    drvdv0::Vector{T}
-
-    vtmp::Vector{T}
-    dvdr0::Vector{T}
-    dvda0::Vector{T}
-    dvdv0::Vector{T}
-    dvdk::Vector{T}
-
-    function Derivatives(::Type{T}) where T<:AbstractFloat
-        return new{T}([zeros(T,3) for _ in 1:23]...)
+    function Derivatives(::Type{T},n::Integer) where T<:AbstractFloat
+        sevn::Int64 = 7*n
+        return new{T,Vector{T},Matrix{T}}([zeros(T,sevn,sevn) for _ in 1:3]...,
+                                        zeros(T,14,14),
+                                        [zeros(14,sevn) for _ in 1:3]...,
+                                        zeros(T,14),
+                                        [zeros(T,sevn) for _ in 1:2]...)
     end
 end
 
