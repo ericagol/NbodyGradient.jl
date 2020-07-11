@@ -28,13 +28,16 @@ abstract type AbstractState end
 
 Current state of simulation.
 """
-mutable struct State{M<:AbstractMatrix} <: AbstractState
+mutable struct State{T<:AbstractFloat,V<:AbstractVector,M<:AbstractMatrix} <: AbstractState
     x::M
     v::M
+    t::T
+    m::V
     jac_step::M
     xerror::M # These might be put into an 'PreAllocArrays'
     verror::M
     jac_error::M
+    n::Int64
 
     function State(ic::InitialConditions{T}) where T<:AbstractFloat
         x,v,_ = init_nbody(ic)
@@ -42,13 +45,22 @@ mutable struct State{M<:AbstractMatrix} <: AbstractState
         verror = zeros(T,size(v))
         jac_step = Matrix{T}(I,7*ic.nbody,7*ic.nbody)
         jac_error = zeros(T,size(jac_step))
-        return new{Matrix{T}}(x,v,jac_step,xerror,verror,jac_error)
+        return new{T,Vector{T},Matrix{T}}(x,v,ic.t0,ic.m,jac_step,xerror,verror,jac_error,ic.nbody)
     end
 end
 
 #========== Other Methods ==========#
-"""Callable `Integrator` method. Takes one step."""
-(i::Integrator)(ic::InitialConditions{T},s::State{Matrix{T}}) where T<:AbstractFloat = i.scheme(s.x,s.v,s.xerror,s.verror,i.h,ic.m,ic.nbody,s.jac_step,s.jac_error,zeros(Bool,ic.nbody,ic.nbody))
+#Should let this be called without `ic`?
+"""Callable `Integrator` method. Integrates to `i.tmax`."""
+function (i::Integrator)(s::State{T,Vector{T},Matrix{T}}) where T<:AbstractFloat 
+    s2 = zero(T) # For compensated summation
+    while s.t < (i.t0 + i.tmax)
+        # Take integration step and advance time
+        i.scheme(s.x,s.v,s.xerror,s.verror,i.h,s.m,s.n,s.jac_step,s.jac_error,zeros(Bool,s.n,s.n))
+        s.t,s2 = comp_sum(s.t,s2,i.h)
+    end
+    return
+end
 
 #========== Includes  ==========#
 const ints = ["ah18"]
