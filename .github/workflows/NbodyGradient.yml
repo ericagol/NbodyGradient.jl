@@ -28,4 +28,4 @@ jobs:
     - uses: julia-actions/setup-julia@v1
       with: 
         version: ${{ matrix.julia-version }}
-    - uses: julia-runtest@latest  
+    - uses: julia-actions/julia-runtest@latest  
