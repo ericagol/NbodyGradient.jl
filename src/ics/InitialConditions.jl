@@ -38,19 +38,17 @@ abstract type InitialConditions{T} end
 
 Holds relevant initial conditions arrays. Uses orbital elements.
 """
-mutable struct ElementsIC{T<:AbstractFloat,V<:AbstractVector,M<:AbstractMatrix} <: InitialConditions{T}
+mutable struct ElementsIC{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: InitialConditions{T}
     elements::M
     H::Vector{Int64}
     ϵ::M
     amat::M
-    NDIM::Int64
     nbody::Int64
     m::V
     t0::T
     der::Bool
 
-    function ElementsIC(elems::Union{String,Array{T,2}},H::Union{Array{Int64,1},Int64},
-                        t0::T;NDIM::Int64 = 3,der::Bool=true) where T <: AbstractFloat
+    function ElementsIC(elems::Union{String,Array{T,2}},H::Union{Array{Int64,1},Int64},t0::T;der::Bool=true) where T <: AbstractFloat
         # Check if only number of bodies was passed. Assumes fully nested.
         if typeof(H) == Int64; H::Vector{Int64} = [H,ones(H-1)...]; end
         ϵ = convert(Array{T},hierarchy(H))
@@ -62,7 +60,7 @@ mutable struct ElementsIC{T<:AbstractFloat,V<:AbstractVector,M<:AbstractMatrix} 
         nbody = H[1]
         m = elements[1:nbody,1]
         amat = amatrix(ϵ,m)
-        return new{T,Vector{T},Matrix{T}}(elements,H,ϵ,amat,NDIM,nbody,m,t0,der);
+        return new{T,Vector{T},Matrix{T}}(elements,H,ϵ,amat,nbody,m,t0,der);
     end
 end
 
@@ -107,13 +105,11 @@ mutable struct CartesianIC{T<:AbstractFloat} <: InitialConditions{T}
     m::Array{T,1}
     t0::T
     nbody::Int64
-    NDIM::Int64
     
-    function CartesianIC(filename::String,x,v,jac_init,t0;
-            NDIM::Int64 = 3) where T <: AbstractFloat
+    function CartesianIC(filename::String,x,v,jac_init,t0) where T <: AbstractFloat
         m = convert(Array{T},readdlm(filename,',',comments=true))
         nbody = length(m)
-        return new{T}(x,v,jac_init,m,t0,nbody,NDIM)
+        return new{T}(x,v,jac_init,m,t0,nbody)
     end
 end
 
