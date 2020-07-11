@@ -17,10 +17,10 @@ function init_nbody(init::ElementsIC{T}) where T <: AbstractFloat
     Ainv = inv(init.amat)
 
     # Cartesian coordinates
-    x = zeros(T,init.NDIM,init.nbody)
+    x = zeros(T,NDIM,init.nbody)
     x = Array(transpose(*(Ainv,r)))
     
-    v = zeros(T,init.NDIM,init.nbody)
+    v = zeros(T,NDIM,init.nbody)
     v = Array(transpose(*(Ainv,rdot)))
 
     return x,v,jac_init
@@ -41,8 +41,8 @@ Computes Kepler's problem for each pair of bodies in the system.
 function kepcalc(init::ElementsIC{T}) where T <: AbstractFloat
 
     # Kepler position/velocity arrays (body,pos/vel)
-    rkepler = zeros(T,init.nbody,init.NDIM)
-    rdotkepler = zeros(T,init.nbody,init.NDIM)
+    rkepler = zeros(T,init.nbody,NDIM)
+    rdotkepler = zeros(T,init.nbody,NDIM)
     if init.der
         jac_kepler = zeros(T,6*init.nbody,7*init.nbody)
     end
@@ -61,7 +61,7 @@ function kepcalc(init::ElementsIC{T}) where T <: AbstractFloat
             else
                 r, rdot = kepler_init(init.t0,m1+m2,init.elements[i+1,2:7])
             end
-            for j = 1:init.NDIM
+            for j = 1:NDIM
                 rkepler[i,j] = r[j]
                 rdotkepler[i,j] = rdot[j]
             end
@@ -109,8 +109,8 @@ function d_dm(init::ElementsIC{T},rkepler::Array{T,2},rdotkepler::Array{T,2},jac
     ϵ = init.ϵ
     jac_init = zeros(T,7*N,7*N)
     dAdm = zeros(T,N,N,N)
-    dxdm = zeros(T,init.NDIM,N)
-    dvdm = zeros(T,init.NDIM,N)
+    dxdm = zeros(T,NDIM,N)
+    dvdm = zeros(T,NDIM,N)
 
     # Differentiate A matrix wrt the mass of each body
     for k in 1:N, i in 1:N, j in 1:N
