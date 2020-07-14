@@ -6,8 +6,8 @@ An N-body itegrator that computes derivatives with respect to initial conditions
 
 module NbodyGradient
 
-using LinearAlgebra
-using DelimitedFiles
+using LinearAlgebra, DelimitedFiles
+using JLD2, FileIO
 
 # Constants used by most functions
 # Need to clean this up
@@ -22,6 +22,7 @@ export Elements, ElementsIC, CartesianIC
 export State
 export Integrator
 export Derivatives
+export Output, CartesianOutput
 
 # Output Methods
 export ttv_elements!#, ttvbv_elements!
@@ -38,6 +39,7 @@ include("ttvs/TTVs.jl")
 
 # For testing
 include("integrator/ah18_new.jl")
+include("integrator/output.jl")
 
 # wrapper for testing new ics.
 @inline function ttv_elements!(el::ElementsIC{T},t0::T,h::T,tmax::T,tt::Array{T,2},count::Array{Int64,1},rstar::T) where T <: Real
