@@ -49,13 +49,18 @@ mutable struct State{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: AbstractStat
     end
 end
 
-#========== Other Methods ==========#
-#Should let this be called without `ic`?
-"""Callable `Integrator` method. Integrates to `i.tmax`."""
+#========== Running Methods ==========#
+"""
+
+Callable `Integrator` method. Integrates to `i.tmax`.
+"""
 function (i::Integrator)(s::State{T}) where T<:AbstractFloat 
     s2 = zero(T) # For compensated summation
+    
+    # Preallocate struct of arrays for derivatives (and pair)
     d = Derivatives(T,s.n) 
     pair = zeros(Bool,s.n,s.n)
+    
     while s.t < (i.t0 + i.tmax)
         # Take integration step and advance time
         i.scheme(s,d,i.h,pair)
