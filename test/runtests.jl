@@ -35,6 +35,7 @@ end
         # Need to fix dh17.
         #include("test_dh17.jl")
         include("test_ah18.jl")
+        include("test_integrator.jl")
     end;
     println("Finished.")
 
