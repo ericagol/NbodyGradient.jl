@@ -49,6 +49,15 @@ mutable struct State{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: AbstractStat
     end
 end
 
+"""Shows if the positions, velocities, and Jacobian are finite."""
+Base.show(io::IO,::MIME"text/plain",s::State{T}) where {T} = begin
+    println(io,"State{$T}:"); 
+    println(io,"Positions  : ", all(isfinite.(s.x)) ? "finite" : "infinite!"); 
+    println(io,"Velocities : ", all(isfinite.(s.v)) ? "finite" : "infinite!");
+    println(io,"Jacobian   : ", all(isfinite.(s.jac_step)) ? "finite" : "infinite!");
+    return
+end 
+
 #========== Running Methods ==========#
 """
 
