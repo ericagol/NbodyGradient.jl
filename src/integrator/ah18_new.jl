@@ -113,3 +113,32 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     return
 end
 
+"""
+
+Carries out AH18 mapping with compensated summation, WITHOUT derivatives
+"""
+function ah18!(s::State{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
+    h2 = 0.5*h; n = s.n
+    drift!(s.x,s.v,s.xerror,s.verror,h2,n)
+    kickfast!(s.x,s.v,s.xerror,s.verror,h/6,s.m,s.n,pair)
+    @inbounds for i=1:n-1
+        for j=i+1:n
+            if ~pair[i,j]
+                kepler_driftij_gamma!(s.m,s.x,s.v,s.xerror,s.verror,i,j,h2,true)
+            end
+        end
+    end
+    phic!(s.x,s.v,s.xerror,s.verror,h,s.m,n,pair)
+    phisalpha!(s.x,s.v,s.xerror,s.verror,h,s.m,convert(T,2),n,pair)
+    for i=n-1:-1:1
+        for j=n:-1:i+1
+            if ~pair[i,j]
+                kepler_driftij_gamma!(s.m,s.x,s.v,s.xerror,s.verror,i,j,h2,false)
+            end
+        end
+    end
+    kickfast!(s.x,s.v,s.xerror,s.verror,h/6,s.m,n,pair)
+    drift!(s.x,s.v,s.xerror,s.verror,h2,n)
+    return
+end
+
