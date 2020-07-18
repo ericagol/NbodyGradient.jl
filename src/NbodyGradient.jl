@@ -7,7 +7,7 @@ An N-body itegrator that computes derivatives with respect to initial conditions
 module NbodyGradient
 
 using LinearAlgebra, DelimitedFiles
-using JLD2, FileIO
+using BSON
 
 # Constants used by most functions
 # Need to clean this up
@@ -22,7 +22,7 @@ export Elements, ElementsIC, CartesianIC
 export State
 export Integrator
 export Derivatives
-export Output, CartesianOutput
+export CartesianOutput, ElementsOutput
 
 # Output Methods
 export ttv_elements!#, ttvbv_elements!

@@ -1,4 +1,3 @@
-
 abstract type AbstractOutput end
 abstract type Output{T} <: AbstractOutput end
 """
@@ -13,7 +12,7 @@ mutable struct CartesianOutput{T<:AbstractFloat,M<:Array{T,3}} <: Output{T}
     nstep::Int64
     filename::String
 
-    function CartesianOutput(::Type{T},nbody::Int64,nstep::Int64;filename="data.jld2") where T <: AbstractFloat
+    function CartesianOutput(::Type{T},nbody::Int64,nstep::Int64;filename="data.out") where T <: AbstractFloat
         return new{T,Array{T,3}}(zeros(T,nstep,NDIM,nbody),
                                  zeros(T,nstep,NDIM,nbody),
                                  zeros(T,nstep,7*nbody,7*nbody),
@@ -23,7 +22,25 @@ mutable struct CartesianOutput{T<:AbstractFloat,M<:Array{T,3}} <: Output{T}
 end
 
 # Allow user to not have to specify type. Defaults to Float64
-CartesianOutput(nbody::Int64,nstep::Int64;filename="data.jld2") = CartesianOutput(Float64,nbody,nstep,filename=filename)
+CartesianOutput(nbody::Int64,nstep::Int64;filename="data.out") = CartesianOutput(Float64,nbody,nstep,filename=filename)
+
+"""
+
+Preallocates and holds arrays for orbital elements at every integrator step
+"""
+mutable struct ElementsOutput{T<:AbstractFloat,M<:Matrix{T}} <: Output{T}
+    m::M
+    P::M
+    t0::M
+    e::M
+    ϖ::M
+    I::M
+    Ω::M
+
+    function ElementsOutput(::Type{T},nbody::Integer,nstep::Integer;filename="elems.out") where T<:AbstractFloat
+        return new{T,Matrix{T}}([zeros(T,nstep,nbody) for i in 1:7]...)
+    end
+end
 
 """
 
@@ -48,7 +65,7 @@ function (i::Integrator)(s::State{T},o::CartesianOutput{T}) where T<:AbstractFlo
         o.jac[iout,:,:] .= s.jac_step
         iout+=1
     end
-    save(o.filename,Dict("pos"=>o.x,"vel"=>o.v,"jac"=>o.jac)) 
+    bson(o.filename,Dict("pos"=>o.x,"vel"=>o.v,"jac"=>o.jac)) 
     return
 end
 
