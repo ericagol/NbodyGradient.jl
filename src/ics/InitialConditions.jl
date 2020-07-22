@@ -12,10 +12,7 @@ struct Elements{T<:AbstractFloat} <: AbstractInitialConditions
     i::T
     Ω::T
 
-    function Elements(m::T,P::T,t0::T,e::T,ϖ::T,i::T,Ω::T) where T<:Real
-        esinϖ,ecosϖ = e .* sincos(ϖ)
-        return new{T}(m,P,t0,ecosϖ,esinϖ,i,Ω)
-    end
+    Elements(m::T,P::T,t0::T,ecosϖ::T,esinϖ::T,i::T,Ω::T) where T<:Real = new{T}(m,P,t0,ecosϖ,esinϖ,i,Ω)
 end
 
 function Base.show(io::IO, ::MIME"text/plain" ,elems::Elements{T}) where T <: Real
@@ -25,8 +22,15 @@ function Base.show(io::IO, ::MIME"text/plain" ,elems::Elements{T}) where T <: Re
     println.(Ref(io), names,": ",vals)
 end
 
+# Fix this later...
+#="""Allow alternate specification"""
+function Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,e::T=0.0,ϖ::T=0.0,i::T=0.0,Ω::T=0.0) where T<:Real
+    esinϖ,ecosϖ = e .* sincos(ϖ)
+    return new{T}(m,P,t0,ecosϖ,esinϖ,i,Ω)
+end=#
+
 """Allow keywargs"""
-Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,e::T=0.0,ϖ::T=0.0,i::T=0.0,Ω::T=0.0) where T<:Real = Elements(m,P,t0,e,ϖ,i,Ω)
+Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,ecosϖ::T=0.0,esinϖ::T=0.0,i::T=0.0,Ω::T=0.0) where T<:Real = Elements(m,P,t0,ecosϖ,esinϖ,i,Ω)
 
 #= This overwrites the main constructor... Maybe not needed. I don't see folks using integers here.
 """Promotion to (atleast) floats"""
@@ -38,7 +42,7 @@ abstract type InitialConditions{T} end
 
 Holds relevant initial conditions arrays. Uses orbital elements.
 """
-mutable struct ElementsIC{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: InitialConditions{T}
+struct ElementsIC{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: InitialConditions{T}
     elements::M
     H::Vector{Int64}
     ϵ::M
@@ -70,7 +74,7 @@ Collects `Elements` and produces an `ElementsIC` struct.
 """
 function ElementsIC(t0::T,elems::Elements{T}...;H::Vector{Int64}) where T <: AbstractFloat
     
-    # Not sure if this is a good spot for this...
+    elements = zeros(length(elems),7)
     function parse_system(elems::Elements{T}...) where T <: AbstractFloat
         bodies = Dict{Symbol,Elements}()
         for i in 1:length(elems)
@@ -86,7 +90,7 @@ function ElementsIC(t0::T,elems::Elements{T}...;H::Vector{Int64}) where T <: Abs
         return elements
     end     
             
-    elements = parse_system(elems...)
+    elements .= parse_system(elems...)
     return ElementsIC(elements,H,t0)
 end
 
@@ -98,7 +102,7 @@ println(io,"ElementsIC{$T}\nOribital Elements: "); show(io,"text/plain",ic.eleme
 
 Holds relevant initial conditions arrays. Uses Cartesian coordinates. 
 """
-mutable struct CartesianIC{T<:AbstractFloat} <: InitialConditions{T}
+struct CartesianIC{T<:AbstractFloat} <: InitialConditions{T}
     x::Array{T,2}
     v::Array{T,2}
     jac_init::Array{T,2}
