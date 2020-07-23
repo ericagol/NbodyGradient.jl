@@ -34,6 +34,7 @@ mutable struct State{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: AbstractStat
     t::T
     m::V
     jac_step::M
+    dqdt::V
     xerror::M # These might be put into an 'PreAllocArrays'
     verror::M
     jac_error::M
@@ -41,11 +42,13 @@ mutable struct State{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: AbstractStat
 
     function State(ic::InitialConditions{T}) where T<:AbstractFloat
         x,v,_ = init_nbody(ic)
+        n = ic.nbody
         xerror = zeros(T,size(x))
         verror = zeros(T,size(v))
-        jac_step = Matrix{T}(I,7*ic.nbody,7*ic.nbody)
+        jac_step = Matrix{T}(I,7*n,7*n)
+        dqdt = zeros(T,7*n)
         jac_error = zeros(T,size(jac_step))
-        return new{T,Vector{T},Matrix{T}}(x,v,ic.t0,ic.m,jac_step,xerror,verror,jac_error,ic.nbody)
+        return new{T,Vector{T},Matrix{T}}(x,v,ic.t0,ic.m,jac_step,dqdt,xerror,verror,jac_error,ic.nbody)
     end
 end
 
@@ -67,7 +70,7 @@ function (i::Integrator)(s::State{T}) where T<:AbstractFloat
     s2 = zero(T) # For compensated summation
     
     # Preallocate struct of arrays for derivatives (and pair)
-    d = Derivatives(T,s.n) 
+    d = Jacobian(T,s.n) 
     pair = zeros(Bool,s.n,s.n)
     
     while s.t < (i.t0 + i.tmax)

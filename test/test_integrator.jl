@@ -142,38 +142,33 @@
         jac_step_num[j*7,j*7] = 1.0
     end
 
-    #= dqdt
-    dqdt = zeros(7*n)
+    # dqdt
+    s_dt = State(ic)
+    dt = dTime(Float64,s_dt.n)
     dqdt_num = zeros(BigFloat,7*n)
-    x = copy(x0)
-    v = copy(v0)
-    m = copy(m0)
-    xerror = zeros(3,n); verror = zeros(3,n)
-    ah18!(x,v,xerror,verror,h,m,n,dqdt,pair)
-    xm= big.(x0)
-    vm= big.(v0)
-    mm= big.(m0)
-    fill!(big_xerror,0.0)
-    fill!(big_verror,0.0)
+    pair = zeros(Bool,s_dt.n,s_dt.n)
+    ah18!(s_dt,dt,h,pair)
+    
+    s_dtm = deepcopy(State(ic_big))
+    dt_big = dTime(BigFloat,s_dt.n) 
+    hbig = big(h)
     dq = hbig*dlnq
     hbig -= dq
-    ah18!(xm,vm,big_xerror,big_verror,hbig,mm,n,pair)
-    xp= big.(x0)
-    vp= big.(v0)
-    mp= big.(m0)
-    fill!(big_xerror,0.0)
-    fill!(big_verror,0.0)
+    ah18!(s_dtm,dt_big,hbig,pair)
+    
+    s_dtp = deepcopy(State(ic_big))
     hbig += 2dq
-    ah18!(xp,vp,big_xerror,big_verror,hbig,mp,n,pair)
+    ah18!(s_dtp,dt_big,hbig,pair)
     for i=1:n, k=1:3
-    dqdt_num[(i-1)*7+  k] = .5*(xp[k,i]-xm[k,i])/dq
-    dqdt_num[(i-1)*7+3+k] = .5*(vp[k,i]-vm[k,i])/dq
+    dqdt_num[(i-1)*7+  k] = .5*(s_dtp.x[k,i]-s_dtm.x[k,i])/dq
+    dqdt_num[(i-1)*7+3+k] = .5*(s_dtp.v[k,i]-s_dtm.v[k,i])/dq
     end
     dqdt_num = convert(Array{Float64,1},dqdt_num)
-    =#
+
     ####################
 
     ###### Tests #######
     # Check analytic vs finite difference derivatives 
     @test isapprox(asinh.(s0.jac_step),asinh.(jac_step_num);norm=maxabs)
+    @test isapprox(s_dt.dqdt,dqdt_num,norm=maxabs)
 end

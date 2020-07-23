@@ -21,7 +21,7 @@ const alpha0 = 0.0
 export Elements, ElementsIC, CartesianIC
 export State
 export Integrator
-export Derivatives
+export Jacobian, dTime
 export CartesianOutput, ElementsOutput
 
 # Output Methods
