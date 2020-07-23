@@ -14,7 +14,7 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.version == '0.7' }}
+    continue-on-error: ${{ matrix.julia-version == '0.7' }}
     strategy:
       fail-fast: false
       matrix:
