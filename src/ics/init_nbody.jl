@@ -18,10 +18,10 @@ function init_nbody(init::ElementsIC{T}) where T <: AbstractFloat
 
     # Cartesian coordinates
     x = zeros(T,NDIM,init.nbody)
-    x = Array(transpose(*(Ainv,r)))
+    x = permutedims(*(Ainv,r))
     
     v = zeros(T,NDIM,init.nbody)
-    v = Array(transpose(*(Ainv,rdot)))
+    v = permutedims(*(Ainv,rdot))
 
     return x,v,jac_init
 end
@@ -163,7 +163,7 @@ function amatrix(ϵ::Array{T,2},m::Array{T,1}) where T<:AbstractFloat
     N = length(ϵ[:,1]) # Number of bodies in system
 
     for i in 1:N, j in 1:N
-        A[i,j] = (ϵ[i,j]*m[j])/(Σm(m,i,j,ϵ))
+        A[i,j] = -(ϵ[i,j]*m[j])/(Σm(m,i,j,ϵ))
     end
     return A
 end
