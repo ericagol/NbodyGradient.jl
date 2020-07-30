@@ -122,7 +122,7 @@ function d_dm(init::ElementsIC{T},rkepler::Array{T,2},rdotkepler::Array{T,2},jac
     Ainv = inv(init.amat)
     dAinvdm = zeros(T,N,N,N)
     for k in 1:N
-        dAinvdm[:,:,k] = -Ainv*dAdm[:,:,k]*Ainv
+        dAinvdm[:,:,k] = Ainv*dAdm[:,:,k]*Ainv
     end
 
     # Fill in jac_init array
