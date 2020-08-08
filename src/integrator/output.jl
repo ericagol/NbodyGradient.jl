@@ -5,24 +5,20 @@ abstract type Output{T} <: AbstractOutput end
 Preallocates and holds arrays for positions, velocities, and Jacobian at every integrator step
 """ 
 # Should add option to choose out intervals, checkpointing, etc.
-mutable struct CartesianOutput{T<:AbstractFloat,M<:Array{T,3}} <: Output{T}
-    x::M
-    v::M
-    jac::M
+mutable struct CartesianOutput{T<:AbstractFloat} <: Output{T}
+    states::Vector{State{T}}
     nstep::Int64
     filename::String
+    file::Bool
 
-    function CartesianOutput(::Type{T},nbody::Int64,nstep::Int64;filename="data.out") where T <: AbstractFloat
-        return new{T,Array{T,3}}(zeros(T,nstep,NDIM,nbody),
-                                 zeros(T,nstep,NDIM,nbody),
-                                 zeros(T,nstep,7*nbody,7*nbody),
-                                 nstep,filename
-                                )
+    function CartesianOutput(::Type{T},nbody::Int64,nstep::Int64;filename="data.jld2",file=false) where T <: AbstractFloat
+        states = State[]
+        return new{T}(states,nstep,filename,file)
     end
 end
 
 # Allow user to not have to specify type. Defaults to Float64
-CartesianOutput(nbody::Int64,nstep::Int64;filename="data.out") = CartesianOutput(Float64,nbody,nstep,filename=filename)
+CartesianOutput(nbody::T,nstep::T;filename="data.jld2") where T<:Int64 = CartesianOutput(Float64,nbody,nstep,filename=filename)
 
 """
 
@@ -53,19 +49,18 @@ function (i::Integrator)(s::State{T},o::CartesianOutput{T}) where T<:AbstractFlo
     d = Jacobian(T,s.n) 
     pair = zeros(Bool,s.n,s.n)
     
-    iout::Integer = 1 
-    while s.t < (i.t0 + i.tmax) && iout <= o.nstep
+    # Push initial state
+    push!(o.states,s)
+    
+    while s.t < (i.t0 + i.tmax)
         # Take integration step and advance time
         i.scheme(s,d,i.h,pair)
         s.t,s2 = comp_sum(s.t,s2,i.h)
         
         # Save coords to output structure
-        o.x[iout,:,:] .= s.x
-        o.v[iout,:,:] .= s.v
-        o.jac[iout,:,:] .= s.jac_step
-        iout+=1
+        push!(o.states,s)
     end
-    save(o.filename,Dict("pos"=>o.x,"vel"=>o.v,"jac"=>o.jac)) 
+    if o.file; save(o.filename,Dict("states" => o.states)); end 
     return
 end
 

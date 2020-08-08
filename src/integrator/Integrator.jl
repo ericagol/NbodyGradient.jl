@@ -39,17 +39,17 @@ mutable struct State{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: AbstractStat
     verror::M
     jac_error::M
     n::Int64
+end
 
-    function State(ic::InitialConditions{T}) where T<:AbstractFloat
-        x,v,_ = init_nbody(ic)
-        n = ic.nbody
-        xerror = zeros(T,size(x))
-        verror = zeros(T,size(v))
-        jac_step = Matrix{T}(I,7*n,7*n)
-        dqdt = zeros(T,7*n)
-        jac_error = zeros(T,size(jac_step))
-        return new{T,Vector{T},Matrix{T}}(x,v,ic.t0,ic.m,jac_step,dqdt,xerror,verror,jac_error,ic.nbody)
-    end
+function State(ic::InitialConditions{T}) where T<:AbstractFloat
+    x,v,_ = init_nbody(ic)
+    n = ic.nbody
+    xerror = zeros(T,size(x))
+    verror = zeros(T,size(v))
+    jac_step = Matrix{T}(I,7*n,7*n)
+    dqdt = zeros(T,7*n)
+    jac_error = zeros(T,size(jac_step))
+    return State(x,v,ic.t0,ic.m,jac_step,dqdt,xerror,verror,jac_error,ic.nbody)
 end
 
 """Shows if the positions, velocities, and Jacobian are finite."""
@@ -68,11 +68,11 @@ Callable `Integrator` method. Integrates to `i.tmax`.
 """
 function (i::Integrator)(s::State{T}) where T<:AbstractFloat 
     s2 = zero(T) # For compensated summation
-    
+
     # Preallocate struct of arrays for derivatives (and pair)
     d = Jacobian(T,s.n) 
     pair = zeros(Bool,s.n,s.n)
-    
+
     while s.t < (i.t0 + i.tmax)
         # Take integration step and advance time
         i.scheme(s,d,i.h,pair)
