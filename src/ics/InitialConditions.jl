@@ -9,17 +9,31 @@ struct Elements{T<:AbstractFloat} <: AbstractInitialConditions
     t0::T
     ecosϖ::T
     esinϖ::T
-    i::T
+    I::T
     Ω::T
+    a::T
+    e::T
+    ϖ::T
+end
 
-    Elements(m::T,P::T,t0::T,ecosϖ::T,esinϖ::T,i::T,Ω::T) where T<:Real = new{T}(m,P,t0,ecosϖ,esinϖ,i,Ω)
+"""Main `Elements` constructor.`"""
+function Elements(m::T,P::T,t0::T,ecosϖ::T,esinϖ::T,I::T,Ω::T) where T<:Real 
+    e = sqrt(ecosϖ^2 + esinϖ^2)
+    ϖ = atan(esinϖ,ecosϖ)
+    Elements(m,P,t0,ecosϖ,esinϖ,I,Ω,0.0,e,ϖ)
 end
 
 function Base.show(io::IO, ::MIME"text/plain" ,elems::Elements{T}) where T <: Real
-    names = ["m","P","t0","ecosϖ","esinϖ","i","Ω"]
-    vals = [elems.m,elems.P,elems.t0,elems.ecosϖ,elems.esinϖ,elems.i,elems.Ω]
+    fields = fieldnames(typeof(elems))
+    vals = Dict([fn => getfield(elems,fn) for fn in fields])
     println(io, "Elements{$T}")
-    println.(Ref(io), names,": ",vals)
+    for key in keys(vals)
+        println(io,key,": ",vals[key])
+    end
+    if elems.a == 0.0
+        println(io, "Semi-major axis: undefined")
+    end
+    return
 end
 
 # Fix this later...
@@ -30,7 +44,7 @@ function Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,e::T=0.0,ϖ::T=0.0,i::T=0.0,Ω::T
 end=#
 
 """Allow keywargs"""
-Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,ecosϖ::T=0.0,esinϖ::T=0.0,i::T=0.0,Ω::T=0.0) where T<:Real = Elements(m,P,t0,ecosϖ,esinϖ,i,Ω)
+Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,ecosϖ::T=0.0,esinϖ::T=0.0,I::T=0.0,Ω::T=0.0) where T<:Real = Elements(m,P,t0,ecosϖ,esinϖ,I,Ω)
 
 #= This overwrites the main constructor... Maybe not needed. I don't see folks using integers here.
 """Promotion to (atleast) floats"""
@@ -72,6 +86,16 @@ end
 
 Collects `Elements` and produces an `ElementsIC` struct.
 """
+function ElementsIC(t0::T,elems::Elements{T}...;H::Union{Int64,Vector{Int64}}) where T <: AbstractFloat
+    if H isa Int64; H = [H,ones(Int64,H-1)...]; end
+    elements = zeros(T,H[1],7)
+    fields = setdiff(fieldnames(Elements),[:a,:e,:ϖ])
+    for i in eachindex(elems)
+        elements[i,:] .= [getfield(elems[i],f) for f in fields]
+    end
+    return ElementsIC(elements,H,t0) 
+end
+#=    
 function ElementsIC(t0::T,elems::Elements{T}...;H::Vector{Int64}) where T <: AbstractFloat
     
     elements = zeros(length(elems),7)
@@ -82,9 +106,8 @@ function ElementsIC(t0::T,elems::Elements{T}...;H::Vector{Int64}) where T <: Abs
             bodies[key] = elems[i]
         end
         key = sort(collect(keys(bodies)))
-        field = fieldnames(Elements)
-        elements = zeros(length(bodies),7)
-        for i in 1:length(bodies), elm in enumerate(fieldnames(Elements))
+        fields = setdiff(fieldnames(Elements),[:a,:e,:ϖ])
+        for i in 1:length(bodies), elm in enumerate(fields)
             elements[i,elm[1]] = getfield(bodies[key[i]],elm[2])
         end
         return elements
@@ -93,7 +116,7 @@ function ElementsIC(t0::T,elems::Elements{T}...;H::Vector{Int64}) where T <: Abs
     elements .= parse_system(elems...)
     return ElementsIC(elements,H,t0)
 end
-
+=#
 """Shows the elements array."""
 Base.show(io::IO,::MIME"text/plain",ic::ElementsIC{T}) where {T} = begin
 println(io,"ElementsIC{$T}\nOribital Elements: "); show(io,"text/plain",ic.elements); end;

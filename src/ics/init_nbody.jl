@@ -38,48 +38,54 @@ Computes Kepler's problem for each pair of bodies in the system.
 - `rdotkepler::Array{T<:Real,2}`: Matrix of initial velocity vectors for each keplerian.
 - `jac_init::Array{T<:Real,2}`: Derivatives of the A-matrix and cartesian positions and velocities with respect to the masses of each object.
 """
-function kepcalc(init::ElementsIC{T}) where T <: AbstractFloat
-
-    # Kepler position/velocity arrays (body,pos/vel)
-    rkepler = zeros(T,init.nbody,NDIM)
-    rdotkepler = zeros(T,init.nbody,NDIM)
-    if init.der
-        jac_kepler = zeros(T,6*init.nbody,7*init.nbody)
+function kepcalc(init::ElementsIC{T}) where T<:AbstractFloat
+    n = init.nbody
+    rkepler = zeros(T,n,NDIM)
+    rdotkepler = zeros(T,n,NDIM)
+    if init.der 
+        jac_kepler = zeros(T,6*n,7*n)
+        jac_21 = zeros(T,7,7)
     end
-    # Compute Kepler's problem
-    for i in 1:init.nbody
+    # Compute Kepler's problem for each binary
+    i = 1; b = 0
+    while i < init.nbody
+        ind = Bool.(abs.(init.ϵ[i,:]))
+        μ = sum(init.m[ind])
 
-        ind1 = findall(isequal(-1.0),init.ϵ[i,:])
-        ind2 = findall(isequal(1.0),init.ϵ[i,:])
-        m1 = sum(init.m[ind1])
-        m2 = sum(init.m[ind2])
+        # Check for a new binary.
+        if first(ind) == zero(T)
+            b += 1 
+        end
 
-        if i < init.nbody
-            if init.der
-                jac_21 = zeros(T,7,7)
-                r, rdot = kepler_init(init.t0,m1+m2,init.elements[i+1,2:7],jac_21)
-            else
-                r, rdot = kepler_init(init.t0,m1+m2,init.elements[i+1,2:7])
+        # Solve Kepler's problem
+        if init.der
+            r,rdot = kepler_init(init.t0,μ,init.elements[i+1+b,2:7],jac_21)
+        else
+            r,rdot = kepler_init(init.t0,μ,init.elements[i+1+b,2:7])
+        end
+        rkepler[i,:] .= r
+        rdotkepler[i,:] .= rdot
+        
+        if init.der
+            for j=1:6, k=1:6
+                jac_kepler[(i-1)*6+j,i*7+k] = jac_21[j,k]
             end
-            for j = 1:NDIM
-                rkepler[i,j] = r[j]
-                rdotkepler[i,j] = rdot[j]
-            end
-            if init.der
-                # Save Keplerian Jacobian. First, positions/velocity vs. elements
-                for j=1:6, k=1:6
-                    jac_kepler[(i-1)*6+j,i*7+k] = jac_21[j,k]
+            for j in 1:n
+                if init.ϵ[i,j] != 0
+                    for k = 1:6
+                        jac_kepler[(i-1)*6+k,j*7] = jac_21[k,7]
+                    end
                 end
-                # Then mass derivatives
-        		for j=1:init.nbody
-        	    	if init.ϵ[i,j] != 0
-        	        	for k = 1:6
-        		    	jac_kepler[(i-1)*6+k,j*7] = jac_21[k,7]
-        				end
-        	    	end
-        		end
             end
         end
+        # Check if last binary was a new branch.
+        if b > 0
+            b -= 2 
+        elseif b < 0
+            b = 0
+            i += 1
+        end
+        i += 1
     end
     if init.der
         jac_init = d_dm(init,rkepler,rdotkepler,jac_kepler)
