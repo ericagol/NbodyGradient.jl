@@ -1,3 +1,5 @@
 .ipynb_checkpoints
 Manifest.toml
 .DS_Store
+.vscode/
+*.jld2
