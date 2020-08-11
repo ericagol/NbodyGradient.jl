@@ -1,11 +1,10 @@
 abstract type AbstractOutput end
-abstract type Output{T} <: AbstractOutput end
 """
 
 Preallocates and holds arrays for positions, velocities, and Jacobian at every integrator step
 """ 
 # Should add option to choose out intervals, checkpointing, etc.
-struct CartesianOutput{T<:AbstractFloat} <: Output{T}
+struct CartesianOutput{T<:AbstractFloat} <: AbstractOutput
     states::Vector{State{T}}
     nstep::Int64
     filename::String
@@ -19,6 +18,7 @@ end
 
 # Allow user to not have to specify type. Defaults to Float64
 CartesianOutput(nbody::T,nstep::T;filename="data.jld2") where T<:Int64 = CartesianOutput(Float64,nbody,nstep,filename=filename)
+
 """
 
 Runs integrator like (*insert doc reference here*) and output positions, velocities, and Jacobian to a JLD2 file.
@@ -45,3 +45,6 @@ function (i::Integrator)(s::State{T},o::CartesianOutput{T}) where T<:AbstractFlo
     return
 end
 
+# Includes
+const outputs = ["elements"]
+for i in outputs; include("$(i).jl"); end

@@ -34,11 +34,11 @@ include("utils.jl")
 include("PreAllocArrays.jl")
 include("ics/InitialConditions.jl")
 include("integrator/Integrator.jl")
+include("outputs/Outputs.jl")
 include("ttvs/TTVs.jl")
 
-# For testing
-include("integrator/ah18_new.jl")
-include("integrator/output.jl")
+# To be cleaned up
+include("integrator/ah18/ah18_old.jl") 
 
 # wrapper for testing new ics.
 @inline function ttv_elements!(el::ElementsIC{T},t0::T,h::T,tmax::T,tt::Array{T,2},count::Array{Int64,1},rstar::T) where T <: Real
