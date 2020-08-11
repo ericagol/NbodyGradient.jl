@@ -14,11 +14,11 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.julia-version == '0.7' }}
+    #continue-on-error: ${{ matrix.julia-version == '0.7' }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
-        julia-version: ['1','0.7']
+        julia-version: ['1.5','1.0']
         os: [ubuntu-latest, macOS-latest]
     
     # Steps represent a sequence of tasks that will be executed as part of the job
