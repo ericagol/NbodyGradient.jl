@@ -39,6 +39,12 @@ end
     end;
     println("Finished.")
 
+    println("Outputs... ")
+    @testset "Outputs" begin
+        include("test_cartesian_to_elements.jl")
+    end
+    println("Finished.")
+
     print("TTVs... ")
     @testset "TTVs" begin
         include("test_findtransit3.jl")
