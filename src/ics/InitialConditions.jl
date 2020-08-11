@@ -36,20 +36,8 @@ function Base.show(io::IO, ::MIME"text/plain" ,elems::Elements{T}) where T <: Re
     return
 end
 
-# Fix this later...
-#="""Allow alternate specification"""
-function Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,e::T=0.0,ϖ::T=0.0,i::T=0.0,Ω::T=0.0) where T<:Real
-    esinϖ,ecosϖ = e .* sincos(ϖ)
-    return new{T}(m,P,t0,ecosϖ,esinϖ,i,Ω)
-end=#
-
 """Allow keywargs"""
 Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,ecosϖ::T=0.0,esinϖ::T=0.0,I::T=0.0,Ω::T=0.0) where T<:Real = Elements(m,P,t0,ecosϖ,esinϖ,I,Ω)
-
-#= This overwrites the main constructor... Maybe not needed. I don't see folks using integers here.
-"""Promotion to (atleast) floats"""
-Elements(m::Real=0.0,P::Real=0.0,t0::Real=0.0,e::Real=0.0,ϖ::Real=0.0,i::Real=0.0,Ω::Real=0.0) = Elements(promote(m,P,t0,e,ϖ,i,Ω)...)
-=#
 
 abstract type InitialConditions{T} end
 """
@@ -86,7 +74,7 @@ end
 
 Collects `Elements` and produces an `ElementsIC` struct.
 """
-function ElementsIC(t0::T,elems::Elements{T}...;H::Union{Int64,Vector{Int64}}) where T <: AbstractFloat
+function ElementsIC(t0::T,H::Union{Int64,Vector{Int64}},elems::Elements{T}...) where T <: AbstractFloat
     if H isa Int64; H = [H,ones(Int64,H-1)...]; end
     elements = zeros(T,H[1],7)
     fields = setdiff(fieldnames(Elements),[:a,:e,:ϖ])
@@ -95,28 +83,10 @@ function ElementsIC(t0::T,elems::Elements{T}...;H::Union{Int64,Vector{Int64}}) w
     end
     return ElementsIC(elements,H,t0) 
 end
-#=    
-function ElementsIC(t0::T,elems::Elements{T}...;H::Vector{Int64}) where T <: AbstractFloat
-    
-    elements = zeros(length(elems),7)
-    function parse_system(elems::Elements{T}...) where T <: AbstractFloat
-        bodies = Dict{Symbol,Elements}()
-        for i in 1:length(elems)
-            key = Meta.parse("b$i")
-            bodies[key] = elems[i]
-        end
-        key = sort(collect(keys(bodies)))
-        fields = setdiff(fieldnames(Elements),[:a,:e,:ϖ])
-        for i in 1:length(bodies), elm in enumerate(fields)
-            elements[i,elm[1]] = getfield(bodies[key[i]],elm[2])
-        end
-        return elements
-    end     
-            
-    elements .= parse_system(elems...)
-    return ElementsIC(elements,H,t0)
-end
-=#
+
+"""Allows for array of `Elements` argument."""
+ElementsIC(t0::T,H::Union{Int64,Vector{Int64}},elems::Array{Elements{T},1}) where T<:AbstractFloat = ElementsIC(t0,H,elems...)
+
 """Shows the elements array."""
 Base.show(io::IO,::MIME"text/plain",ic::ElementsIC{T}) where {T} = begin
 println(io,"ElementsIC{$T}\nOribital Elements: "); show(io,"text/plain",ic.elements); end;
