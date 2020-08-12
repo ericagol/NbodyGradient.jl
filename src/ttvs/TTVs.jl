@@ -15,7 +15,8 @@ end
 
 function TransitTiming(tmax,ic::ElementsIC{T}) where T<:AbstractFloat
     n = ic.nbody
-    ntt = maximum(ceil.(Int64,tmax/ic.elements[:,2]).+3)
+    ind = isfinite.(tmax./ic.elements[:,2])
+    ntt = maximum(ceil.(Int64,tmax./ic.elements[ind,2]).+3)
     tt = zeros(T,n,ntt)
     dtdq0 = zeros(T,n,ntt,7,n)
     dtdelements = zeros(T,n,ntt,7,n)
