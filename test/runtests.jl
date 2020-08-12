@@ -39,7 +39,7 @@ end
     end;
     println("Finished.")
 
-    println("Outputs... ")
+    print("Outputs... ")
     @testset "Outputs" begin
         include("test_cartesian_to_elements.jl")
     end

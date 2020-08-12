@@ -1,5 +1,10 @@
 # Collection of functions to compute transit timing variations, using the AH18 integrator.
 
+# wrapper for testing new ics.
+@inline function ttv_elements!(el::ElementsIC{T},t0::T,h::T,tmax::T,tt::Array{T,2},count::Array{Int64,1},rstar::T) where T <: Real
+    return ttv_elements!(el.H,t0,h,tmax,el.elements,tt,count,0.0,0,0,rstar)
+end
+
 """
 
 Computes Transit Timing Variations (TTVs) as a function of orbital elements, and computes Jacobian of transit times with respect to the initial orbital elements.

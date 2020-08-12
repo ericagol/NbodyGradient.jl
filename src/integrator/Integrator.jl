@@ -35,6 +35,7 @@ mutable struct State{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: AbstractStat
     m::V
     jac_step::M
     dqdt::V
+    jac_init::M
     xerror::M # These might be put into an 'PreAllocArrays'
     verror::M
     jac_error::M
@@ -42,14 +43,14 @@ mutable struct State{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: AbstractStat
 end
 
 function State(ic::InitialConditions{T}) where T<:AbstractFloat
-    x,v,_ = init_nbody(ic)
+    x,v,jac_init = init_nbody(ic)
     n = ic.nbody
     xerror = zeros(T,size(x))
     verror = zeros(T,size(v))
     jac_step = Matrix{T}(I,7*n,7*n)
     dqdt = zeros(T,7*n)
     jac_error = zeros(T,size(jac_step))
-    return State(x,v,ic.t0,ic.m,jac_step,dqdt,xerror,verror,jac_error,ic.nbody)
+    return State(x,v,ic.t0,ic.m,jac_step,dqdt,jac_init,xerror,verror,jac_error,ic.nbody)
 end
 
 """Shows if the positions, velocities, and Jacobian are finite."""
