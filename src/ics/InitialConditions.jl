@@ -89,7 +89,7 @@ ElementsIC(t0::T,H::Union{Int64,Vector{Int64}},elems::Array{Elements{T},1}) wher
 
 """Shows the elements array."""
 Base.show(io::IO,::MIME"text/plain",ic::ElementsIC{T}) where {T} = begin
-println(io,"ElementsIC{$T}\nOribital Elements: "); show(io,"text/plain",ic.elements); end;
+println(io,"ElementsIC{$T}\nOrbital Elements: "); show(io,"text/plain",ic.elements); end;
 
 """
 
