@@ -16,11 +16,19 @@ mutable struct Jacobian{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: AbstractD
 
     function Jacobian(::Type{T},n::Integer) where T<:AbstractFloat
         sevn::Int64 = 7*n
-        return new{T,Vector{T},Matrix{T}}([zeros(T,sevn,sevn) for _ in 1:3]...,
-                                        zeros(T,14,14),
-                                        [zeros(14,sevn) for _ in 1:3]...,
-                                        zeros(T,14),
-                                        [zeros(T,sevn) for _ in 1:2]...)
+        jac_phi = zeros(T,sevn,sevn)
+        jac_kick = zeros(T,sevn,sevn)
+        jac_copy = zeros(T,sevn,sevn)
+        jac_ij = zeros(T,14,14)
+        jac_tmp1 = zeros(T,14,sevn)
+        jac_tmp2 = zeros(T,14,sevn)
+        jac_err1 = zeros(T,14,sevn)
+        dqdt_ij = zeros(T,14)
+        dqdt_phi = zeros(T,sevn)
+        dqdt_kick = zeros(T,sevn)
+
+        return new{T,Vector{T},Matrix{T}}(jac_phi,jac_kick,jac_copy,jac_ij,
+            jac_tmp1,jac_tmp2,jac_err1,dqdt_ij,dqdt_phi,dqdt_kick)
     end
 end
 
@@ -37,11 +45,15 @@ mutable struct dTime{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: AbstractDeri
 
     function dTime(::Type{T},n::Integer) where T<:AbstractFloat
         sevn::Int64 = 7*n
-        return new{T,Vector{T},Matrix{T}}([zeros(T,sevn,sevn) for _ in 1:2]...,
-                                        zeros(T,14,14),
-                                        [zeros(T,sevn) for _ in 1:2]...,
-                                        zeros(T,14),
-                                        [zeros(T,14) for _ in 1:2]...)
+        jac_phi = zeros(T,sevn,sevn)
+        jac_kick = zeros(T,sevn,sevn)
+        jac_ij = zeros(T,14,14)
+        dqdt_phi = zeros(T,sevn)
+        dqdt_kick = zeros(T,sevn)
+        dqdt_ij = zeros(T,14)
+        dqdt_tmp1 = zeros(T,14)
+        dqdt_tmp2 = zeros(T,14)
+        return new{T,Vector{T},Matrix{T}}(jac_phi,jac_kick,jac_ij,dqdt_phi,dqdt_kick,
+            dqdt_ij,dqdt_tmp1,dqdt_tmp2)
     end
 end
-
