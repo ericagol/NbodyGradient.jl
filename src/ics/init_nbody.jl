@@ -128,7 +128,7 @@ function d_dm(init::ElementsIC{T},rkepler::Array{T,2},rdotkepler::Array{T,2},jac
     Ainv = inv(init.amat)
     dAinvdm = zeros(T,N,N,N)
     for k in 1:N
-        dAinvdm[:,:,k] = Ainv*dAdm[:,:,k]*Ainv
+        dAinvdm[:,:,k] .= -Ainv * dAdm[:,:,k] * Ainv
     end
 
     # Fill in jac_init array
@@ -169,7 +169,7 @@ function amatrix(ϵ::Array{T,2},m::Array{T,1}) where T<:AbstractFloat
     N = length(ϵ[:,1]) # Number of bodies in system
 
     for i in 1:N, j in 1:N
-        A[i,j] = -(ϵ[i,j]*m[j])/(Σm(m,i,j,ϵ))
+        A[i,j] = (ϵ[i,j]*m[j])/(Σm(m,i,j,ϵ))
     end
     return A
 end
