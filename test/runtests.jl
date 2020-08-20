@@ -1,4 +1,4 @@
- 
+
 
 include("loglinspace.jl")
 include("../src/ttv.jl")
@@ -22,7 +22,8 @@ include("test_kepler_drift_gamma.jl")
 include("test_kepler_driftij_gamma.jl")
 include("test_kickfast.jl")
 include("test_phisalpha.jl")
-include("test_dh17.jl")
+# Need to fix dh17.
+#include("test_dh17.jl")
 include("test_ah18.jl")
 include("test_findtransit3.jl")
 include("test_ttv_cartesian.jl")

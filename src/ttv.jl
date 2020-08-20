@@ -13,6 +13,7 @@ if ~@isdefined YEAR
   const third = 1.0/3.0
   const alpha0 = 0.0
 end
+include("PreAllocArrays.jl")
 include("kepler_step.jl")
 include("kepler_drift_step.jl")
 include("kepler_drift_gamma.jl")
@@ -47,7 +48,7 @@ return
 end
 
 
-# These "constants" pre-allocate memory for matrices used in the derivative computation (to save time with allocation and garbage collection):
+#= These "constants" pre-allocate memory for matrices used in the derivative computation (to save time with allocation and garbage collection):
 if ~@isdefined pxpr0
   const pxpr0 = zeros(Float64,3);const  pxpa0=zeros(Float64,3);const  pxpk=zeros(Float64,3);const  pxps=zeros(Float64,3);const  pxpbeta=zeros(Float64,3)
   const dxdr0 = zeros(Float64,3);const  dxda0=zeros(Float64,3);const  dxdk=zeros(Float64,3);const  dxdv0 =zeros(Float64,3)
@@ -55,10 +56,10 @@ if ~@isdefined pxpr0
   const drvdr0 = zeros(Float64,3);const  drvda0=zeros(Float64,3);const  drvdk=zeros(Float64,3);const  drvdv0=zeros(Float64,3)
   const vtmp = zeros(Float64,3);const  dvdr0 = zeros(Float64,3);const  dvda0=zeros(Float64,3);const  dvdv0=zeros(Float64,3);const  dvdk=zeros(Float64,3)
 end
-
+=#
 # Computes TTVs as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
-function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,n,n)) where {T <: Real}
-# 
+function ttv_elements!(H::Union{Int64,Array{Int64,1}},t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,H[1],H[1])) where {T <: Real}
+#
 # Input quantities:
 # n     = number of bodies
 # t0    = initial time of integration  [days]
@@ -77,6 +78,7 @@ function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Arra
 #
 #fcons = open("fcons.txt","w");
 # Set up mass, position & velocity arrays.  NDIM =3
+n = H[1]
 m=zeros(T,n)
 x=zeros(T,NDIM,n)
 v=zeros(T,NDIM,n)
@@ -96,9 +98,11 @@ if iq == 7 && dlnq != 0.0
   m[jq] += dq
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-x,v = init_nbody(elements,t0,n)
+init = ElementsIC(elements,H,t0)
+x,v,_ = init_nbody(init)
 elements_big=big.(elements); t0big = big(t0)
-xbig,vbig = init_nbody(elements_big,t0big,n)
+init_big = ElementsIC(elements_big,H,t0big)
+xbig,vbig,_ = init_nbody(init_big)
 #if T != BigFloat
 #  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (dlnq version)")
 #end
@@ -127,8 +131,8 @@ return dq
 end
 
 # Computes TTVs, v_sky & b_sky^2 as a function of orbital elements, allowing for a single log perturbation of dlnq for body jq and element iq
-function ttvbv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::Array{T,3},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,n,n)) where {T <: Real}
-# 
+function ttvbv_elements!(H::Union{Int64,Array{Int64,1}},t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::Array{T,3},count::Array{Int64,1},dlnq::T,iq::Int64,jq::Int64,rstar::T;fout="",iout=-1,pair = zeros(Bool,H[1],H[1])) where {T <: Real}
+#
 # Input quantities:
 # n     = number of bodies
 # t0    = initial time of integration  [days]
@@ -147,6 +151,8 @@ function ttvbv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::
 #
 #fcons = open("fcons.txt","w");
 # Set up mass, position & velocity arrays.  NDIM =3
+H = [3,1,1]
+n = H[1]
 m=zeros(T,n)
 x=zeros(T,NDIM,n)
 v=zeros(T,NDIM,n)
@@ -166,9 +172,11 @@ if iq == 7 && dlnq != 0.0
   m[jq] += dq
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-x,v = init_nbody(elements,t0,n)
+init = ElementsIC(elements,H,t0)
+x,v,_ = init_nbody(init)
 elements_big=big.(elements); t0big = big(t0)
-xbig,vbig = init_nbody(elements_big,t0big,n)
+init_big = ElementsIC(elements_big,H,t0big)
+xbig,vbig,_ = init_nbody(init_big)
 #if T != BigFloat
 #  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (dlnq version)")
 #end
@@ -198,8 +206,8 @@ end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
 # This version is used to test/debug findtransit2 by computing finite difference derivative of findtransit2.
-function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64;pair=zeros(Bool,n,n))
-# 
+function ttv_elements!(H::Union{Int64,Array{Int64,1}},t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},tt::Array{Float64,2},count::Array{Int64,1},dtdq0::Array{Float64,4},dtdq0_num::Array{BigFloat,4},dlnq::BigFloat,rstar::Float64;pair=zeros(Bool,H[1],H[1]))
+#
 # Input quantities:
 # n     = number of bodies
 # t0    = initial time of integration  [days]
@@ -222,6 +230,7 @@ function ttv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::A
 # Example: see test_ttv_elements.jl in test/ directory
 #
 # Define initial mass, position & velocity arrays:
+n = H[1]
 m=zeros(Float64,n)
 x=zeros(Float64,NDIM,n)
 v=zeros(Float64,NDIM,n)
@@ -237,10 +246,12 @@ for i=1:n
   m[i] = elements[i,1]
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-jac_init     = zeros(Float64,7*n,7*n)
-x,v = init_nbody(elements,t0,n,jac_init)
-elements_big=big.(elements); t0big = big(t0); jac_init_big = zeros(BigFloat,7*n,7*n)
-xbig,vbig = init_nbody(elements_big,t0big,n,jac_init_big)
+#jac_init     = zeros(Float64,7*n,7*n)
+init = ElementsIC(elements,H,t0)
+x,v,jac_init = init_nbody(init)
+elements_big=big.(elements); t0big = big(t0); #jac_init_big = zeros(BigFloat,7*n,7*n)
+init_big = ElementsIC(elements_big,H,t0big)
+xbig,vbig,jac_init_big = init_nbody(init_big)
 println("Difference in x,v init: ",x-convert(Array{Float64,2},xbig)," ",v-convert(Array{Float64,2},vbig)," (transit derivative version)")
 # x = convert(Array{Float64,2},xbig); v = convert(Array{Float64,2},vbig); jac_init=convert(Array{Float64,2},jac_init_big)
 #x,v = init_nbody(elements,t0,n)
@@ -264,8 +275,8 @@ end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
 # This version is used to test/debug findtransit2 by computing finite difference derivative of findtransit2.
-function ttvbv_elements!(n::Int64,t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},ttbv::Array{Float64,3},
-count::Array{Int64,1},dtbvdq0::Array{Float64,5},dtbvdq0_num::Array{BigFloat,5},dlnq::BigFloat,rstar::Float64;pair=zeros(Bool,n,n))
+function ttvbv_elements!(H::Union{Int64,Array{Int64,1}},t0::Float64,h::Float64,tmax::Float64,elements::Array{Float64,2},ttbv::Array{Float64,3},
+                         count::Array{Int64,1},dtbvdq0::Array{Float64,5},dtbvdq0_num::Array{BigFloat,5},dlnq::BigFloat,rstar::Float64;pair=zeros(Bool,H[1],H[1]))
 #
 # Input quantities:
 # n     = number of bodies
@@ -281,13 +292,14 @@ count::Array{Int64,1},dtbvdq0::Array{Float64,5},dtbvdq0_num::Array{BigFloat,5},d
 #             masses of *all* bodies.  Note: mass derivatives are *after* positions/velocities, even though they are at start
 #             of the elements[i,j] array.
 # Output quantity:
-# dtbvdelements = 5D array  [1-3]x[n x max(ntt) ] x [n x 7] - derivatives of transits, impact parameters, and sky velocities of each planet 
-#                 with respect to initial orbital elements/masses of *all* bodies.  Note: mass derivatives are *after* elements, even 
+# dtbvdelements = 5D array  [1-3]x[n x max(ntt) ] x [n x 7] - derivatives of transits, impact parameters, and sky velocities of each planet
+#                 with respect to initial orbital elements/masses of *all* bodies.  Note: mass derivatives are *after* elements, even
 #                 though they are at start of the elements[i,j] array
 #
 # Example: see test_ttvbv_elements.jl in test/ directory
 #
 # Define initial mass, position & velocity arrays:
+n = H[1]
 m=zeros(Float64,n)
 x=zeros(Float64,NDIM,n)
 v=zeros(Float64,NDIM,n)
@@ -303,10 +315,12 @@ for i=1:n
   m[i] = elements[i,1]
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-jac_init     = zeros(Float64,7*n,7*n)
-x,v = init_nbody(elements,t0,n,jac_init)
-elements_big=big.(elements); t0big = big(t0); jac_init_big = zeros(BigFloat,7*n,7*n)
-xbig,vbig = init_nbody(elements_big,t0big,n,jac_init_big)
+#jac_init     = zeros(Float64,7*n,7*n)
+init = ElementsIC(elements,H,t0)
+x,v,jac_init = init_nbody(init)
+elements_big=big.(elements); t0big = big(t0); #jac_init_big = zeros(BigFloat,7*n,7*n)
+init_big = ElementsIC(elements_big,H,t0big)
+xbig,vbig,jac_init_big = init_nbody(init)
 println("Difference in x,v init: ",x-convert(Array{Float64,2},xbig)," ",v-convert(Array{Float64,2},vbig)," (transit derivative version)")
 # x = convert(Array{Float64,2},xbig); v = convert(Array{Float64,2},vbig); jac_init=convert(Array{Float64,2},jac_init_big)
 #x,v = init_nbody(elements,t0,n)
@@ -329,9 +343,8 @@ end
 return dtbvdelements
 end
 
-function ttv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},
-count::Array{Int64,1},dtdq0::Array{T,4},rstar::T;fout="",iout=-1,pair=zeros(Bool,n,n)) where {T <: Real}
-# 
+function ttv_elements!(H::Union{Int64,Array{Int64,1}},t0::T,h::T,tmax::T,elements::Array{T,2},tt::Array{T,2},count::Array{Int64,1},dtdq0::Array{T,4},rstar::T;fout="",iout=-1,pair=zeros(Bool,H[1],H[1])) where {T <: Real}
+#
 # Input quantities:
 # n     = number of bodies
 # t0    = initial time of integration  [days]
@@ -354,6 +367,7 @@ count::Array{Int64,1},dtdq0::Array{T,4},rstar::T;fout="",iout=-1,pair=zeros(Bool
 # Example: see test_ttv_elements.jl in test/ directory
 #
 # Define initial mass, position & velocity arrays:
+n = H[1]
 m=zeros(T,n)
 x=zeros(T,NDIM,n)
 v=zeros(T,NDIM,n)
@@ -368,10 +382,12 @@ for i=1:n
   m[i] = elements[i,1]
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-jac_init     = zeros(T,7*n,7*n)
-x,v = init_nbody(elements,t0,n,jac_init)
-elements_big=big.(elements); t0big = big(t0); jac_init_big = zeros(BigFloat,7*n,7*n)
-xbig,vbig = init_nbody(elements_big,t0big,n,jac_init_big)
+#jac_init     = zeros(T,7*n,7*n)
+init = ElementsIC(elements,H,t0)
+x,v,jac_init = init_nbody(init)
+elements_big=big.(elements); t0big = big(t0); #jac_init_big = zeros(BigFloat,7*n,7*n)
+init_big = ElementsIC(elements_big,H,t0big)
+xbig,vbig,jac_init_big = init_nbody(init_big)
 #if T != BigFloat
 #  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (Jacobian version)")
 #  println("Difference in Jacobian: ",jac_init-convert(Array{T,2},jac_init_big)," (Jacobian version)")
@@ -397,9 +413,9 @@ return dtdelements
 end
 
 # Computes TTVs as a function of orbital elements, and computes Jacobian of transit times with respect to initial orbital elements.
-function ttvbv_elements!(n::Int64,t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::Array{T,3},
-count::Array{Int64,1},dtbvdq0::Array{T,5},rstar::T;fout="",iout=-1,pair=zeros(Bool,n,n)) where {T <: Real}
-# 
+function ttvbv_elements!(H::Union{Int64,Array{Int64,1}},t0::T,h::T,tmax::T,elements::Array{T,2},ttbv::Array{T,3},
+                         count::Array{Int64,1},dtbvdq0::Array{T,5},rstar::T;fout="",iout=-1,pair=zeros(Bool,H[1],H[1])) where {T <: Real}
+#
 # Input quantities:
 # n     = number of bodies
 # t0    = initial time of integration  [days]
@@ -422,6 +438,7 @@ count::Array{Int64,1},dtbvdq0::Array{T,5},rstar::T;fout="",iout=-1,pair=zeros(Bo
 # Example: see test_ttvbv_elements.jl in test/ directory
 #
 # Define initial mass, position & velocity arrays:
+n = H[1]
 m=zeros(T,n)
 x=zeros(T,NDIM,n)
 v=zeros(T,NDIM,n)
@@ -436,10 +453,12 @@ for i=1:n
   m[i] = elements[i,1]
 end
 # Initialize the N-body problem using nested hierarchy of Keplerians:
-jac_init     = zeros(T,7*n,7*n)
-x,v = init_nbody(elements,t0,n,jac_init)
+#jac_init     = zeros(T,7*n,7*n)
+init = ElementsIC(elements,H,t0)
+x,v,jac_init = init_nbody(init)
 elements_big=big.(elements); t0big = big(t0); jac_init_big = zeros(BigFloat,7*n,7*n)
-xbig,vbig = init_nbody(elements_big,t0big,n,jac_init_big)
+init_big = ElementsIC(elements_big,H,t0big)
+xbig,vbig,jac_init_big = init_nbody(init_big)
 #if T != BigFloat
 #  println("Difference in x,v init: ",x-convert(Array{T,2},xbig)," ",v-convert(Array{T,2},vbig)," (Jacobian version)")
 #  println("Difference in Jacobian: ",jac_init-convert(Array{T,2},jac_init_big)," (Jacobian version)")
@@ -514,10 +533,11 @@ end
 dt = zero(T)
 gi = zero(T)
 ntt_max = size(tt)[2]
+d = Derivatives(T)
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
 while t < (t0+tmax) && param_real
   # Carry out a dh17 mapping step:
-  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
+  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair,d)
   #dh17!(x,v,h,m,n,jac_step,pair)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
@@ -571,7 +591,7 @@ if fout != ""
   # Close output file:
   close(file_handle)
 end
-return 
+return
 end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
@@ -629,10 +649,11 @@ end
 dt = zero(T)
 gi = zero(T)
 ntt_max = size(ttbv)[3]
+d = Derivatives(T)
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
 while t < (t0+tmax) && param_real
   # Carry out a dh17 mapping step:
-  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
+  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair,d)
   #dh17!(x,v,h,m,n,jac_step,pair)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
@@ -692,7 +713,7 @@ if fout != ""
   # Close output file:
   close(file_handle)
 end
-return 
+return
 end
 
 # Computes TTVs for initial x,v, as well as timing derivatives with respect to x,v,m (dtdq0).
@@ -742,10 +763,11 @@ end
 dt::Float64 = 0.0
 gi = 0.0
 ntt_max = size(tt)[2]
+d = Derivatives(Float64)
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
 while t < t0+tmax && param_real
   # Carry out a dh17 mapping step:
-  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
+  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair,d)
   #dh17!(x,v,h,m,n,jac_step,pair)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
@@ -899,10 +921,12 @@ end
 dt::Float64 = 0.0
 gi = 0.0
 ntt_max = size(tt)[2]
+d = Derivatives(T)
+dBig = Derivatives(BigFloat)
 param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
 while t < t0+tmax && param_real
   # Carry out a dh17 mapping step:
-  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair)
+  ah18!(x,v,xerror,verror,h,m,n,jac_step,jac_error,pair,d)
   #dh17!(x,v,h,m,n,jac_step,pair)
   param_real = all(isfinite.(x)) && all(isfinite.(v)) && all(isfinite.(m)) && all(isfinite.(jac_step))
   # Check to see if a transit may have occured.  Sky is x-y plane; line of sight is z.
@@ -944,7 +968,7 @@ while t < t0+tmax && param_real
           end
           xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m); fill!(xerr_big,zero(BigFloat)); fill!(verr_big,zero(BigFloat))
           if k < 4; dq = dlnq*xtransit_plus[k,p]; xtransit_plus[k,p] += dq; elseif k < 7; dq =vtransit_plus[k-3,p]*dlnq; vtransit_plus[k-3,p] += dq; else; dq  = m_plus[p]*dlnq; m_plus[p] += dq; end
-          if calcbvsky 
+          if calcbvsky
             dt_plus,dvsky_plus,dbsky2_plus = findtransit3!(1,i,n,hbig,dt_plus,m_plus,xtransit_plus,vtransit_plus,xerr_big,verr_big,pair;calcbvsky=calcbvsky) # 20%
             dvsky_minus = big(vsky)
             dbsky2_minus = big(bsky2)
@@ -968,13 +992,13 @@ while t < t0+tmax && param_real
             # Compute gdot_num:
             dt_minus = big(dt)*(1-dlnq)  # Starting estimate
             xtransit_minus .= big.(xprior); vtransit_minus .= big.(vprior); m_minus .= big.(m); fill!(xerr_big,zero(BigFloat)); fill!(verr_big,zero(BigFloat))
-            ah18!(xtransit_minus,vtransit_minus,xerr_big,verr_big,dt_minus,m_minus,n,pair)
+            ah18!(xtransit_minus,vtransit_minus,xerr_big,verr_big,dt_minus,m_minus,n,pair,dBig)
             #dh17!(xtransit_minus,vtransit_minus,dt_minus,m_minus,n,pair)
             # Compute time offset:
             gsky_minus = g!(i,1,xtransit_minus,vtransit_minus)
             dt_plus = big(dt)*(1+dlnq)  # Starting estimate
             xtransit_plus .= big.(xprior); vtransit_plus .= big.(vprior); m_plus .= big.(m); fill!(xerr_big,zero(BigFloat)); fill!(verr_big,zero(BigFloat))
-            ah18!(xtransit_plus,vtransit_plus,xerr_big,verr_big,dt_plus,m_plus,n,pair)
+            ah18!(xtransit_plus,vtransit_plus,xerr_big,verr_big,dt_plus,m_plus,n,pair,dBig)
             #dh17!(xtransit_plus,vtransit_plus,dt_plus,m_plus,n,pair)
             # Compute time offset:
             gsky_plus = g!(i,1,xtransit_plus,vtransit_plus)
@@ -1174,7 +1198,7 @@ while t < t0+tmax && param_real
         #dtbig = findtransit2!(1,i,n,hbig,dt0big,mbig,xtbig,vtbig,pair)
         #dt = convert(Float64,dtbig)
         if calcbvsky
-          dt,vsky,bsky2 = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_prior,verr_prior,pair;calcbvsky=calcbvsky) 
+          dt,vsky,bsky2 = findtransit3!(1,i,n,h,dt0,m,xtransit,vtransit,xerr_prior,verr_prior,pair;calcbvsky=calcbvsky)
           ttbv[2,i,count[i]] = vsky
           ttbv[3,i,count[i]] = bsky2
         else
@@ -1375,7 +1399,7 @@ return
 end
 
 # Carries out a Kepler step and reverse drift for bodies i & j, and computes Jacobian:
-function kepler_driftij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},i::Int64,j::Int64,h::T,jac_ij::Array{T,2},dqdt::Array{T,1},drift_first::Bool) where {T <: Real}
+function kepler_driftij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},i::Int64,j::Int64,h::T,jac_ij::Array{T,2},dqdt::Array{T,1},drift_first::Bool,d::Derivatives{T}) where {T <: Real}
 # The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
 # Initial state:
 state0 = zeros(T,12)
@@ -1400,7 +1424,7 @@ if gm == 0
 else
   jac_kepler = zeros(T,7,7)
   # predicted value of s
-  kepler_drift_step!(gm, h, state0, state,jac_kepler,drift_first)
+  kepler_drift_step!(gm, h, state0, state,jac_kepler,drift_first,d)
   mijinv =1.0/(m[i] + m[j])
   mi = m[i]*mijinv # Normalize the masses
   mj = m[j]*mijinv
@@ -1646,7 +1670,7 @@ return
 end
 
 # Carries out a Kepler step for bodies i & j with dqdt and Jacobian:
-function keplerij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},i::Int64,j::Int64,h::T,jac_ij::Array{T,2},dqdt::Array{T,1}) where {T <: Real}
+function keplerij!(m::Array{T,1},x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},i::Int64,j::Int64,h::T,jac_ij::Array{T,2},dqdt::Array{T,1},d::Derivatives{T}) where {T <: Real}
 # The state vector has: 1 time; 2-4 position; 5-7 velocity; 8 r0; 9 dr0dt; 10 beta; 11 s; 12 ds
 # Initial state:
 state0 = zeros(T,12)
@@ -1655,7 +1679,7 @@ state = zeros(T,12)
 delx = zeros(T,NDIM)
 delv = zeros(T,NDIM)
 # jac_ij should be the Jacobian for going from (x_{0,i},v_{0,i},m_i) &  (x_{0,j},v_{0,j},m_j)
-# to  (x_i,v_i,m_i) &  (x_j,v_j,m_j), a 14x14 matrix for the 3-dimensional case. 
+# to  (x_i,v_i,m_i) &  (x_j,v_j,m_j), a 14x14 matrix for the 3-dimensional case.
 # Fill with zeros for now:
 fill!(jac_ij,0.0)
 for k=1:NDIM
@@ -1666,7 +1690,7 @@ gm = GNEWT*(m[i]+m[j])
 # The following jacobian is just computed for the Keplerian coordinates (i.e. doesn't include
 # center-of-mass motion, or scale to motion of bodies about their common center of mass):
 jac_kepler = zeros(T,7,7)
-kepler_step!(gm, h, state0, state, jac_kepler)
+kepler_step!(gm, h, state0, state, jac_kepler,d)
 for k=1:NDIM
   delx[k] = state[1+k] - state0[1+k]
   delv[k] = state[1+NDIM+k] - state0[1+NDIM+k]
@@ -2079,7 +2103,7 @@ indi = 0; indj=0; indd = 0
       r1 = sqrt(r2)
       ardot = aij[1]*rij[1]+aij[2]*rij[2]+aij[3]*rij[3]
       fac1 = coeff/r1^5
-      fac2 = (2*GNEWT*(m[i]+m[j])/r1 + 3*ardot) 
+      fac2 = (2*GNEWT*(m[i]+m[j])/r1 + 3*ardot)
       for k=1:3
   #      fac = coeff/r1^5*(rij[k]*(2*GNEWT*(m[i]+m[j])/r1 + 3*ardot) - r2*aij[k])
         fac = fac1*(rij[k]*fac2- r2*aij[k])
@@ -2472,7 +2496,8 @@ return
 end
 
 # Carries out the AH18 mapping & computes the Jacobian:
-function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},jac_error::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
+function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},
+    h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},jac_error::Array{T,2},pair::Array{Bool,2},d::Derivatives{T}) where {T <: Real}
 zilch = zero(T); uno = one(T); half = convert(T,0.5); two = convert(T,2.0)
 h2 = half*h
 sevn = 7*n
@@ -2608,7 +2633,7 @@ return
 end
 
 # Carries out the AH18 mapping & computes the derivative with respect to time step, h:
-function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,dqdt::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
+function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,dqdt::Array{T,1},pair::Array{Bool,2},d::Derivatives{T}) where {T <: Real}
 # [Currently this routine is not giving the correct dqdt values. -EA 8/12/2019]
 zilch = zero(T); uno = one(T); half = convert(T,0.5); two = convert(T,2.0)
 h2 = half*h
@@ -2634,7 +2659,7 @@ end
 kickfast!(x,v,xerror,verror,h/6,m,n,jac_kick,dqdt_kick,pair)
 dqdt_kick /= 6 # Since step is h/6
 # Since I removed identity from kickfast, need to add in dqdt:
-dqdt .+= dqdt_kick + *(jac_kick,dqdt) 
+dqdt .+= dqdt_kick + *(jac_kick,dqdt)
 #println("dqdt 2: ",dqdt-dqdt_save)
 #dqdt_save .= dqdt
 @inbounds for i=1:n-1
@@ -2664,7 +2689,7 @@ dqdt .+= dqdt_kick + *(jac_kick,dqdt)
     end
   end
 end
-# Looks like we are missing phic! here: [ ]  
+# Looks like we are missing phic! here: [ ]
 # Since I haven't added dqdt to phic yet, for now, set jac_phi equal to identity matrix
 # (since this is commented out within phisalpha):
 #jac_phi .= eye(T,sevn)
@@ -2911,7 +2936,7 @@ indi = 0; indj = 0
 end
 # kick and correction for pairs which are kicked:
 phic!(x,v,xerror,verror,h,m,n,jac_phi,dqdt_phi,pair)
-if alpha != uno 
+if alpha != uno
 #  phisalpha!(x,v,h,m,2.0*(1.0-alpha),n,jac_phi,pair) # 10%
   phisalpha!(x,v,xerror,verror,h,m,two*(uno-alpha),n,jac_phi,dqdt_phi,pair) # 10%
 #  @inbounds for i in eachindex(jac_step)
@@ -2969,12 +2994,12 @@ indi=0; indj=0
         jac_step[indj+k1,k2]=jac_tmp2[7+k1,k2]
         jac_error[indj+k1,k2]=jac_err1[7+k1,k2]
       end
-      driftij!(x,v,xerror,verror,i,j,-h2,jac_step,jac_error,n) 
+      driftij!(x,v,xerror,verror,i,j,-h2,jac_step,jac_error,n)
     end
   end
 end
 drift!(x,v,xerror,verror,h2,n,jac_step,jac_error)
-if alpha != zilch 
+if alpha != zilch
 #  phisalpha!(x,v,h,m,alpha,n,jac_phi)
   phisalpha!(x,v,xerror,verror,h,m,alpha,n,jac_phi,dqdt_phi,pair) # 10%
 #  jac_step .= jac_phi*jac_step # < 1%
@@ -3051,7 +3076,7 @@ dqdt .+= dqdt_kick
     end
   end
 end
-# Looks like we are missing phic! here: [ ]  
+# Looks like we are missing phic! here: [ ]
 # Since I haven't added dqdt to phic yet, for now, set jac_phi equal to identity matrix
 # (since this is commented out within phisalpha):
 #jac_phi .= eye(T,sevn)
@@ -3283,6 +3308,7 @@ gdot = zero(T)
 gsky = gdot
 x = copy(x1); v = copy(v1); xerr_trans = copy(xerror); verr_trans = copy(verror)
 dqdt = zeros(T,7*n)
+d = Derivatives(T)
 #TRANSIT_TOL = 10*sqrt(eps(dt)
 TRANSIT_TOL = 10*eps(dt)
 ITMAX = 20
@@ -3296,7 +3322,7 @@ while true
   # Advance planet state at start of step to estimated transit time:
 #  dh17!(x,v,tt,m,n,pair)
   #dh17!(x,v,xerror,verror,tt,m,n,dqdt,pair)
-  ah18!(x,v,xerr_trans,verr_trans,tt,m,n,dqdt,pair)
+  ah18!(x,v,xerr_trans,verr_trans,tt,m,n,dqdt,pair,d)
   # Compute time offset:
   gsky = g!(i,j,x,v)
 #  # Compute derivative of g with respect to time:
@@ -3345,6 +3371,7 @@ v = copy(v1)
 #xerror = zeros(T,size(x1)); verror = zeros(T,size(v1))
 xerr_trans = copy(xerror); verr_trans = copy(verror)
 dqdt = zeros(T,7*n)
+d = Derivatives(T)
 #TRANSIT_TOL = 10*sqrt(eps(dt))
 TRANSIT_TOL = 10*eps(dt)
 tt1 = tt + 1
@@ -3358,7 +3385,7 @@ while true
   # Advance planet state at start of step to estimated transit time:
 #  dh17!(x,v,tt,m,n,pair)
   #dh17!(x,v,xerror,verror,tt,m,n,dqdt,pair)
-  ah18!(x,v,xerr_trans,verr_trans,tt,m,n,dqdt,pair)
+  ah18!(x,v,xerr_trans,verr_trans,tt,m,n,dqdt,pair,d)
   # Compute time offset:
   gsky = g!(i,j,x,v)
 #  # Compute derivative of g with respect to time:
@@ -3383,11 +3410,11 @@ x .= x1; v .= v1; xerr_trans .= xerror; verr_trans .= verror
 # Compute dgdt with the updated time step.
 #dh17!(x,v,xerror,verror,tt,m,n,jac_step,pair)
 #ah18!(x,v,xerror,verror,tt,m,n,jac_step,pair)
-ah18!(x,v,xerr_trans,verr_trans,tt,m,n,jac_step,jac_error,pair)
+ah18!(x,v,xerr_trans,verr_trans,tt,m,n,jac_step,jac_error,pair,d)
 # Need to reset to compute dqdt:
 x .= x1; v .= v1; xerr_trans .= xerror; verr_trans .= verror
 #dh17!(x,v,xerror,verror,tt,m,n,dqdt,pair)
-ah18!(x,v,xerr_trans,verr_trans,tt,m,n,dqdt,pair)
+ah18!(x,v,xerr_trans,verr_trans,tt,m,n,dqdt,pair,d)
 # Compute time offset:
 gsky = g!(i,j,x,v)
 # Compute derivative of g with respect to time:

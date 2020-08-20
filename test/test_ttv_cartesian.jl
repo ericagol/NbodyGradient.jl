@@ -9,6 +9,7 @@
 # to the initial cartesian coordinates of bodies. [x]
 #n = 8
 n = 3
+H = [3,1,1]
 t0 = 7257.93115525-7300.0
 #h  = 0.12
 h  = 0.04
@@ -38,15 +39,15 @@ count = zeros(Int64,n)
 count1 = zeros(Int64,n)
 # Call the ttv function:
 rstar = 1e12
-dq = ttv_elements!(n,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
+dq = ttv_elements!(H,t0,h,tmax,elements,tt1,count1,0.0,0,0,rstar)
 # Now call with half the timestep:
 count2 = zeros(Int64,n)
 count3 = zeros(Int64,n)
-dq = ttv_elements!(n,t0,h/2,tmax,elements,tt2,count2,0.0,0,0,rstar)
+dq = ttv_elements!(H,t0,h/2,tmax,elements,tt2,count2,0.0,0,0,rstar)
 
 # Now, compute derivatives (with respect to initial cartesian positions/masses):
 dtdq0 = zeros(n,maximum(ntt),7,n)
-dtdelements = ttv_elements!(n,t0,h,tmax,elements,tt,count,dtdq0,rstar)
+dtdelements = ttv_elements!(H,t0,h,tmax,elements,tt,count,dtdq0,rstar)
 #read(STDIN,Char)
 
 # Check that this is working properly:
@@ -66,9 +67,9 @@ hbig = big(h); t0big = big(t0); tmaxbig=big(tmax); tt2big = big.(tt2); tt3big = 
 for jq=1:n
   for iq=1:7
     elements2  = big.(elements)
-    dq_plus = ttv_elements!(n,t0big,hbig,tmaxbig,elements2,tt2big,count2,dlnq,iq,jq,big(rstar))
+    dq_plus = ttv_elements!(H,t0big,hbig,tmaxbig,elements2,tt2big,count2,dlnq,iq,jq,big(rstar))
     elements3  = big.(elements)
-    dq_minus = ttv_elements!(n,t0big,hbig,tmaxbig,elements3,tt3big,count3,-dlnq,iq,jq,big(rstar))
+    dq_minus = ttv_elements!(H,t0big,hbig,tmaxbig,elements3,tt3big,count3,-dlnq,iq,jq,big(rstar))
     for i=1:n
       for k=1:count2[i]
         # Compute double-sided derivative for more accuracy:
@@ -96,17 +97,18 @@ for i=2:n, j=1:count[i], k=1:7, l=1:n
 end
 
 tt_big = big.(tt); elementsbig = big.(elements); rstarbig = big(rstar)
-dqbig = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt_big,count,big(0.0),0,0,rstarbig)
+dqbig = ttv_elements!(H,t0big,hbig,tmaxbig,elementsbig,tt_big,count,big(0.0),0,0,rstarbig)
 # Now halve the time steps:
 tt_big_half = copy(tt_big)
-dqbig = ttv_elements!(n,t0big,hbig/2,tmaxbig,elementsbig,tt_big_half,count1,big(0.0),0,0,rstarbig)
+dqbig = ttv_elements!(H,t0big,hbig/2,tmaxbig,elementsbig,tt_big_half,count1,big(0.0),0,0,rstarbig)
 
 # Compute the derivatives in BigFloat precision to see whether finite difference
 # derivatives or Float64 derivatives are imprecise at the start:
 dtdq0_big = zeros(BigFloat,n,maximum(ntt),7,n)
 hbig = big(h); tt_big = big.(tt); elementsbig = big.(elements); rstarbig = big(rstar)
-dtdelements_big = ttv_elements!(n,t0big,hbig,tmaxbig,elementsbig,tt_big,count,dtdq0_big,rstarbig)
+dtdelements_big = ttv_elements!(H,t0big,hbig,tmaxbig,elementsbig,tt_big,count,dtdq0_big,rstarbig)
 
+#=
 using PyPlot
 
 clf()
@@ -158,7 +160,7 @@ end
 
 loglog([1.0,1024.0],1e-12*[1,2^15],":",linewidth=3)
 
-
+=#
 #println("Max diff log(dtdq0): ",maximum(abs.(dtdq0_num[mask]./dtdq0[mask].-1.0)))
 println("Max diff asinh(dtdq0): ",maximum(abs.(asinh.(dtdq0_num[mask]).-asinh.(dtdq0[mask]))))
 #unit = ones(dtdq0[mask])

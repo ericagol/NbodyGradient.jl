@@ -5,6 +5,7 @@ for drift_first in [true,false]
 # Next, try computing two-body Keplerian Jacobian:
 
 n = 3
+H = [3,1,1]
 t0 = 7257.93115525
 #t0 = -300.0
 h  = 0.0000005
@@ -27,7 +28,8 @@ for k=1:n
 end
 for iter = 1:2
 
-x0,v0 = init_nbody(elements,t0,n)
+init = ElementsIC(elements,H,t0)
+x0,v0,_ = init_nbody(init)
  if iter == 2
    # Reduce masses to trigger hyperbolic routine:
     m[1:n] *= 1e-1
@@ -49,18 +51,20 @@ println("masses: ",m)
 i=1 ; j=2
 x = copy(x0) ; v=copy(v0)
 xerror = zeros(NDIM,n); verror = zeros(NDIM,n)
+d = Derivatives(Float64)
 # Predict values of s:
-kepler_driftij!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,drift_first)
+kepler_driftij!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,drift_first,d)
 x0 = copy(x) ; v0 = copy(v)
 xerror = zeros(NDIM,n); verror = zeros(NDIM,n)
 xbig = big.(x) ; vbig=big.(v); mbig = big.(m)
 xerr_big = zeros(BigFloat,NDIM,n); verr_big = zeros(BigFloat,NDIM,n)
-kepler_driftij!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,drift_first)
+kepler_driftij!(m,x,v,xerror,verror,i,j,h,jac_ij,dqdt_ij,drift_first,d)
 # Now compute Jacobian with BigFloat precision:
 jac_ij_big = zeros(BigFloat,14,14)
 dqdt_ij_big = zeros(BigFloat,14)
 KEPLER_TOL = sqrt(eps(big(1.0)))
-kepler_driftij!(mbig,xbig,vbig,xerr_big,verr_big,i,j,hbig,jac_ij_big,dqdt_ij_big,drift_first)
+dBig = Derivatives(BigFloat)
+kepler_driftij!(mbig,xbig,vbig,xerr_big,verr_big,i,j,hbig,jac_ij_big,dqdt_ij_big,drift_first,dBig)
 #println("jac_ij: ",convert(Array{Float64,2},jac_ij_big))
 #println("jac_ij - jac_ij_big: ",convert(Array{Float64,2},jac_ij_big)-jac_ij)
 println("max(jac_ij - jac_ij_big): ",maxabs(convert(Array{Float64,2},jac_ij_big)-jac_ij))
