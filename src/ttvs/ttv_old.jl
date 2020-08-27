@@ -48,7 +48,7 @@ function ttv_elements!(H::Union{Int64,Array{Int64,1}},t0::T,h::T,tmax::T,element
         m[i] = elements[i,1]
     end
     # Initialize the N-body problem using nested hierarchy of Keplerians:
-    init = ElementsIC(elements,H,t0)
+    init = ElementsIC(t0,H,elements)
     x,v,jac_init = init_nbody(init)
     
     #= Why is this here??

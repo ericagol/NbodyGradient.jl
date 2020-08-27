@@ -22,6 +22,22 @@ function TransitTiming(tmax,ic::ElementsIC{T}) where T<:AbstractFloat
     return TransitTiming(tt,dtdq0,dtdelements,count,ntt)
 end
 
+function Base.iterate(tt::TransitTiming,state=1)
+    fields = fieldnames(TransitTiming)
+    if state > length(fields)
+        return nothing
+    end
+    return (getfield(tt,fields[state]), state+1)
+end
+
+function zero_out!(tt::TransitTiming{T}) where T
+    for i in tt
+        if ~(typeof(i) <: Integer)
+            i .= zero(T)
+        end
+    end
+end
+        
 """
 
 Integrator method for outputing `TransitTiming`.
@@ -33,9 +49,9 @@ function (i::Integrator)(s::State{T},tt::TransitTiming) where T<:AbstractFloat
     pair = zeros(Bool,s.n,s.n)
 
     # Run integrator and calculate transit times, with derivatives.
-    rstar = 1e5 # Need to pass this in. 
-    ttv!(s,i,tt,rstar,pair)
-    dttv!(s,tt)
+    rstar = 1e12 # Need to pass this in. 
+    calc_tt!(s,i,tt,rstar,pair)
+    calc_dtdelements!(s,tt)
     return
 end
 
@@ -43,7 +59,7 @@ end
 files = ["ttv.jl","ttv_no_grad.jl"]
 include.(files)
 
-function ttv!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar,pair) where T<:AbstractFloat
+function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar,pair) where T<:AbstractFloat
     n = s.n; ntt_max = tt.ntt;
     d = Jacobian(T,s.n) 
     dT = dTime(T,s.n)
@@ -79,7 +95,7 @@ function ttv!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar,pair) wher
     dt = zero(T)
     gi = zero(T)
     param_real = all(isfinite.(s.x)) && all(isfinite.(s.v)) && all(isfinite.(s.m)) && all(isfinite.(s.jac_step))
-    while s.t[1] < (intr.t0+intr.tmax) && param_real
+    while s.t[1] < (t0+intr.tmax) && param_real
         # Carry out a ah18 mapping step and advance time:
         intr.scheme(s,d,intr.h,pair)
         istep += 1 
@@ -105,7 +121,7 @@ function ttv!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar,pair) wher
                 if tt.count[i] <= ntt_max
                     dt0 = -gsave[i]*intr.h/(gi-gsave[i])  # Starting estimate
                     set_state!(s,s_prior) # Set state to step after transit occured
-                    dt = findtransit!(1,i,dt0,s,d,dT,intr,dtdq,pair) # Search for transit time (integrating 'backward')
+                    dt = findtransit!(1,i,dt0,s,d,dT,dtdq,intr,pair) # Search for transit time (integrating 'backward')
                     # Copy transit time and derivatives to TransitTiming structure
                     tt.tt[i,tt.count[i]] = s.t[1] + dt 
                     for k=1:7, p=1:n
@@ -121,7 +137,7 @@ function ttv!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar,pair) wher
     return
 end
 
-function dttv!(s::State{T},tt::TransitTiming{T}) where T <: AbstractFloat
+function calc_dtdelements!(s::State{T},tt::TransitTiming{T}) where T <: AbstractFloat
     for i=1:s.n, j=1:tt.count[i]
         if j <= tt.ntt
             # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
@@ -135,7 +151,7 @@ function dttv!(s::State{T},tt::TransitTiming{T}) where T <: AbstractFloat
     end
 end
 
-function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Jacobian{T},dT::dTime{T},intr::Integrator,dtbvdq::Array{T,3},pair::Array{Bool,2}) where T<:AbstractFloat
+function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Jacobian{T},dT::dTime{T},dtbvdq,intr::Integrator,pair::Array{Bool,2}) where T<:AbstractFloat
     # Computes the transit time, approximating the motion as a fraction of a AH17 step backward in time.
     # Also computes the Jacobian of the transit time with respect to the initial parameters, dtbvdq[1-3,7,n].
     # Initial guess using linear interpolation:
@@ -153,8 +169,8 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Jacobian{T},dT::dT
     tt1 = dt0 + 1
     tt2 = dt0 + 2
     ITMAX = 20
-    #while abs(dt) > TRANSIT_TOL && iter < 20
-    while true
+    while abs(dt) > TRANSIT_TOL && iter < 20
+    #while true
         tt2 = tt1
         tt1 = dt0
         set_state!(s,s_prior)
@@ -168,7 +184,8 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Jacobian{T},dT::dT
         # Refine estimate of transit time with Newton's method:
         dt = -gsky/gdot
         # Add refinement to estimated time:
-        dt0 += dt
+        #dt0 += dt
+        dt0,stmp = comp_sum(dt0,stmp,dt)
         iter += 1
         # Break out if we have reached maximum iterations, or if
         # current transit time estimate equals one of the prior two steps:
@@ -184,33 +201,18 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Jacobian{T},dT::dT
     zero_out!(d)
     # Compute dgdt with the updated time step.
     intr.scheme(s,d,dt0,pair)
+    s_prior.jac_step .= s.jac_step
+    s_prior.jac_error .= s.jac_error
     # Need to reset to compute dqdt:
     set_state!(s,s_prior)
     zero_out!(dT)
     intr.scheme(s,dT,dt0,pair)
     # Compute derivative of transit time, impact parameter, and sky velocity.
     dtbvdq!(i,j,s.x,s.v,s.jac_step,s.dqdt,dtbvdq)
-
     # Note: this is the time elapsed *after* the beginning of the timestep:
     ntbv = size(dtbvdq)[1]
+    # return the transit time, impact parameter, and sky velocity:
     if ntbv == 3
-        # Compute the impact parameter and sky velocity:
-        vsky = sqrt((v[1,j]-v[1,i])^2 + (v[2,j]-v[2,i])^2)
-        bsky2 = (x[1,j]-x[1,i])^2 + (x[2,j]-x[2,i])^2
-        # partial derivative v_{sky} with respect to time:
-        dvdt = ((v[1,j]-v[1,i])*(dqdt[(j-1)*7+4]-dqdt[(i-1)*7+4])+(v[2,j]-v[2,i])*(dqdt[(j-1)*7+5]-dqdt[(i-1)*7+5]))/vsky
-        # (note that \partial b/\partial t = 0 at mid-transit since g_{sky} = 0 mid-transit).
-        for p=1:s.n
-            indp = (p-1)*7
-            for k=1:7
-                # Compute derivatives:
-                #v_{sky} = sqrt((v[1,j]-v[1,i])^2+(v[2,j]-v[2,i])^2)
-                dtbvdq[2,k,p] = ((jac_step[indj+3,indp+k]-jac_step[indi+3,indp+k])*(v[1,j]-v[1,i])+(jac_step[indj+4,indp+k]-jac_step[indi+4,indp+k])*(v[2,j]-v[2,i]))/vsky + dvdt*dtbvdq[1,k,p]
-                #b_{sky}^2 = (x[1,j]-x[1,i])^2+(x[2,j]-x[2,i])^2
-                dtbvdq[3,k,p] = 2*((jac_step[indj  ,indp+k]-jac_step[indi  ,indp+k])*(x[1,j]-x[1,i])+(jac_step[indj+1,indp+k]-jac_step[indi+1,indp+k])*(x[2,j]-x[2,i]))
-            end
-        end
-        # return the transit time, impact parameter, and sky velocity:
         return dt0::T,vsky::T,bsky2::T
     else
         return dt0::T
@@ -245,4 +247,25 @@ function dtbvdq!(i,j,x,v,jac_step,dqdt,dtbvdq)
                           (jac_step[indj+3,indp+k]-jac_step[indi+3,indp+k])*(x[1,j]-x[1,i])+(jac_step[indj+4,indp+k]-jac_step[indi+4,indp+k])*(x[2,j]-x[2,i]))/gdot
         end
     end
+    ntbv = size(dtbvdq)[1]
+    if ntbv == 3
+        # Compute the impact parameter and sky velocity:
+        vsky = sqrt((v[1,j]-v[1,i])^2 + (v[2,j]-v[2,i])^2)
+        bsky2 = (x[1,j]-x[1,i])^2 + (x[2,j]-x[2,i])^2
+        # partial derivative v_{sky} with respect to time:
+        dvdt = ((v[1,j]-v[1,i])*(dqdt[(j-1)*7+4]-dqdt[(i-1)*7+4])+(v[2,j]-v[2,i])*(dqdt[(j-1)*7+5]-dqdt[(i-1)*7+5]))/vsky
+        # (note that \partial b/\partial t = 0 at mid-transit since g_{sky} = 0 mid-transit).
+        for p=1:s.n
+            indp = (p-1)*7
+            for k=1:7
+                # Compute derivatives:
+                #v_{sky} = sqrt((v[1,j]-v[1,i])^2+(v[2,j]-v[2,i])^2)
+                dtbvdq[2,k,p] = ((jac_step[indj+3,indp+k]-jac_step[indi+3,indp+k])*(v[1,j]-v[1,i])+(jac_step[indj+4,indp+k]-jac_step[indi+4,indp+k])*(v[2,j]-v[2,i]))/vsky + dvdt*dtbvdq[1,k,p]
+                #b_{sky}^2 = (x[1,j]-x[1,i])^2+(x[2,j]-x[2,i])^2
+                dtbvdq[3,k,p] = 2*((jac_step[indj  ,indp+k]-jac_step[indi  ,indp+k])*(x[1,j]-x[1,i])+(jac_step[indj+1,indp+k]-jac_step[indi+1,indp+k])*(x[2,j]-x[2,i]))
+            end
+        end
+        return vsky,bsky2
+    end
+    return
 end

@@ -81,12 +81,12 @@ Callable `Integrator` method. Integrates to `i.tmax`.
 """
 function (i::Integrator)(s::State{T}) where T<:AbstractFloat 
     s2 = zero(T) # For compensated summation
-    t = s.t[1]
+    t0 = t = s.t[1]
     # Preallocate struct of arrays for derivatives (and pair)
     d = Jacobian(T,s.n) 
     pair = zeros(Bool,s.n,s.n)
 
-    while t < (i.t0 + i.tmax)
+    while t < (t0 + i.tmax)
         # Take integration step and advance time
         i.scheme(s,d,i.h,pair)
         t,s2 = comp_sum(t,s2,i.h)

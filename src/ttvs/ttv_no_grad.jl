@@ -44,7 +44,7 @@ function ttv_elements!(H::Union{Int64,Array{Int64,1}},t0::T,h::T,tmax::T,element
         m[jq] += dq
     end
     # Initialize the N-body problem using nested hierarchy of Keplerians:
-    init = ElementsIC(elements,H,t0)
+    init = ElementsIC(t0,H,elements)
     x,v,_ = init_nbody(init)
     #elements_big=big.(elements); t0big = big(t0)
     #init_big = ElementsIC(elements_big,H,t0big)
