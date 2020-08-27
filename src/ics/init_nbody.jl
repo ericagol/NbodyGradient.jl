@@ -175,7 +175,7 @@ function amatrix(ϵ::Array{T,2},m::Array{T,1}) where T<:AbstractFloat
 end
 
 function amatrix(init::ElementsIC{T}) where T <: Real
-    init.amat = amatrix(init.ϵ,init.m)
+    init.amat .= amatrix(init.ϵ,init.m)
 end
 
 """

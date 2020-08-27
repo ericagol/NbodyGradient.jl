@@ -54,16 +54,16 @@ struct ElementsIC{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: InitialConditio
     t0::T
     der::Bool
 
-    function ElementsIC(elems::Union{String,Array{T,2}},H::Union{Array{Int64,1},Int64},t0::T;der::Bool=true) where T <: AbstractFloat
+    function ElementsIC(t0::T,H::Union{Array{Int64,1},Int64},elems::Union{String,Array{T,2}};der::Bool=true) where T <: AbstractFloat
         # Check if only number of bodies was passed. Assumes fully nested.
         if typeof(H) == Int64; H::Vector{Int64} = [H,ones(H-1)...]; end
+        nbody = H[1]
         ϵ = convert(Array{T},hierarchy(H))
         if typeof(elems) == String
-            elements = convert(Array{T},readdlm(elems,',',comments=true))
+            elements = convert(Array{T},readdlm(elems,',',comments=true)[1:nbody,:])
         else
             elements = elems
         end
-        nbody = H[1]
         m = elements[1:nbody,1]
         amat = amatrix(ϵ,m)
         return new{T,Vector{T},Matrix{T}}(elements,H,ϵ,amat,nbody,m,t0,der);
@@ -81,7 +81,7 @@ function ElementsIC(t0::T,H::Union{Int64,Vector{Int64}},elems::Elements{T}...) w
     for i in eachindex(elems)
         elements[i,:] .= [getfield(elems[i],f) for f in fields]
     end
-    return ElementsIC(elements,H,t0) 
+    return ElementsIC(t0,H,elements) 
 end
 
 """Allows for array of `Elements` argument."""
@@ -90,25 +90,6 @@ ElementsIC(t0::T,H::Union{Int64,Vector{Int64}},elems::Array{Elements{T},1}) wher
 """Shows the elements array."""
 Base.show(io::IO,::MIME"text/plain",ic::ElementsIC{T}) where {T} = begin
 println(io,"ElementsIC{$T}\nOrbital Elements: "); show(io,"text/plain",ic.elements); end;
-
-"""
-
-Holds relevant initial conditions arrays. Uses Cartesian coordinates. 
-"""
-struct CartesianIC{T<:AbstractFloat} <: InitialConditions{T}
-    x::Array{T,2}
-    v::Array{T,2}
-    jac_init::Array{T,2}
-    m::Array{T,1}
-    t0::T
-    nbody::Int64
-    
-    function CartesianIC(filename::String,x,v,jac_init,t0) where T <: AbstractFloat
-        m = convert(Array{T},readdlm(filename,',',comments=true))
-        nbody = length(m)
-        return new{T}(x,v,jac_init,m,t0,nbody)
-    end
-end
 
 # Include ics source files
 const ics = ["kepler","kepler_init","setup_hierarchy","init_nbody"]
