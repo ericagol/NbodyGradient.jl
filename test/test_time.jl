@@ -25,11 +25,11 @@ println("Compensated: ",tc[nt]," big: ",tb[nt]," diff: ",tc[nt]-tb[nt]," diff+er
 
 #tref = convert(Array{Float64,1},tb)
 #semilogy(abs.(t-tref),label="Added")
-#println("Maximum difference added: ",maximum(abs.(t-tref)))
+println("Maximum difference added: ",maximum(abs.(t-tref)))
 #plot(abs.(tc-tref),":",label="Compensated")
-#println("Maximum difference compensated: ",maximum(abs.(tc-tref)))
+println("Maximum difference compensated: ",maximum(abs.(tc-tref)))
 #plot(abs.(tm-tref),"--",label="Multiplied")
-#println("Maximum difference multiplied: ",maximum(abs.(tm-tref)))
+println("Maximum difference multiplied: ",maximum(abs.(tm-tref)))
 #legend()
 return
 end

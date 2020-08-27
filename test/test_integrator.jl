@@ -9,7 +9,7 @@
     elements[2,1] *= 100.0
     elements[3,1] *= 100.0
     # Generate ICs
-    ic = ElementsIC(elements[1:n,:],H,t0)
+    ic = ElementsIC(t0,H,elements[1:n,:])
 
     # Setup State and tilt orbits
     function perturb!(s::State{<:AbstractFloat})
@@ -38,7 +38,7 @@
     ##### BigFloat #####
     t0_big = big(t0)
     elements_big = big.(elements)
-    ic_big = ElementsIC(elements_big,H,t0_big)
+    ic_big = ElementsIC(t0_big,H,elements_big)
 
     s_big = State(ic_big)
     perturb!(s_big)

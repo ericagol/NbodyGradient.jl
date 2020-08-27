@@ -32,7 +32,7 @@ for k=1:n
 end
 for iter = 1:2
 
-init = ElementsIC(elements,H,t0)
+init = ElementsIC(t0,H,elements)
 x0,v0,_ = init_nbody(init)
  if iter == 2
    # Reduce masses to trigger hyperbolic routine:

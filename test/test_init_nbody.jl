@@ -11,12 +11,12 @@
 elements = "elements.txt"
 H = [3,1,1]
 t0 = 7257.93115525-7300.0
-init = ElementsIC(elements,H,t0) 
+init = ElementsIC(t0,H,elements) 
 init.elements[:,3] .-= 7300.0
 x,v,jac_init = init_nbody(init)
 elements_big = big.(init.elements)
 t0big = big(t0)
-init_big = ElementsIC(elements_big,H,t0big)
+init_big = ElementsIC(t0big,H,elements_big)
 xbig,vbig,jac_init_big = init_nbody(init_big)
 
 #elements = readdlm("elements.txt",',')
@@ -45,10 +45,10 @@ for j=1:n_body
     elementsbig = big.(elements0)
     dq0 = dq[k]; if j==1 && k==1 ; dq0 = big(1e-15); end
     elementsbig[j,k] += dq0
-    initp = ElementsIC(elementsbig,H,t0big)
+    initp = ElementsIC(t0big,H,elementsbig)
     xp,vp,_ = init_nbody(initp)
     elementsbig[j,k] -= 2dq0
-    initm = ElementsIC(elementsbig,H,t0big)
+    initm = ElementsIC(t0big,H,elementsbig)
     xm,vm,_ = init_nbody(initm)
     for l=1:n_body, p=1:3
       i1 = (l-1)*7+p
