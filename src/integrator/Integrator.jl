@@ -95,6 +95,21 @@ function (i::Integrator)(s::State{T}) where T<:AbstractFloat
     return 
 end
 
+# No gradients (need to rewrite later)
+function (i::Integrator)(s::State{T},nograd::Bool) where T<:AbstractFloat 
+    s2 = zero(T) # For compensated summation
+    t0 = t = s.t[1]
+    pair = zeros(Bool,s.n,s.n)
+
+    while t < (t0 + i.tmax)
+        # Take integration step and advance time
+        i.scheme(s,i.h,pair)
+        t,s2 = comp_sum(t,s2,i.h)
+    end
+    s.t[1] = t
+    return 
+end
+
 """
 
 Take N steps.
