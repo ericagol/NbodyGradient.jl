@@ -79,31 +79,22 @@ end
 
 Callable `Integrator` method. Integrates to `i.tmax`.
 """
-function (i::Integrator)(s::State{T}) where T<:AbstractFloat 
+function (i::Integrator)(s::State{T};grad::Bool=true) where T<:AbstractFloat 
     s2 = zero(T) # For compensated summation
     t0 = t = s.t[1]
     # Preallocate struct of arrays for derivatives (and pair)
-    d = Jacobian(T,s.n) 
-    pair = zeros(Bool,s.n,s.n)
-
-    while t < (t0 + i.tmax)
-        # Take integration step and advance time
-        i.scheme(s,d,i.h,pair)
-        t,s2 = comp_sum(t,s2,i.h)
+    if grad
+        d = Jacobian(T,s.n) 
     end
-    s.t[1] = t
-    return 
-end
-
-# No gradients (need to rewrite later)
-function (i::Integrator)(s::State{T},nograd::Bool) where T<:AbstractFloat 
-    s2 = zero(T) # For compensated summation
-    t0 = t = s.t[1]
     pair = zeros(Bool,s.n,s.n)
 
     while t < (t0 + i.tmax)
         # Take integration step and advance time
-        i.scheme(s,i.h,pair)
+        if grad
+            i.scheme(s,d,i.h,pair)
+        else
+            i.scheme(s,i.h,pair)
+        end
         t,s2 = comp_sum(t,s2,i.h)
     end
     s.t[1] = t

@@ -28,7 +28,6 @@ end
         include("test_kepler_driftij_gamma.jl")
         include("test_kickfast.jl")
         include("test_phisalpha.jl")
-        include("test_ah18.jl")
         include("test_integrator.jl")
     end;
     println("Finished.")

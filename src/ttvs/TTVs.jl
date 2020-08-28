@@ -42,16 +42,18 @@ end
 
 Integrator method for outputing `TransitTiming`.
 """
-function (i::Integrator)(s::State{T},tt::TransitTiming) where T<:AbstractFloat 
+function (i::Integrator)(s::State{T},tt::TransitTiming;grad::Bool=true) where T<:AbstractFloat 
     #s2 = zero(T) # For compensated summation
 
     # Preallocate struct of arrays for derivatives (and pair)
     pair = zeros(Bool,s.n,s.n)
 
     # Run integrator and calculate transit times, with derivatives.
-    rstar = 1e12 # Need to pass this in. 
-    calc_tt!(s,i,tt,rstar,pair)
-    calc_dtdelements!(s,tt)
+    rstar::T = 1e12 # Need to pass this in. 
+    calc_tt!(s,i,tt,rstar,pair;grad=grad)
+    if grad
+        calc_dtdelements!(s,tt)
+    end
     return
 end
 
@@ -59,9 +61,11 @@ end
 files = ["ttv.jl","ttv_no_grad.jl"]
 include.(files)
 
-function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar,pair) where T<:AbstractFloat
+function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T,pair::Matrix{Bool};grad::Bool=true) where T<:AbstractFloat
     n = s.n; ntt_max = tt.ntt;
-    d = Jacobian(T,s.n) 
+    if grad
+        d = Jacobian(T,s.n) 
+    end
     dT = dTime(T,s.n)
     #xprior = copy(s.x)
     #vprior = copy(s.v)
@@ -80,7 +84,7 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar,pair) 
     #jac_transit = zeros(T,7*n,7*n)
     #jac_trans_err = zeros(T,7*n,7*n)
     # Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
-    dtdq = zeros(T,1,7,s.n)
+    if grad; dtdq = zeros(T,1,7,s.n); end
 
     # Initial time
     t0 = s.t[1]
@@ -97,7 +101,11 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar,pair) 
     param_real = all(isfinite.(s.x)) && all(isfinite.(s.v)) && all(isfinite.(s.m)) && all(isfinite.(s.jac_step))
     while s.t[1] < (t0+intr.tmax) && param_real
         # Carry out a ah18 mapping step and advance time:
-        intr.scheme(s,d,intr.h,pair)
+        if grad 
+            intr.scheme(s,d,intr.h,pair)
+        else
+            intr.scheme(s,intr.h,pair)
+        end
         istep += 1 
         s.t[1] = t0 + (istep * intr.h)
         param_real = all(isfinite.(s.x)) && all(isfinite.(s.v)) && all(isfinite.(s.m)) && all(isfinite.(s.jac_step))
@@ -121,11 +129,17 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar,pair) 
                 if tt.count[i] <= ntt_max
                     dt0 = -gsave[i]*intr.h/(gi-gsave[i])  # Starting estimate
                     set_state!(s,s_prior) # Set state to step after transit occured
-                    dt = findtransit!(1,i,dt0,s,d,dT,dtdq,intr,pair) # Search for transit time (integrating 'backward')
+                    if grad 
+                        dt = findtransit!(1,i,dt0,s,d,dT,dtdq,intr,pair) # Search for transit time (integrating 'backward')
+                    else
+                        dt = findtransit!(1,i,dt0,s,dT,intr,pair)
+                    end
                     # Copy transit time and derivatives to TransitTiming structure
                     tt.tt[i,tt.count[i]] = s.t[1] + dt 
-                    for k=1:7, p=1:n
-                        tt.dtdq0[i,tt.count[i],k,p] = dtdq[1,k,p]
+                    if grad
+                        for k=1:7, p=1:n
+                            tt.dtdq0[i,tt.count[i],k,p] = dtdq[1,k,p]
+                        end
                     end
                 end
             end
@@ -213,6 +227,62 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Jacobian{T},dT::dT
     ntbv = size(dtbvdq)[1]
     # return the transit time, impact parameter, and sky velocity:
     if ntbv == 3
+        return dt0::T,vsky::T,bsky2::T
+    else
+        return dt0::T
+    end
+end
+
+function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},dT::dTime{T},intr::Integrator,pair::Array{Bool,2};bv::Bool=false) where T<:AbstractFloat
+    # Computes the transit time, approximating the motion as a fraction of a AH17 step backward in time.
+    # Initial guess using linear interpolation:
+
+    s.dqdt .= 0.0
+    s_prior = deepcopy(s)
+
+    dt = one(T)
+    iter = 0
+    r3 = zero(T)
+    gdot = zero(T)
+    gsky = zero(T)
+    stmp = zero(T)
+    TRANSIT_TOL = 10*eps(dt)
+    tt1 = dt0 + 1
+    tt2 = dt0 + 2
+    ITMAX = 20
+    while abs(dt) > TRANSIT_TOL && iter < 20
+    #while true
+        tt2 = tt1
+        tt1 = dt0
+        set_state!(s,s_prior)
+        # Advance planet state at start of step to estimated transit time:
+        zero_out!(dT)
+        intr.scheme(s,dT,dt0,pair)
+        # Compute time offset:
+        gsky = g!(i,j,s.x,s.v)
+        #  # Compute derivative of g with respect to time:
+        gdot = gd!(i,j,s.x,s.v,s.dqdt)
+        # Refine estimate of transit time with Newton's method:
+        dt = -gsky/gdot
+        # Add refinement to estimated time:
+        #dt0 += dt
+        dt0,stmp = comp_sum(dt0,stmp,dt)
+        iter += 1
+        # Break out if we have reached maximum iterations, or if
+        # current transit time estimate equals one of the prior two steps:
+        if (iter >= ITMAX) || (dt0 == tt1) || (dt0 == tt2)
+            break
+        end
+    end
+    #if iter >= 20
+    #    println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot, "dt0 ", dt0)
+    #end 
+    # return the transit time, impact parameter, and sky velocity:
+    if bv
+        # Compute the sky velocity and impact parameter:
+        vsky = sqrt((s.v[1,j]-s.v[1,i])^2 + (s.v[2,j]-s.v[2,i])^2)
+        bsky2 = (s.x[1,j]-s.x[1,i])^2 + (s.x[2,j]-s.x[2,i])^2
+        # return the transit time, impact parameter, and sky velocity:
         return dt0::T,vsky::T,bsky2::T
     else
         return dt0::T
