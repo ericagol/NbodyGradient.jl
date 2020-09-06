@@ -82,4 +82,5 @@ import NbodyGradient: set_state!, zero_out!, amatrix
 
     dtde_num = calc_finite_diff(h, t0, tmax, elements)
     @test isapprox(asinh.(tts[1].dtdelements[mask]), asinh.(dtde_num[mask]);norm=maxabs)
+    @test isapprox(asinh.(tts[1].dtdelements), asinh.(dtde_num);norm=maxabs)
 end
