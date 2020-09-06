@@ -19,27 +19,20 @@ end
     @testset "Initial Conditions" begin
         include("test_kepler_init.jl")
         include("test_init_nbody.jl")
+        include("test_initial_conditions.jl")
     end;
     println("Finished.")
 
     print("Integrator... ")
     @testset "Integrator" begin
-        #include("test_elliptic_derivative.jl") #Deprecated functions
-        #include("test_keplerij.jl") # Deprecated functions
-        #include("test_kepler_drift.jl") # Deprecated functions (??)
-        #include("test_kepler_driftij.jl") # Deprecated functions
-        #include("test_kepler_drift_gamma.jl") # Only for auto-diff version, deprecated
         include("test_kepler_driftij_gamma.jl")
         include("test_kickfast.jl")
         include("test_phisalpha.jl")
-        # Need to fix dh17.
-        #include("test_dh17.jl")
-        include("test_ah18.jl")
         include("test_integrator.jl")
     end;
     println("Finished.")
 
-    println("Outputs... ")
+    print("Outputs... ")
     @testset "Outputs" begin
         include("test_cartesian_to_elements.jl")
     end
@@ -47,9 +40,10 @@ end
 
     print("TTVs... ")
     @testset "TTVs" begin
-        include("test_findtransit3.jl")
-        include("test_ttv_cartesian.jl")
-        include("test_ttv_elements.jl")
+        include("test_findtransit.jl")
+        include("test_transit_timing.jl")
+        #include("test_ttv_cartesian.jl")
+        #include("test_ttv_elements.jl")
         # Add in later
         #include("test_ttvbv_cartesian.jl")
         #include("test_ttvbv_elements.jl")

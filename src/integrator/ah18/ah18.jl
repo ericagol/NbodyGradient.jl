@@ -5,6 +5,7 @@ The AH18 integrator top level function. Carries out the AH18 mapping and compute
 """
 function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
     zilch = zero(T); uno = one(T); half = convert(T,0.5); two = convert(T,2.0); h2 = half*h; sevn = 7*s.n
+    zero_out!(d)
 
     drift!(s.x,s.v,s.xerror,s.verror,h2,s.n,s.jac_step,s.jac_error)
     kickfast!(s.x,s.v,s.xerror,s.verror,h/6,s.m,s.n,d.jac_kick,d.dqdt_kick,pair)
@@ -121,6 +122,7 @@ function ah18!(s::State{T},d::dTime{T},h::T,pair::Matrix{Bool}) where T<:Abstrac
     # [Currently this routine is not giving the correct dqdt values. -EA 8/12/2019]
     n = s.n
     zilch = zero(T); uno = one(T); half = convert(T,0.5); two = convert(T,2.0); h2 = half*h; sevn = 7*n
+    zero_out!(d)
     fill!(s.dqdt,zilch)
     #dqdt_save =copy(dqdt)
     drift!(s.x,s.v,s.xerror,s.verror,h2,n)

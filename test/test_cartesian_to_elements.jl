@@ -12,14 +12,13 @@ function Base.isapprox(a::Elements,b::Elements;tol=1e-8)
     return true
 end
 
-
 @testset "Cartesian to Elements" begin
 
     # Get known Elements
     fname = "elements.txt"
     t0 = 7257.93115525-7300.0
-    H = [3,1,1]
-    ic = ElementsIC(fname,H,t0)
+    H = [4,1,1,1]
+    ic = ElementsIC(t0,H,fname)
 
     a = Elements(ic.elements[1,:]...)
     b = Elements(ic.elements[2,:]...)

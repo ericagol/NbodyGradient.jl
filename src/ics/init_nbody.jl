@@ -128,7 +128,7 @@ function d_dm(init::ElementsIC{T},rkepler::Array{T,2},rdotkepler::Array{T,2},jac
     Ainv = inv(init.amat)
     dAinvdm = zeros(T,N,N,N)
     for k in 1:N
-        dAinvdm[:,:,k] = -Ainv*dAdm[:,:,k]*Ainv
+        dAinvdm[:,:,k] .= -Ainv * dAdm[:,:,k] * Ainv
     end
 
     # Fill in jac_init array
@@ -175,7 +175,7 @@ function amatrix(ϵ::Array{T,2},m::Array{T,1}) where T<:AbstractFloat
 end
 
 function amatrix(init::ElementsIC{T}) where T <: Real
-    init.amat = amatrix(init.ϵ,init.m)
+    init.amat .= amatrix(init.ϵ,init.m)
 end
 
 """

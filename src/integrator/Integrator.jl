@@ -28,28 +28,41 @@ abstract type AbstractState end
 
 Current state of simulation.
 """
-mutable struct State{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: AbstractState
+struct State{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: AbstractState
     x::M
     v::M
-    t::T
+    t::V
     m::V
     jac_step::M
     dqdt::V
+    jac_init::M
     xerror::M # These might be put into an 'PreAllocArrays'
     verror::M
+    dqdt_error::V
     jac_error::M
     n::Int64
 end
 
 function State(ic::InitialConditions{T}) where T<:AbstractFloat
-    x,v,_ = init_nbody(ic)
+    x,v,jac_init = init_nbody(ic)
     n = ic.nbody
     xerror = zeros(T,size(x))
     verror = zeros(T,size(v))
     jac_step = Matrix{T}(I,7*n,7*n)
     dqdt = zeros(T,7*n)
+    dqdt_error = zeros(T,size(dqdt))
     jac_error = zeros(T,size(jac_step))
-    return State(x,v,ic.t0,ic.m,jac_step,dqdt,xerror,verror,jac_error,ic.nbody)
+    return State(x,v,[ic.t0],ic.m,jac_step,dqdt,jac_init,xerror,verror,dqdt_error,jac_error,ic.nbody)
+end
+
+function set_state!(s_old::State,s_new::State)
+    fields = setdiff(fieldnames(State),[:m,:n])
+    for fn in fields
+        f_new = getfield(s_new,fn)
+        f_old = getfield(s_old,fn)
+        f_old .= f_new
+    end
+    return
 end
 
 """Shows if the positions, velocities, and Jacobian are finite."""
@@ -66,18 +79,50 @@ end
 
 Callable `Integrator` method. Integrates to `i.tmax`.
 """
-function (i::Integrator)(s::State{T}) where T<:AbstractFloat 
+function (i::Integrator)(s::State{T};grad::Bool=true) where T<:AbstractFloat 
+    s2 = zero(T) # For compensated summation
+    t0 = t = s.t[1]
+    # Preallocate struct of arrays for derivatives (and pair)
+    if grad
+        d = Jacobian(T,s.n) 
+    end
+    pair = zeros(Bool,s.n,s.n)
+
+    while t < (t0 + i.tmax)
+        # Take integration step and advance time
+        if grad
+            i.scheme(s,d,i.h,pair)
+        else
+            i.scheme(s,i.h,pair)
+        end
+        t,s2 = comp_sum(t,s2,i.h)
+    end
+    s.t[1] = t
+    return 
+end
+
+"""
+
+Take N steps.
+"""
+function (i::Integrator)(s::State{T},N::Int64) where T<:AbstractFloat
     s2 = zero(T) # For compensated summation
 
     # Preallocate struct of arrays for derivatives (and pair)
     d = Jacobian(T,s.n) 
     pair = zeros(Bool,s.n,s.n)
 
-    while s.t < (i.t0 + i.tmax)
+    # check to see if backward step
+    if N < 0; i.h *= -1; N *= -1; end
+
+    for n in 1:N
         # Take integration step and advance time
         i.scheme(s,d,i.h,pair)
-        s.t,s2 = comp_sum(s.t,s2,i.h)
+        s.t[1],s2 = comp_sum(s.t[1],s2,i.h)
     end
+
+    # Return time step to forward if needed
+    if i.h < 0; i.h *= -1; end
     return
 end
 

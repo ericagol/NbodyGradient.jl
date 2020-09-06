@@ -9,7 +9,7 @@
     elements[2,1] *= 100.0
     elements[3,1] *= 100.0
     # Generate ICs
-    ic = ElementsIC(elements[1:n,:],H,t0)
+    ic = ElementsIC(t0,H,elements[1:n,:])
 
     # Setup State and tilt orbits
     function perturb!(s::State{<:AbstractFloat})
@@ -38,7 +38,7 @@
     ##### BigFloat #####
     t0_big = big(t0)
     elements_big = big.(elements)
-    ic_big = ElementsIC(elements_big,H,t0_big)
+    ic_big = ElementsIC(t0_big,H,elements_big)
 
     s_big = State(ic_big)
     perturb!(s_big)
@@ -47,7 +47,7 @@
     tmax_big = nstep*h_big
     AH18_big = Integrator(ah18!,h_big,t0_big,tmax_big)
 
-    AH18_big(s_big)
+    AH18_big(s_big,grad=false)
     ####################
 
     ## Numerical Derivatives ##
@@ -68,7 +68,7 @@
                 dq = dlnq
                 sm.x[jj,j] = -dq
             end
-            AH18_big(sm)
+            AH18_big(sm,grad=false)
 
             sp = deepcopy(State(ic_big))
             perturb!(sp)
@@ -79,7 +79,7 @@
                 dq = dlnq
                 sp.x[jj,j] = dq
             end
-            AH18_big(sp)
+            AH18_big(sp,grad=false)
 
             # Now x & v are final positions & velocities after time step
             for i=1:n
@@ -99,7 +99,7 @@
                 dq = dlnq
                 sm.v[jj,j] = -dq
             end
-            AH18_big(sm)
+            AH18_big(sm,grad=false)
 
             sp = deepcopy(State(ic_big))
             perturb!(sp)
@@ -110,7 +110,7 @@
                 dq = dlnq
                 sp.v[jj,j] = dq
             end
-            AH18_big(sp)
+            AH18_big(sp;grad=false)
 
             for i=1:n
                 for k=1:3
@@ -125,13 +125,13 @@
         perturb!(sm)
         dq = sm.m[j]*dlnq
         sm.m[j] -= dq
-        AH18_big(sm)
+        AH18_big(sm;grad=false)
 
         sp = deepcopy(State(ic_big))
         perturb!(sp)
         dq = sp.m[j]*dlnq
         sp.m[j] += dq
-        AH18_big(sp)
+        AH18_big(sp;grad=false)
         for i=1:n
             for k=1:3
                 jac_step_num[(i-1)*7+  k,j*7] = .5*(sp.x[k,i]-sm.x[k,i])/dq

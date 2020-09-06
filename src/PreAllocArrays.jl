@@ -57,3 +57,17 @@ mutable struct dTime{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: AbstractDeri
             dqdt_ij,dqdt_tmp1,dqdt_tmp2)
     end
 end
+
+function Base.iterate(d::AbstractDerivatives{T},state=1) where T<:AbstractFloat
+    fields = fieldnames(typeof(d))
+    if state > length(fields)
+        return nothing
+    end
+    return (getfield(d,fields[state]), state+1)
+end
+
+function zero_out!(d::AbstractDerivatives{T}) where T<:AbstractFloat
+    for i in d
+        i .= zero(T)
+    end
+end

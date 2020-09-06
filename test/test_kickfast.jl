@@ -37,7 +37,7 @@ for k=1:n
 end
 m0 = copy(m)
 
-init = ElementsIC(elements,H,t0)
+init = ElementsIC(t0,H,elements)
 x0,v0,_ = init_nbody(init)
 xerror = zeros(Float64,size(x0))
 verror = zeros(Float64,size(v0))

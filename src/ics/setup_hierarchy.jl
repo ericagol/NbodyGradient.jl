@@ -167,10 +167,10 @@ function symmetric_nest(nbody,bodies,bins,binsp,row,h,iter)
     j = 0
     while row < nbody-1
         println(j)
-        h[row,1:2+j] .= -1.0
-        h[row,3+j] =  1.0
-        h[row+1,hlf+1:hlf+2+j] .= -1.0
-        h[row+1,hlf+3+j]  = 1.0
+        h[row,1:2+j] .= -1
+        h[row,3+j] =  1
+        h[row+1,hlf+1:hlf+2+j] .= -1
+        h[row+1,hlf+3+j]  = 1
         j += 1
         row += 2
     end
