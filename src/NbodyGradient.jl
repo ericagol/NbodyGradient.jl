@@ -22,7 +22,7 @@ export State
 export Integrator
 export Jacobian, dTime
 export CartesianOutput, ElementsOutput
-export TransitTiming
+export TransitTiming, TransitParameters
 
 # Output Methods
 export ttv_elements!#, ttvbv_elements!

@@ -1,10 +1,10 @@
-abstract type AbstractOutput end
+abstract type AbstractOutput{T} end
 """
 
 Preallocates and holds arrays for positions, velocities, and Jacobian at every integrator step
 """ 
 # Should add option to choose out intervals, checkpointing, etc.
-struct CartesianOutput{T<:AbstractFloat} <: AbstractOutput
+struct CartesianOutput{T<:AbstractFloat} <: AbstractOutput{T}
     states::Vector{State{T}}
     nstep::Int64
     filename::String

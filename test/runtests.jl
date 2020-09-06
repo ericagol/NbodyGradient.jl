@@ -42,6 +42,7 @@ end
     @testset "TTVs" begin
         include("test_findtransit.jl")
         include("test_transit_timing.jl")
+        include("test_transit_parameters.jl")
         #include("test_ttv_cartesian.jl")
         #include("test_ttv_elements.jl")
         # Add in later

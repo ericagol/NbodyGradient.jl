@@ -3,7 +3,7 @@
 
 Holds the transit times and derivatives.
 """
-struct TransitTiming{T<:AbstractFloat} <: AbstractOutput
+struct TransitTiming{T<:AbstractFloat} <: AbstractOutput{T}
     tt::Matrix{T}
     dtdq0::Array{T,4}
     dtdelements::Array{T,4}
@@ -22,15 +22,38 @@ function TransitTiming(tmax,ic::ElementsIC{T}) where T<:AbstractFloat
     return TransitTiming(tt,dtdq0,dtdelements,count,ntt)
 end
 
-function Base.iterate(tt::TransitTiming,state=1)
-    fields = fieldnames(TransitTiming)
+"""
+
+Structure for transit timing, impact parameter, and sky velocity
+"""
+struct TransitParameters{T<:AbstractFloat} <: AbstractOutput{T}
+    ttbv::Array{T,3}
+    dtbvdq0::Array{T,5}
+    dtbvdelements::Array{T,5}
+    count::Vector{Int64}
+    ntt::Int64
+end
+
+function TransitParameters(tmax,ic::ElementsIC{T}) where T<:AbstractFloat
+    n = ic.nbody
+    ind = isfinite.(tmax./ic.elements[:,2])
+    ntt = maximum(ceil.(Int64,tmax./ic.elements[ind,2]).+3)
+    ttbv = zeros(T,3,n,ntt)
+    dtbvdq0 = zeros(T,3,n,ntt,7,n)
+    dtbvdelements = zeros(T,3,n,ntt,7,n)
+    count = zeros(Int64,n)
+    return TransitParameters(ttbv,dtbvdq0,dtbvdelements,count,ntt)
+end
+
+function Base.iterate(tt::AbstractOutput,state=1)
+    fields = fieldnames(typeof(tt))
     if state > length(fields)
         return nothing
     end
     return (getfield(tt,fields[state]), state+1)
 end
 
-function zero_out!(tt::TransitTiming{T}) where T
+function zero_out!(tt::AbstractOutput{T}) where T
     for i in tt
         if ~(typeof(i) <: Integer)
             i .= zero(T)
@@ -40,9 +63,9 @@ end
         
 """
 
-Integrator method for outputing `TransitTiming`.
+Integrator method for outputing `TransitTiming` or `TransitParameters`.
 """
-function (i::Integrator)(s::State{T},tt::TransitTiming;grad::Bool=true) where T<:AbstractFloat 
+function (i::Integrator)(s::State{T},tt::AbstractOutput;grad::Bool=true) where T<:AbstractFloat 
     #s2 = zero(T) # For compensated summation
 
     # Preallocate struct of arrays for derivatives (and pair)
@@ -57,9 +80,24 @@ function (i::Integrator)(s::State{T},tt::TransitTiming;grad::Bool=true) where T<
     return
 end
 
-# Includes for source
-files = ["ttv.jl","ttv_no_grad.jl"]
-include.(files)
+"""
+
+Integrator method for outputing `TransitParameters`.
+"""
+function (i::Integrator)(s::State{T},ttbv::TransitParameters;grad::Bool=true) where T<:AbstractFloat 
+    #s2 = zero(T) # For compensated summation
+
+    # Preallocate struct of arrays for derivatives (and pair)
+    pair = zeros(Bool,s.n,s.n)
+
+    # Run integrator and calculate transit times, with derivatives.
+    rstar::T = 1e12 # Need to pass this in. 
+    calc_tt!(s,i,ttbv,rstar,pair;grad=grad)
+    if grad
+        calc_dtdelements!(s,ttbv)
+    end
+    return
+end
 
 function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T,pair::Matrix{Bool};grad::Bool=true) where T<:AbstractFloat
     n = s.n; ntt_max = tt.ntt;
@@ -67,22 +105,11 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T,pai
         d = Jacobian(T,s.n) 
     end
     dT = dTime(T,s.n)
-    #xprior = copy(s.x)
-    #vprior = copy(s.v)
     s_prior = deepcopy(s)
-    #xtransit = copy(x)
-    #vtransit = copy(v)
-    #xerr_trans = zeros(T,size(x)); verr_trans =zeros(T,size(v))
-    #xerr_prior = zeros(T,size(s.x)); verr_prior =zeros(T,size(s.v))
     # Define error estimate based on Kahan (1965):
     s2 = zero(T)
     # Set step counter to zero:
     istep = 0
-    # Jacobian for each step (7- 6 elements+mass, n_planets, 7 - 6 elements+mass, n planets):
-    #jac_prior = zeros(T,7*s.n,7*s.n)
-    #jac_error_prior = zeros(T,7*s.n,7*s.n)
-    #jac_transit = zeros(T,7*n,7*n)
-    #jac_trans_err = zeros(T,7*n,7*n)
     # Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
     if grad; dtdq = zeros(T,1,7,s.n); end
 
@@ -151,6 +178,87 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T,pai
     return
 end
 
+function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T,pair::Matrix{Bool};grad::Bool=true) where T<:AbstractFloat
+    n = s.n; ntt_max = tt.ntt;
+    if grad
+        d = Jacobian(T,s.n) 
+    end
+    dT = dTime(T,s.n)
+    s_prior = deepcopy(s)
+    # Define error estimate based on Kahan (1965):
+    s2 = zero(T)
+    # Set step counter to zero:
+    istep = 0
+    # Initialize matrix for derivatives of transit times with respect to the initial x,v,m:
+    if grad; dtbvdq = zeros(T,3,7,s.n); end
+
+    # Initial time
+    t0 = s.t[1]
+    # Save the g function, which computes the relative sky velocity dotted with relative position
+    # between the planets and star:
+    gsave = zeros(T,s.n)
+    for i=2:s.n
+        # Compute the relative sky velocity dotted with position:
+        gsave[i]= g!(i,1,s.x,s.v)
+    end
+    # Loop over time steps:
+    dt = zero(T)
+    gi = zero(T)
+    param_real = all(isfinite.(s.x)) && all(isfinite.(s.v)) && all(isfinite.(s.m)) && all(isfinite.(s.jac_step))
+    while s.t[1] < (t0+intr.tmax) && param_real
+        # Carry out a ah18 mapping step and advance time:
+        if grad 
+            intr.scheme(s,d,intr.h,pair)
+        else
+            intr.scheme(s,intr.h,pair)
+        end
+        istep += 1 
+        s.t[1] = t0 + (istep * intr.h)
+        param_real = all(isfinite.(s.x)) && all(isfinite.(s.v)) && all(isfinite.(s.m)) && all(isfinite.(s.jac_step))
+
+        # Save current state as prior state.
+        set_state!(s_prior,s)
+
+        # Check to see if a transit may have occured before current state.  
+        # Sky is x-y plane; line of sight is z.
+        # Star is body 1; planets are 2-nbody (note that this could be modified to see if
+        # any body transits another body):
+        for i=2:s.n
+            # Compute the relative sky velocity dotted with position:
+            gi = g!(i,1,s.x,s.v)
+            ri = sqrt(s.x[1,i]^2+s.x[2,i]^2+s.x[3,i]^2)  # orbital distance
+            # See if sign of g switches, and if planet is in front of star (by a good amount):
+            # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
+            if gi > 0 && gsave[i] < 0 && -s.x[3,i] > 0.25*ri && ri < rstar
+                # A transit has occurred between the time steps - integrate ah18! between timesteps
+                tt.count[i] += 1
+                if tt.count[i] <= ntt_max
+                    dt0 = -gsave[i]*intr.h/(gi-gsave[i])  # Starting estimate
+                    set_state!(s,s_prior) # Set state to step after transit occured
+                    if grad 
+                        dt,vsky,bsky2 = findtransit!(1,i,dt0,s,d,dT,dtbvdq,intr,pair) # Search for transit time (integrating 'backward')
+                    else
+                        dt,vsky,bsky2 = findtransit!(1,i,dt0,s,dT,intr,pair,bv=true)
+                    end
+                    # Copy transit time, b, vsky and derivatives to TransitParameters structure
+                    tt.ttbv[1,i,tt.count[i]] = s.t[1] + dt 
+                    tt.ttbv[2,i,tt.count[i]] = vsky
+                    tt.ttbv[3,i,tt.count[i]] = bsky2
+                    if grad
+                        for itbv=1:3, k=1:7, p=1:s.n
+                            tt.dtbvdq0[itbv,i,tt.count[i],k,p] = dtbvdq[itbv,k,p]
+                        end
+                    end
+                end
+            end
+            gsave[i] = gi
+        end
+        # Set state back to after transit
+        set_state!(s,s_prior)
+    end
+    return
+end
+
 function calc_dtdelements!(s::State{T},tt::TransitTiming{T}) where T <: AbstractFloat
     for i=1:s.n, j=1:tt.count[i]
         if j <= tt.ntt
@@ -159,6 +267,20 @@ function calc_dtdelements!(s::State{T},tt::TransitTiming{T}) where T <: Abstract
                 tt.dtdelements[i,j,l,k] = zero(T)
                 for p=1:s.n, q=1:7
                     tt.dtdelements[i,j,l,k] += tt.dtdq0[i,j,q,p]*s.jac_init[(p-1)*7+q,(k-1)*7+l]
+                end
+            end
+        end
+    end
+end
+
+function calc_dtdelements!(s::State{T},ttbv::TransitParameters{T}) where T <: AbstractFloat
+    for itbv = 1:3, i=1:s.n, j = 1:ttbv.count[i]
+        if j <= ttbv.ntt
+            # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
+            for k=1:s.n, l=1:7
+                ttbv.dtbvdelements[itbv,i,j,l,k] = zero(T)
+                for p=1:s.n, q=1:7
+                    ttbv.dtbvdelements[itbv,i,j,l,k] += ttbv.dtbvdq0[itbv,i,j,q,p]*s.jac_init[(p-1)*7+q,(k-1)*7+l]
                 end
             end
         end
@@ -221,14 +343,14 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Jacobian{T},dT::dT
     set_state!(s,s_prior)
     zero_out!(dT)
     intr.scheme(s,dT,dt0,pair)
-    # Compute derivative of transit time, impact parameter, and sky velocity.
-    dtbvdq!(i,j,s.x,s.v,s.jac_step,s.dqdt,dtbvdq)
-    # Note: this is the time elapsed *after* the beginning of the timestep:
     ntbv = size(dtbvdq)[1]
     # return the transit time, impact parameter, and sky velocity:
     if ntbv == 3
+        vsky,bsky2 = dtbvdq!(i,j,s.x,s.v,s.jac_step,s.dqdt,dtbvdq)
         return dt0::T,vsky::T,bsky2::T
     else
+        # Compute derivative of transit time, impact parameter, and sky velocity.
+        dtbvdq!(i,j,s.x,s.v,s.jac_step,s.dqdt,dtbvdq)
         return dt0::T
     end
 end
@@ -325,7 +447,7 @@ function dtbvdq!(i,j,x,v,jac_step,dqdt,dtbvdq)
         # partial derivative v_{sky} with respect to time:
         dvdt = ((v[1,j]-v[1,i])*(dqdt[(j-1)*7+4]-dqdt[(i-1)*7+4])+(v[2,j]-v[2,i])*(dqdt[(j-1)*7+5]-dqdt[(i-1)*7+5]))/vsky
         # (note that \partial b/\partial t = 0 at mid-transit since g_{sky} = 0 mid-transit).
-        for p=1:s.n
+        for p=1:n
             indp = (p-1)*7
             for k=1:7
                 # Compute derivatives:
@@ -339,3 +461,7 @@ function dtbvdq!(i,j,x,v,jac_step,dqdt,dtbvdq)
     end
     return
 end
+
+# Includes for source
+files = ["ttv.jl","ttv_no_grad.jl"]
+include.(files)
