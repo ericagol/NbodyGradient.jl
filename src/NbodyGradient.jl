@@ -23,9 +23,7 @@ export Integrator
 export Jacobian, dTime
 export CartesianOutput, ElementsOutput
 export TransitTiming, TransitParameters
-
-# Output Methods
-export ttv_elements!#, ttvbv_elements!
+export Photodynamics
 
 # Integrator methods
 export ah18!, dh17!
@@ -37,6 +35,7 @@ include("ics/InitialConditions.jl")
 include("integrator/Integrator.jl")
 include("outputs/Outputs.jl")
 include("ttvs/TTVs.jl")
+include("photodynamics/Photodynamics.jl")
 
 # To be cleaned up
 include("integrator/ah18/ah18_old.jl") 
