@@ -4,7 +4,8 @@ import NbodyGradient: set_state!, zero_out!, amatrix
     N = 3
     t0 = 7257.93115525 - 7300.0 - 0.5 # Initialize IC before first transit 
     h = 0.04
-    tmax = 10.0
+    itime = 10.0 # Time integrator will run
+    tmax = itime + t0
 
     # Setup initial conditions:
     elements = readdlm("elements.txt", ',')[1:N,:]
@@ -17,7 +18,7 @@ import NbodyGradient: set_state!, zero_out!, amatrix
     function calc_times(h)
         intr = Integrator(ah18!, h, 0.0, tmax)
         s = State(ic)
-        ttbv = TransitParameters(tmax, ic)
+        ttbv = TransitParameters(itime, ic)
         intr(s, ttbv)
         return ttbv
     end
@@ -42,16 +43,16 @@ import NbodyGradient: set_state!, zero_out!, amatrix
         end
     end
 
-    function calc_finite_diff(h, t0, tmax, elements)
+    function calc_finite_diff(h, t0, itime, tmax, elements)
     # Now do finite difference with big float
         dq0 = big(1e-10)
         ic_big = ElementsIC(big(t0), N, big.(elements))
         elements_big = copy(ic_big.elements)
         s_big = State(ic_big)
-        ttp = TransitParameters(big(tmax), ic_big); 
-        ttm = TransitParameters(big(tmax), ic_big);
+        ttp = TransitParameters(big(itime), ic_big); 
+        ttm = TransitParameters(big(itime), ic_big);
         dtde_num = zeros(BigFloat, size(ttp.dtbvdelements));
-        intr_big = Integrator(big(h), 0.0, big(tmax))
+        intr_big = Integrator(big(h), zero(BigFloat), big(tmax))
 
         for jq in 1:N  
             for iq in 1:7
@@ -80,7 +81,7 @@ import NbodyGradient: set_state!, zero_out!, amatrix
         return dtde_num
     end
 
-    dtde_num = calc_finite_diff(h, t0, tmax, elements)
+    dtde_num = calc_finite_diff(h, t0, itime, tmax, elements)
     @test isapprox(asinh.(tts.dtbvdelements[mask]), asinh.(dtde_num[mask]);norm=maxabs)
     @test isapprox(asinh.(tts.dtbvdelements), asinh.(dtde_num);norm=maxabs)
 end

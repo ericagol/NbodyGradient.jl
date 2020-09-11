@@ -50,4 +50,10 @@ end
         #include("test_ttvbv_elements.jl")
     end;
     println("Finished.")
+
+    print("Photodyanmics... ")
+    @testset "Photodynamics" begin
+        include("test_photodynamics.jl")
+    end
+    println("Finished.")
 end
