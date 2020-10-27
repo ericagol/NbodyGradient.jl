@@ -77,8 +77,9 @@ end
 
 #========== Running Methods ==========#
 """
+    (::Integrator)(s, time; grad=true)
 
-Callable `Integrator` method. Integrate to specific time
+Callable `Integrator` method. Integrate to specific time.
 """
 function (intr::Integrator)(s::State{T},time::T;grad::Bool=true) where T<:AbstractFloat 
     t0 = s.t[1]
@@ -88,6 +89,10 @@ function (intr::Integrator)(s::State{T},time::T;grad::Bool=true) where T<:Abstra
     
     # Step either forward or backward
     h = intr.h * check_step(t0,time)
+
+    # Calculate last step (if needed)
+    #while t0 + (h * nsteps) <= time; nsteps += 1; end
+    tmax = t0 + (h * nsteps)
 
     # Preallocate struct of arrays for derivatives (and pair)
     if grad; d = Derivatives(T,s.n); end
@@ -102,11 +107,9 @@ function (intr::Integrator)(s::State{T},time::T;grad::Bool=true) where T<:Abstra
         end
     end
 
-    # Calculate and do last step (if needed)
-    tmax = t0 + (h * nsteps)
-    hf = zero(T)
+    # Do last step (if needed)
     if nsteps == 0; hf = time; end
-    if  tmax != time
+    if tmax != time
         hf = time - tmax
         if grad
             intr.scheme(s,d,hf,pair)
