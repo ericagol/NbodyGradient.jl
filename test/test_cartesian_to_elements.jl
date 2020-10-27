@@ -1,6 +1,6 @@
 import NbodyGradient: get_orbital_elements
 
-function Base.isapprox(a::Elements,b::Elements;tol=1e-8)
+function Base.isapprox(a::Elements,b::Elements;tol=1e-10)
     fields = setdiff(fieldnames(Elements),[:a,:e,:ϖ])
     for i in fields
         af = getfield(a,i)
