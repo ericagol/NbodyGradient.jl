@@ -46,7 +46,7 @@ function TransitParameters(tmax,ic::ElementsIC{T}) where T<:AbstractFloat
 end
 
 function Base.iterate(tt::AbstractOutput,state=1)
-    fields = fieldnames(typeof(tt))
+    fields = setdiff(fieldnames(typeof(tt)),[:times])
     if state > length(fields)
         return nothing
     end

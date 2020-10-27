@@ -2,8 +2,7 @@
 
 function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T,pair::Matrix{Bool};grad::Bool=true) where T<:AbstractFloat
     n = s.n; ntt_max = tt.ntt;
-    if grad; d = Jacobian(T,s.n); end
-    dT = dTime(T,s.n)
+    grad ? d = Derivatives(T,s.n) : dT = dTime(T,s.n);
     s_prior = deepcopy(s)
     # Define error estimate based on Kahan (1965):
     s2 = zero(T)
@@ -62,7 +61,7 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T,pai
                     dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
                     set_state!(s,s_prior) # Set state to step after transit occured
                     if grad 
-                        dt = findtransit!(1,i,dt0,s,d,dT,dtdq,intr,pair) # Search for transit time (integrating 'backward')
+                        dt = findtransit!(1,i,dt0,s,d,dtdq,intr,pair) # Search for transit time (integrating 'backward')
                     else
                         dt = findtransit!(1,i,dt0,s,dT,intr,pair)
                     end
@@ -85,10 +84,7 @@ end
 
 function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T,pair::Matrix{Bool};grad::Bool=true) where T<:AbstractFloat
     n = s.n; ntt_max = tt.ntt;
-    if grad
-        d = Jacobian(T,s.n) 
-    end
-    dT = dTime(T,s.n)
+    grad ? d = Derivatives(T,s.n) : dT = dTime(T,s.n)
     s_prior = deepcopy(s)
     # Define error estimate based on Kahan (1965):
     s2 = zero(T)
@@ -146,7 +142,7 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
                     dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
                     set_state!(s,s_prior) # Set state to step after transit occured
                     if grad 
-                        dt,vsky,bsky2 = findtransit!(1,i,dt0,s,d,dT,dtbvdq,intr,pair) # Search for transit time (integrating 'backward')
+                        dt,vsky,bsky2 = findtransit!(1,i,dt0,s,d,dtbvdq,intr,pair) # Search for transit time (integrating 'backward')
                     else
                         dt,vsky,bsky2 = findtransit!(1,i,dt0,s,dT,intr,pair,bv=true)
                     end
@@ -197,7 +193,7 @@ function calc_dtdelements!(s::State{T},ttbv::TransitParameters{T}) where T <: Ab
     end
 end
 
-function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Jacobian{T},dT::dTime{T},dtbvdq,intr::Integrator,pair::Array{Bool,2}) where T<:AbstractFloat
+function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},dtbvdq,intr::Integrator,pair::Array{Bool,2}) where T<:AbstractFloat
     # Computes the transit time, approximating the motion as a fraction of a AH17 step backward in time.
     # Also computes the Jacobian of the transit time with respect to the initial parameters, dtbvdq[1-3,7,n].
     # Initial guess using linear interpolation:
@@ -221,8 +217,8 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Jacobian{T},dT::dT
         tt1 = dt0
         set_state!(s,s_prior)
         # Advance planet state at start of step to estimated transit time:
-        zero_out!(dT)
-        intr.scheme(s,dT,dt0,pair)
+        zero_out!(d)
+        intr.scheme(s,d,dt0,pair)
         # Compute time offset:
         gsky = g!(i,j,s.x,s.v)
         #  # Compute derivative of g with respect to time:
@@ -247,12 +243,12 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Jacobian{T},dT::dT
     zero_out!(d)
     # Compute dgdt with the updated time step.
     intr.scheme(s,d,dt0,pair)
-    s_prior.jac_step .= s.jac_step
-    s_prior.jac_error .= s.jac_error
+    #s_prior.jac_step .= s.jac_step
+    #s_prior.jac_error .= s.jac_error
     # Need to reset to compute dqdt:
-    set_state!(s,s_prior)
-    zero_out!(dT)
-    intr.scheme(s,dT,dt0,pair)
+    #set_state!(s,s_prior)
+    #zero_out!(dT)
+    #intr.scheme(s,dT,dt0,pair)
     ntbv = size(dtbvdq)[1]
     # return the transit time, impact parameter, and sky velocity:
     if ntbv == 3
