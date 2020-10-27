@@ -1,5 +1,5 @@
 # Photodyanmics
-struct Photodynamics{T<:AbstractFloat}
+struct Photodynamics{T<:AbstractFloat} <: AbstractOutput{T}
     nt::Int64
     times::Vector{T}
     bsky2::Matrix{T}
@@ -21,18 +21,22 @@ function (intr::Integrator)(s::State{T},pd::Photodynamics{T};grad::Bool=true) wh
     if grad; dbvdq = zeros(T,2,7,s.n); end
 
     # Integrate to each time, using intr.h, and output b and vsky (only want primary transits for now)
-    for (i,ti) in enumerate(pd.times)
+    t0 = s.t[1]
+    for (j,ti) in enumerate(pd.times)
         intr(s,ti;grad=grad)
-        for j in 2:s.n
+        for i in 2:s.n
             if grad
-                pd.vsky[j,i],pd.bsky2[j-1,i] = calc_dbvdq!(s,dbvdq,1,j)
+                pd.vsky[i,j],pd.bsky2[i,j] = calc_dbvdq!(s,dbvdq,1,i)
                 for ibv=1:2, k=1:7, p=1:s.n
-                    pd.dbvdq0[ibv,j,i,k,p] = dbvdq[ibv,k,p]
+                    pd.dbvdq0[ibv,i,j,k,p] = dbvdq[ibv,k,p]
                 end
             else
-                pd.vsky[j,i],pd.bsky2[j,i] = calc_bv(s,1,j)
+                pd.vsky[i,j],pd.bsky2[i,j] = calc_bv(s,1,i)
             end
         end
+        # Step to the next full time step, as measured from t0.
+        #steps = round(Int64 ,(s.t[1] - t0) / intr.h, RoundUp)
+        #intr(s,t0 + (steps * intr.h); grad=grad)
     end
     calc_dbvdelements!(s,pd)
     return
@@ -80,7 +84,7 @@ function calc_dbvdq!(s::State{T},dbvdq::Array{T},i::Int64,j::Int64) where T<:Abs
 end
 
 function calc_dbvdelements!(s::State{T},pd::Photodynamics{T}) where T <: AbstractFloat
-    for ibv = 1:2, i=1:s.n, j = 1:pd.nt
+    for ibv = 1:2, i=1:s.n, j=1:length(pd.bsky2[i,:])
         if j <= pd.nt
             # Now, multiply by the initial Jacobian to convert time derivatives to orbital elements:
             for k=1:s.n, l=1:7
