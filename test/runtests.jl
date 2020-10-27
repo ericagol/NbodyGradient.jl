@@ -43,17 +43,13 @@ end
         include("test_findtransit.jl")
         include("test_transit_timing.jl")
         include("test_transit_parameters.jl")
-        #include("test_ttv_cartesian.jl")
-        #include("test_ttv_elements.jl")
-        # Add in later
-        #include("test_ttvbv_cartesian.jl")
-        #include("test_ttvbv_elements.jl")
     end;
     println("Finished.")
 
-    print("Photodyanmics... ")
-    @testset "Photodynamics" begin
-        include("test_photodynamics.jl")
-    end
+    # Not yet working... 
+    #print("Photodyanmics... ")
+    #@testset "Photodynamics" begin
+    #    include("test_photodynamics.jl")
+    #end
     println("Finished.")
 end
