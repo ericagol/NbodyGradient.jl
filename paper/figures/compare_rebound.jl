@@ -1,8 +1,13 @@
 # Compare the times of simulation
-using NbodyGradient, DelimitedFiles
+using NbodyGradient, DelimitedFiles, BenchmarkTools
 
 elements = readdlm("elements_rebound.txt", ',')
 elements[:,end] .= 0.0
+
+try
+  rm("nbg_times.txt")
+catch
+end
 
 for n = 2:11
   t0 = 0.0
@@ -14,19 +19,16 @@ for n = 2:11
   ic = ElementsIC(t0, n, elements[1:n,:])
   s = State(ic)
   intr = Integrator(h, 0.0, tmax)
-  
-  # Run integrator once, so it's compiled
-  @elapsed intr(s)
-  s = State(ic)
-  @elapsed intr(s, grad=false)
 
   # Time without derivatives
-  s = State(ic)
-  t = @elapsed intr(s, grad=false)
+  t = @belapsed intr(s, grad=false) setup=(s = State($ic))
 
   # Time with derivatives
-  s = State(ic)
-  grad_t = @elapsed intr(s)
+  grad_t = @belapsed intr(s) setup=(s = State($ic))
 
-  println("Nplanet: ", n-1, " No gradient: ", t, " gradient: ", grad_t, " ratio: ", grad_t/t)
+  #println("Nplanet: ", n-1, " No gradient: ", t, " gradient: ", grad_t, " ratio: ", grad_t/t)
+  println(n-1, ",", t,",",grad_t,",", grad_t/t)
+  open("nbg_times.txt", "a") do io
+    writedlm(io, [n-1 t grad_t grad_t/t], ',')
+  end
 end
