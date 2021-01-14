@@ -1,15 +1,18 @@
+# Test for the integrator methods, without outputs.
 @testset "Integrator" begin
     ###### Float64 ######
     # Initial Conditions for Float64 version
     H = [3,1,1]
     n = 3 
     t0 = 7257.93115525
-    elements = readdlm("elements.txt",',')
+    elements = readdlm("elements.txt", ',')
     # Increase mass of inner planets:
     elements[2,1] *= 100.0
-    elements[3,1] *= 100.0
+    elements[3,1] *= 100.0 
+    # Set Ωs to 0.0
+    elements[:,end] .= 0.0       
     # Generate ICs
-    ic = ElementsIC(t0,H,elements[1:n,:])
+    ic = ElementsIC(t0, H, elements[1:n,:])
 
     # Setup State and tilt orbits
     function perturb!(s::State{<:AbstractFloat})
@@ -21,14 +24,13 @@
         s.v[2,3] = -5e-1*sqrt(s.v[1,2]^2+s.v[3,2]^2)
         return
     end
-
     s0 = State(ic)
     perturb!(s0)
 
     # Setup integrator
     h  = 0.05
     nstep = 100
-    tmax = nstep*h
+    tmax = nstep*h + t0
     AH18 = Integrator(ah18!,h,t0,tmax)
 
     # Integrate
@@ -44,7 +46,7 @@
     perturb!(s_big)
 
     h_big = big(h)
-    tmax_big = nstep*h_big
+    tmax_big = nstep*h_big + t0_big
     AH18_big = Integrator(ah18!,h_big,t0_big,tmax_big)
 
     AH18_big(s_big,grad=false)
@@ -68,7 +70,7 @@
                 dq = dlnq
                 sm.x[jj,j] = -dq
             end
-            AH18_big(sm,grad=false)
+            AH18_big(sm, grad=false)
 
             sp = deepcopy(State(ic_big))
             perturb!(sp)
@@ -79,7 +81,7 @@
                 dq = dlnq
                 sp.x[jj,j] = dq
             end
-            AH18_big(sp,grad=false)
+            AH18_big(sp, grad=false)
 
             # Now x & v are final positions & velocities after time step
             for i=1:n
@@ -144,31 +146,30 @@
 
     # dqdt
     s_dt = State(ic)
-    dt = dTime(Float64,s_dt.n)
-    dqdt_num = zeros(BigFloat,7*n)
-    pair = zeros(Bool,s_dt.n,s_dt.n)
-    ah18!(s_dt,dt,h,pair)
-    
+    AH18(s_dt,1)
+    dqdt_num = zeros(BigFloat, 7 * n)
+
     s_dtm = deepcopy(State(ic_big))
-    dt_big = dTime(BigFloat,s_dt.n) 
     hbig = big(h)
-    dq = hbig*dlnq
+    dq = hbig * dlnq
     hbig -= dq
-    ah18!(s_dtm,dt_big,hbig,pair)
+    AH18_big = Integrator(ah18!, hbig, t0_big, tmax_big)
+    AH18_big(s_dtm,1;grad=false)
     
     s_dtp = deepcopy(State(ic_big))
     hbig += 2dq
-    ah18!(s_dtp,dt_big,hbig,pair)
-    for i=1:n, k=1:3
-    dqdt_num[(i-1)*7+  k] = .5*(s_dtp.x[k,i]-s_dtm.x[k,i])/dq
-    dqdt_num[(i-1)*7+3+k] = .5*(s_dtp.v[k,i]-s_dtm.v[k,i])/dq
+    AH18_big = Integrator(ah18!, hbig, t0_big, tmax_big)
+    AH18_big(s_dtp,1;grad=false)
+    for i in 1:n, k in 1:3
+        dqdt_num[(i - 1) * 7 +  k] = .5 * (s_dtp.x[k,i] - s_dtm.x[k,i]) / dq
+        dqdt_num[(i - 1) * 7 + 3 + k] = .5 * (s_dtp.v[k,i] - s_dtm.v[k,i]) / dq
     end
-    dqdt_num = convert(Array{Float64,1},dqdt_num)
+    dqdt_num = convert(Array{Float64,1}, dqdt_num)
 
     ####################
 
     ###### Tests #######
     # Check analytic vs finite difference derivatives 
-    @test isapprox(asinh.(s0.jac_step),asinh.(jac_step_num);norm=maxabs)
-    @test isapprox(s_dt.dqdt,dqdt_num,norm=maxabs)
+    @test isapprox(asinh.(s0.jac_step), asinh.(jac_step_num);norm=maxabs)
+    @test isapprox(s_dt.dqdt, dqdt_num, norm=maxabs)
 end
