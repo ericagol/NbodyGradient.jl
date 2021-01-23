@@ -83,7 +83,7 @@ function kepcalc(init::ElementsIC{T}) where T<:AbstractFloat
             b -= 2 
         elseif b < 0
             b = 0
-            i += 1
+            #i += 1
         end
         i += 1
     end
