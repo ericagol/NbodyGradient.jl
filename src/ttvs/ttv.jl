@@ -20,9 +20,9 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T,pai
     # Save the g function, which computes the relative sky velocity dotted with relative position
     # between the planets and star:
     gsave = zeros(T,s.n)
-    for i=2:s.n
+    for i in tt.occs
         # Compute the relative sky velocity dotted with position:
-        gsave[i]= g!(i,1,s.x,s.v)
+        gsave[i] = g!(i,tt.ti,s.x,s.v)
     end
     # Loop over time steps:
     dt = zero(T)
@@ -31,12 +31,12 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T,pai
     for _ in 1:nsteps
     #while s.t[1] < (t0+intr.tmax) && param_real
         # Carry out a ah18 mapping step and advance time:
-        if grad 
+        if grad
             intr.scheme(s,d,h,pair)
         else
             intr.scheme(s,h,pair)
         end
-        istep += 1 
+        istep += 1
         s.t[1] = t0 + (istep * h)
         param_real = all(isfinite.(s.x)) && all(isfinite.(s.v)) && all(isfinite.(s.m)) && all(isfinite.(s.jac_step))
         if ~param_real; break; end
@@ -44,13 +44,12 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T,pai
         # Save current state as prior state.
         set_state!(s_prior,s)
 
-        # Check to see if a transit may have occured before current state.  
+        # Check to see if a transit may have occured before current state.
         # Sky is x-y plane; line of sight is z.
-        # Star is body 1; planets are 2-nbody (note that this could be modified to see if
-        # any body transits another body):
-        for i=2:s.n
+        # Body being transited is tt.ti, tt.occs is list of occultors:
+        for i in tt.occs
             # Compute the relative sky velocity dotted with position:
-            gi = g!(i,1,s.x,s.v)
+            gi = g!(i,tt.ti,s.x,s.v)
             ri = sqrt(s.x[1,i]^2+s.x[2,i]^2+s.x[3,i]^2)  # orbital distance
             # See if sign of g switches, and if planet is in front of star (by a good amount):
             # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
@@ -61,12 +60,12 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T,pai
                     dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
                     set_state!(s,s_prior) # Set state to step after transit occured
                     if grad 
-                        dt = findtransit!(1,i,dt0,s,d,dtdq,intr,pair) # Search for transit time (integrating 'backward')
+                        dt = findtransit!(tt.ti,i,dt0,s,d,dtdq,intr,pair) # Search for transit time (integrating 'backward')
                     else
-                        dt = findtransit!(1,i,dt0,s,dT,intr,pair)
+                        dt = findtransit!(tt.ti,i,dt0,s,dT,intr,pair)
                     end
                     # Copy transit time and derivatives to TransitTiming structure
-                    tt.tt[i,tt.count[i]] = s.t[1] + dt 
+                    tt.tt[i,tt.count[i]] = s.t[1] + dt
                     if grad
                         for k=1:7, p=1:n
                             tt.dtdq0[i,tt.count[i],k,p] = dtdq[1,k,p]
@@ -102,9 +101,9 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
     # Save the g function, which computes the relative sky velocity dotted with relative position
     # between the planets and star:
     gsave = zeros(T,s.n)
-    for i=2:s.n
+    for i in tt.occs
         # Compute the relative sky velocity dotted with position:
-        gsave[i]= g!(i,1,s.x,s.v)
+        gsave[i]= g!(i,tt.ti,s.x,s.v)
     end
     # Loop over time steps:
     dt = zero(T)
@@ -113,25 +112,23 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
     #while s.t[1] < (t0+intr.tmax) && param_real
     for _ in 1:nsteps
         # Carry out a ah18 mapping step and advance time:
-        if grad 
+        if grad
             intr.scheme(s,d,h,pair)
         else
             intr.scheme(s,h,pair)
         end
-        istep += 1 
+        istep += 1
         s.t[1] = t0 + (istep * h)
         param_real = all(isfinite.(s.x)) && all(isfinite.(s.v)) && all(isfinite.(s.m)) && all(isfinite.(s.jac_step))
         if ~param_real; break; end
         # Save current state as prior state.
         set_state!(s_prior,s)
 
-        # Check to see if a transit may have occured before current state.  
+        # Check to see if a transit may have occured before current state.
         # Sky is x-y plane; line of sight is z.
-        # Star is body 1; planets are 2-nbody (note that this could be modified to see if
-        # any body transits another body):
-        for i=2:s.n
+        for i in tt.occs
             # Compute the relative sky velocity dotted with position:
-            gi = g!(i,1,s.x,s.v)
+            gi = g!(i,tt.ti,s.x,s.v)
             ri = sqrt(s.x[1,i]^2+s.x[2,i]^2+s.x[3,i]^2)  # orbital distance
             # See if sign of g switches, and if planet is in front of star (by a good amount):
             # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
@@ -141,13 +138,13 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
                 if tt.count[i] <= ntt_max
                     dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
                     set_state!(s,s_prior) # Set state to step after transit occured
-                    if grad 
-                        dt,vsky,bsky2 = findtransit!(1,i,dt0,s,d,dtbvdq,intr,pair) # Search for transit time (integrating 'backward')
+                    if grad
+                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,d,dtbvdq,intr,pair) # Search for transit time (integrating 'backward')
                     else
-                        dt,vsky,bsky2 = findtransit!(1,i,dt0,s,dT,intr,pair,bv=true)
+                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,dT,intr,pair,bv=true)
                     end
                     # Copy transit time, b, vsky and derivatives to TransitParameters structure
-                    tt.ttbv[1,i,tt.count[i]] = s.t[1] + dt 
+                    tt.ttbv[1,i,tt.count[i]] = s.t[1] + dt
                     tt.ttbv[2,i,tt.count[i]] = vsky
                     tt.ttbv[3,i,tt.count[i]] = bsky2
                     if grad
