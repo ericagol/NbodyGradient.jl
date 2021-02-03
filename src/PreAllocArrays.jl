@@ -31,7 +31,8 @@ struct Derivatives{T<:AbstractFloat}
     dvdk::Vector{T}
 
     function Derivatives(::Type{T}) where T<:AbstractFloat
-        return new{T}([zeros(T,3) for _ in 1:23]...)
+#        return new{T}([zeros(T,3) for _ in 1:23]...)
+        return Derivatives{T}([zeros(T,3) for _ in 1:23]...)
     end
 end
 
