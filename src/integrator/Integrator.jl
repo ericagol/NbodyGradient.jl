@@ -42,6 +42,15 @@ struct State{T<:AbstractFloat} <: AbstractState
     dqdt_error::Vector{T}
     jac_error::Matrix{T}
     n::Int64
+
+    rij::Vector{T} ## kickfast!, phic!, phisalpha!
+    a::Matrix{T} ## phic!, phisalpha!
+    aij::Vector{T} ## phic!, phisalpha!
+    x0::Vector{T} ## kepler_driftij_gamma!
+    v0::Vector{T} ## kepler_driftij_gamma!
+    input::Vector{T} ## jac_delxv_gamma!
+    delxv::Vector{T} ##  jac_delxv_gamma!
+    rtmp::Vector{T}
 end
 
 function State(ic::InitialConditions{T}) where T<:AbstractFloat
@@ -53,7 +62,17 @@ function State(ic::InitialConditions{T}) where T<:AbstractFloat
     dqdt = zeros(T,7*n)
     dqdt_error = zeros(T,size(dqdt))
     jac_error = zeros(T,size(jac_step))
-    return State(x,v,[ic.t0],ic.m,jac_step,dqdt,jac_init,xerror,verror,dqdt_error,jac_error,ic.nbody)
+
+    rij = zeros(T,3)
+    a = zeros(T,3,n)
+    aij = zeros(T,3)
+    x0 = zeros(T,3)
+    v0 = zeros(T,3)
+    input = zeros(T,8)
+    delxv = zeros(T,6)
+    rtmp = zeros(T,3)
+    return State(x,v,[ic.t0],ic.m,jac_step,dqdt,jac_init,xerror,verror,dqdt_error,jac_error,ic.nbody,
+    rij,a,aij,x0,v0,input,delxv,rtmp)
 end
 
 function set_state!(s_old::State,s_new::State)
@@ -83,10 +102,10 @@ Callable `Integrator` method. Integrate to specific time.
 """
 function (intr::Integrator)(s::State{T},time::T;grad::Bool=true) where T<:AbstractFloat 
     t0 = s.t[1]
-    
+
     # Calculate number of steps
     nsteps = abs(round(Int64,(time - t0)/intr.h))
-    
+
     # Step either forward or backward
     h = intr.h * check_step(t0,time)
 
@@ -130,7 +149,7 @@ function (intr::Integrator)(s::State{T},N::Int64;grad::Bool=true) where T<:Abstr
     s2 = zero(T) # For compensated summation
 
     # Preallocate struct of arrays for derivatives (and pair)
-    if grad; d = Derivatives(T,s.n); end 
+    if grad; d = Derivatives(T,s.n); end
     pair = zeros(Bool,s.n,s.n)
 
     # check to see if backward step
@@ -138,9 +157,9 @@ function (intr::Integrator)(s::State{T},N::Int64;grad::Bool=true) where T<:Abstr
 
     for n in 1:N
         # Take integration step and advance time
-        if grad 
+        if grad
             intr.scheme(s,d,intr.h,pair)
-        else 
+        else
             intr.scheme(s,intr.h,pair)
         end
         s.t[1],s2 = comp_sum(s.t[1],s2,intr.h)
@@ -197,7 +216,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     kickfast!(s.x,s.v,s.xerror,s.verror,h/6,s.m,s.n,d.jac_kick,d.dqdt_kick,pair)
     d.dqdt_kick ./= 6 # Since step is h/6
     # Since I removed identity from kickfast, need to add in dqdt:
-    s.dqdt .+= d.dqdt_kick + *(d.jac_kick,s.dqdt)
+    s.dqdt .+= d.dqdt_kick .+ *(d.jac_kick,s.dqdt)
     # Multiply Jacobian from kick step:
     if T == BigFloat
         d.jac_copy .= *(d.jac_kick,s.jac_step)
@@ -248,7 +267,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
                 # Need to multiply by 1/2 since we're taking 1/2 time step:
                 #    BLAS.gemm!('N','N',uno,jac_ij,dqdt_tmp1,half,dqdt_ij)
                 d.dqdt_ij .*= half
-                d.dqdt_ij .+= *(d.jac_ij,d.dqdt_tmp1) + d.dqdt_tmp1
+                d.dqdt_ij .+= *(d.jac_ij,d.dqdt_tmp1) .+ d.dqdt_tmp1
                 # Copy back time derivatives:
                 @inbounds for k1=1:7
                     s.dqdt[indi+k1] = d.dqdt_ij[  k1]
@@ -267,7 +286,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     # Add in time derivative with respect to prior parameters:
     #BLAS.gemm!('N','N',uno,jac_phi,dqdt,uno,dqdt_phi)
     # Copy result to dqdt:
-    s.dqdt .+= d.dqdt_phi + *(d.jac_phi,s.dqdt)
+    s.dqdt .+= d.dqdt_phi .+ *(d.jac_phi,s.dqdt)
     # Add back in the identity portion of the Jacobian with compensated summation:
     comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
     indi=0; indj=0
@@ -313,7 +332,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
                 # Need to multiply by 1/2 since we're taking 1/2 time step:
                 #BLAS.gemm!('N','N',uno,jac_ij,dqdt_tmp1,half,dqdt_ij)
                 d.dqdt_ij .*= half
-                d.dqdt_ij .+= *(d.jac_ij,d.dqdt_tmp1) + d.dqdt_tmp1
+                d.dqdt_ij .+= *(d.jac_ij,d.dqdt_tmp1) .+ d.dqdt_tmp1
                 # Copy back time derivatives:
                 @inbounds for k1=1:7
                     s.dqdt[indi+k1] = d.dqdt_ij[  k1]
@@ -327,7 +346,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     kickfast!(s.x,s.v,s.xerror,s.verror,h/6,s.m,s.n,d.jac_kick,d.dqdt_kick,pair)
     d.dqdt_kick ./= 6 # Since step is h/6
     # Copy result to dqdt:
-    s.dqdt .+= d.dqdt_kick + *(d.jac_kick,s.dqdt)
+    s.dqdt .+= d.dqdt_kick .+ *(d.jac_kick,s.dqdt)
     # Multiply Jacobian from kick step:
     if T == BigFloat
         d.jac_copy .= *(d.jac_kick,s.jac_step)
