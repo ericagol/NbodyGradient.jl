@@ -49,12 +49,12 @@ import NbodyGradient: set_state!, zero_out!, amatrix
         ic_big = ElementsIC(big(t0), N, big.(elements))
         elements_big = copy(ic_big.elements)
         s_big = State(ic_big)
-        ttp = TransitParameters(big(itime), ic_big); 
+        ttp = TransitParameters(big(itime), ic_big);
         ttm = TransitParameters(big(itime), ic_big);
         dtde_num = zeros(BigFloat, size(ttp.dtbvdelements));
         intr_big = Integrator(big(h), zero(BigFloat), big(tmax))
 
-        for jq in 1:N  
+        for jq in 1:N
             for iq in 1:7
                 zero_out!(ttp); zero_out!(ttm);
                 ic_big.elements .= elements_big

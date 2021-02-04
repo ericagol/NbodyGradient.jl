@@ -1,11 +1,11 @@
 using FiniteDifferences
 import NbodyGradient: set_state!, zero_out!, amatrix
 
-@testset "Photodynamics" begin
+@testset "Transit Series" begin
     N = 3
-    t0 = 7257.93115525 - 7300.0 - 0.5 # Initialize IC before first transit 
+    t0 = 7257.93115525 - 7300.0 - 0.5 # Initialize IC before first transit
     h = 0.04
-    itime = 200.0
+    itime = 10.0
     tmax = itime + t0
 
     # Setup initial conditions:
@@ -29,21 +29,26 @@ import NbodyGradient: set_state!, zero_out!, amatrix
     function calc_pd(h, times;grad=false)
         intr = Integrator(ah18!, h, 0.0, tmax)
         s = State(ic)
-        pd = Photodynamics(times, ic)
-        intr(s, pd; grad=grad)
-        return pd
+        ts = TransitSeries(times, ic)
+        intr(s, ts; grad=grad)
+        return ts
     end
 
     ttbv = calc_times(h; grad=true)
     mask = ttbv.ttbv[1,2,:] .!= 0.0
-    pd = calc_pd(h, ttbv.ttbv[1,2,mask]; grad=true)
+    ts = calc_pd(h, ttbv.ttbv[1,2,mask]; grad=true)
 
     tol = 1e-10
-    #@test all(abs.(ttbv.ttbv[2,2,mask] .- pd.vsky[2,:]) .< tol)
-    @test all(abs.(ttbv.ttbv[3,2,mask] .- pd.bsky2[2,:]) .< tol)
+    # Test whether TransitSeries can reproduce b,vsky at transit time from TransitParameters
+    @test all(abs.(ttbv.ttbv[2,2,mask] .- ts.vsky[2,:]) .< tol)
+    @test all(abs.(ttbv.ttbv[3,2,mask] .- ts.bsky2[2,:]) .< tol)
+
+    # Now make set of times to calc b and vsky and compare derivatives
+    times = [t0, t0 + 1.0]
+    ts = calc_pd(h, times; grad=true)
 
     # method for finite diff
-    function calc_b(θ,i=1;b=true,times=ttbv.ttbv[1,2,mask]) 
+    function calc_b(θ,i=1;b=true,times=ttbv.ttbv[1,2,mask])
         elements = reshape(θ,3,7)
         intr = Integrator(ah18!, h, 0.0, 10.0)
         ic = ElementsIC(t0,N,elements)
@@ -64,12 +69,12 @@ import NbodyGradient: set_state!, zero_out!, amatrix
         ic_big = ElementsIC(big(t0), N, big.(elements))
         elements_big = copy(ic_big.elements)
         s_big = State(ic_big)
-        pdp = Photodynamics(big.(times), ic_big); 
-        pdm = Photodynamics(big.(times), ic_big);
+        pdp = TransitSeries(big.(times), ic_big);
+        pdm = TransitSeries(big.(times), ic_big);
         dbvde_num = zeros(BigFloat, size(pdp.dbvdelements));
         intr_big = Integrator(big(h), zero(BigFloat), big(tmax))
-    
-        for jq in 1:N  
+
+        for jq in 1:N
             for iq in 1:7
                 zero_out!(pdp); zero_out!(pdm);
                 ic_big.elements .= elements_big
@@ -84,7 +89,7 @@ import NbodyGradient: set_state!, zero_out!, amatrix
                 sm = State(ic_big)
                 intr_big(sm, pdm; grad=false)
                 for i in 2:N
-                    for k in 1:length(times)-1
+                    for k in 1:ts.nt
                         # Compute double-sided derivative for more accuracy:
                         dbvde_num[1,i,k,iq,jq] = (pdp.vsky[i,k] - pdm.vsky[i,k]) / (2dq0)
                         dbvde_num[2,i,k,iq,jq] = (pdp.bsky2[i,k] - pdm.bsky2[i,k]) / (2dq0)
@@ -95,6 +100,25 @@ import NbodyGradient: set_state!, zero_out!, amatrix
         return dbvde_num
     end
 
-    dbvde_num = calc_finite_diff(h, t0, pd.times, tmax, elements)
-    @test isapprox(asinh.(pd.dbvdelements[3,:,:,:,:]), asinh.(dbvde_num[2,:,:,:,:]);norm=maxabs)
+    mask = zeros(Bool, size(ts.dbvdelements));
+    for jq = 1:N
+        for iq = 1:7
+            if iq == 7; ivary = 1; else; ivary = iq + 1; end  # Shift mass variation to end
+            for i = 2:N
+                for k = 1:ts.nt
+                    for itbv = 1:2
+                        # Ignore inclination & longitude of nodes variations:
+                        if iq != 5 && iq != 6 && ~(jq == 1 && iq < 7) && ~(jq == i && iq == 7)
+                            mask[2,i,k,iq,jq] = true
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    dbvde_num = calc_finite_diff(h, t0, ts.times, tmax, elements)
+    @test isapprox(asinh.(ts.dbvdelements[mask]), asinh.(dbvde_num[mask]); norm=maxabs)
+    #mask_times = ttbv.ttbv[1,2,:] .!= 0.0
+    #@test isapprox(asinh.(ts.dbvdelements[mask]), asinh.(ttbv.dtbvdelements[2:3,:,mask_times,:,:][mask]); norm=maxabs)
 end

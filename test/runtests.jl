@@ -43,13 +43,7 @@ end
         include("test_findtransit.jl")
         include("test_transit_timing.jl")
         include("test_transit_parameters.jl")
+        #include("test_transit_series.jl") ## Not working...
     end;
-    println("Finished.")
-
-    # Not yet working... 
-    #print("Photodyanmics... ")
-    #@testset "Photodynamics" begin
-    #    include("test_photodynamics.jl")
-    #end
     println("Finished.")
 end

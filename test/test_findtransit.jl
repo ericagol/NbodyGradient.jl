@@ -16,7 +16,7 @@
     tt = TransitTiming(itime,ic);
 
     # Run integrator and calculate times
-    intr(s,tt)
+    intr(s,tt,grad=false)
 
     # Check that we get back the initial transit time (up to tolerance)
     tol = 1e-6 # Percent error
