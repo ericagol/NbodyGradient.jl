@@ -22,8 +22,7 @@ export State
 export Integrator
 export Jacobian, dTime
 export CartesianOutput, ElementsOutput
-export TransitTiming, TransitParameters
-export Photodynamics
+export TransitTiming, TransitParameters, TransitSnapshot
 
 # Integrator methods
 export ah18!, dh17!
@@ -34,10 +33,9 @@ include("PreAllocArrays.jl")
 include("ics/InitialConditions.jl")
 include("integrator/Integrator.jl")
 include("outputs/Outputs.jl")
-include("ttvs/TTVs.jl")
-include("photodynamics/Photodynamics.jl")
+include("transits/Transits.jl")
 
 # To be cleaned up
-include("integrator/ah18/ah18_old.jl") 
+include("integrator/ah18/ah18_old.jl")
 
 end
