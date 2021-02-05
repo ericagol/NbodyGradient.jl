@@ -266,6 +266,21 @@ function drift!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2
     return
 end
 
+function drift_grad!(s::State{T},h::T) where {T <: Real}
+    indi::Int64 = 0
+    @inbounds for i=1:s.n
+        indi = (i-1)*7
+        for j=1:NDIM
+            s.x[j,i],s.xerror[j,i] = comp_sum(s.x[j,i],s.xerror[j,i],h*s.v[j,i])
+        end
+        # Now for Jacobian:
+        for k=1:7*s.n, j=1:NDIM
+            s.jac_step[indi+j,k],s.jac_error[indi+j,k] = comp_sum(s.jac_step[indi+j,k],s.jac_error[indi+j,k],h*s.jac_step[indi+3+j,k])
+        end
+    end
+    return
+end
+
 """
 
 AH18 kick step. Computes "fast" kicks for pairs of bodies (in lieu of -drift+Kepler). Include Jacobian and compensated summation.
@@ -323,6 +338,59 @@ function kickfast!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{
     return
 end
 
+function kickfast!(s::State{T},d::Derivatives{T},h::T,pair::Array{Bool,2}) where {T <: Real}
+    n::Int64 = s.n
+    s.rij .= 0.0
+    # Getting rid of identity since we will add that back in in calling routines:
+    d.jac_kick .= 0.0
+    #jac_step.=eye(T,7*n)
+    @inbounds for i=1:n-1
+        indi = (i-1)*7
+        for j=i+1:n
+            indj = (j-1)*7
+            if pair[i,j]
+                for k=1:3
+                    s.rij[k] = s.x[k,i] - s.x[k,j]
+                end
+                r2inv::T = 1.0/(rij[1]*rij[1]+rij[2]*rij[2]+rij[3]*rij[3])
+                r3inv::T = r2inv*sqrt(r2inv)
+                for k=1:3
+                    fac::T = h*GNEWT*rij[k]*r3inv
+                    # Apply impulses:
+                    #v[k,i] -= m[j]*fac
+                    s.v[k,i],s.verror[k,i] = comp_sum(s.v[k,i],s.verror[k,i],-s.m[j]*fac)
+                    #v[k,j] += m[i]*fac
+                    s.v[k,j],s.verror[k,j] = comp_sum(s.v[k,j],s.verror[k,j], s.m[i]*fac)
+                    # Compute time derivative:
+                    d.dqdt_kick[indi+3+k] -= s.m[j]*fac/h
+                    d.dqdt_kick[indj+3+k] += s.m[i]*fac/h
+                    # Computing the derivative
+                    # Mass derivative of acceleration vector (10/6/17 notes):
+                    # Impulse of ith particle depends on mass of jth particle:
+                    d.jac_kick[indi+3+k,indj+7] -= fac
+                    # Impulse of jth particle depends on mass of ith particle:
+                    d.jac_kick[indj+3+k,indi+7] += fac
+                    # x derivative of acceleration vector:
+                    fac *= 3.0*r2inv
+                    # Dot product x_ij.\delta x_ij means we need to sum over components:
+                    for p=1:3
+                        d.jac_kick[indi+3+k,indi+p] += fac*s.m[j]*s.rij[p]
+                        d.jac_kick[indi+3+k,indj+p] -= fac*s.m[j]*s.rij[p]
+                        d.jac_kick[indj+3+k,indj+p] += fac*s.m[i]*s.rij[p]
+                        d.jac_kick[indj+3+k,indi+p] -= fac*s.m[i]*s.rij[p]
+                    end
+                    # Final term has no dot product, so just diagonal:
+                    fac = h*GNEWT*r3inv
+                    d.jac_kick[indi+3+k,indi+k] -= fac*s.m[j]
+                    d.jac_kick[indi+3+k,indj+k] += fac*s.m[j]
+                    d.jac_kick[indj+3+k,indj+k] -= fac*s.m[i]
+                    d.jac_kick[indj+3+k,indi+k] += fac*s.m[i]
+                end
+            end
+        end
+    end
+    return
+end
 """
 
 Computes correction for pairs which are kicked, with Jacobian, dq/dt, and compensated summation.
@@ -490,6 +558,170 @@ function phic!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2}
     return
 end
 
+function phic!(s::State{T},d::Derivatives{T},h::T,pair::Array{Bool,2}) where {T <: Real}
+    s.a .= 0.0
+    s.rij .= 0.0
+    s.aij .= 0.0
+    d.dadq .= 0.0  # There is no velocity dependence
+    d.dotdadq .= 0.0 # There is no velocity dependence
+    # Set jac_step to zeros:
+    #jac_step.=eye(T,7*n)
+    fill!(d.jac_phi,zero(T))
+    fac::T = 0.0; fac1::T = 0.0; fac2::T = 0.0; fac3::T = 0.0; r1::T = 0.0; r2::T = 0.0; r3::T = 0.0
+    coeff::T = h^3/36*GNEWT
+    n::Int64 = s.n
+    @inbounds for i=1:n-1
+        indi = (i-1)*7
+        for j=i+1:n
+            if pair[i,j]
+                indj = (j-1)*7
+                for k=1:3
+                    s.rij[k] = s.x[k,i] - s.x[k,j]
+                end
+                r2inv::T = inv(s.rij[1]*s.rij[1]+s.rij[2]*s.rij[2]+s.rij[3]*s.rij[3])
+                r3inv::T = r2inv*sqrt(r2inv)
+                for k=1:3
+                    # Apply impulses:
+                    fac = GNEWT*s.rij[k]*r3inv
+                    facv = fac*2*h/3
+                    #v[k,i] -= m[j]*facv
+                    s.v[k,i],s.verror[k,i] = comp_sum(s.v[k,i],s.verror[k,i],-s.m[j]*facv)
+                    #v[k,j] += m[i]*facv
+                    s.v[k,j],s.verror[k,j] = comp_sum(s.v[k,j],s.verror[k,j],s.m[i]*facv)
+                    # Compute time derivative:
+                    d.dqdt_phi[indi+3+k] -= 3/h*s.m[j]*facv
+                    d.dqdt_phi[indj+3+k] += 3/h*s.m[i]*facv
+                    s.a[k,i] -= s.m[j]*fac
+                    s.a[k,j] += s.m[i]*fac
+                    # Impulse of ith particle depends on mass of jth particle:
+                    d.jac_phi[indi+3+k,indj+7] -= facv
+                    # Impulse of jth particle depends on mass of ith particle:
+                    d.jac_phi[indj+3+k,indi+7] += facv
+                    # x derivative of acceleration vector:
+                    facv *= 3.0*r2inv
+                    # Dot product x_ij.\delta x_ij means we need to sum over components:
+                    for p=1:3
+                        d.jac_phi[indi+3+k,indi+p] += facv*s.m[j]*s.rij[p]
+                        d.jac_phi[indi+3+k,indj+p] -= facv*s.m[j]*s.rij[p]
+                        d.jac_phi[indj+3+k,indj+p] += facv*s.m[i]*s.rij[p]
+                        d.jac_phi[indj+3+k,indi+p] -= facv*s.m[i]*s.rij[p]
+                    end
+                    # Final term has no dot product, so just diagonal:
+                    facv = 2h/3*GNEWT*r3inv
+                    d.jac_phi[indi+3+k,indi+k] -= facv*s.m[j]
+                    d.jac_phi[indi+3+k,indj+k] += facv*s.m[j]
+                    d.jac_phi[indj+3+k,indj+k] -= facv*s.m[i]
+                    d.jac_phi[indj+3+k,indi+k] += facv*s.m[i]
+                    # Mass derivative of acceleration vector (10/6/17 notes):
+                    # Since there is no velocity dependence, this is fourth parameter.
+                    # Acceleration of ith particle depends on mass of jth particle:
+                    d.dadq[k,i,4,j] -= fac
+                    d.dadq[k,j,4,i] += fac
+                    # x derivative of acceleration vector:
+                    fac *= 3.0*r2inv
+                    # Dot product x_ij.\delta x_ij means we need to sum over components:
+                    for p=1:3
+                        d.dadq[k,i,p,i] += fac*s.m[j]*s.rij[p]
+                        d.dadq[k,i,p,j] -= fac*s.m[j]*s.rij[p]
+                        d.dadq[k,j,p,j] += fac*s.m[i]*s.rij[p]
+                        d.dadq[k,j,p,i] -= fac*s.m[i]*s.rij[p]
+                    end
+                    # Final term has no dot product, so just diagonal:
+                    fac = GNEWT*r3inv
+                    d.dadq[k,i,k,i] -= fac*s.m[j]
+                    d.dadq[k,i,k,j] += fac*s.m[j]
+                    d.dadq[k,j,k,j] -= fac*s.m[i]
+                    d.dadq[k,j,k,i] += fac*s.m[i]
+                end
+            end
+        end
+    end
+    # Next, compute g_i acceleration vector.
+    # Note that jac_step[(i-1)*7+k,(j-1)*7+p] is the derivative of the kth coordinate
+    # of planet i with respect to the pth coordinate of planet j.
+    indi::Int64 = 0; indj::Int64 = 0; indd::Int64 = 0
+    @inbounds for i=1:n-1
+        indi = (i-1)*7
+        for j=i+1:n
+            if pair[i,j] # correction for Kepler pairs
+                indj = (j-1)*7
+                for k=1:3
+                    s.aij[k] = s.a[k,i] - s.a[k,j]
+                    s.rij[k] = s.x[k,i] - s.x[k,j]
+                end
+                # Compute dot product of r_ij with \delta a_ij:
+                fill!(d.dotdadq,0.0)
+                @inbounds for di=1:n, p=1:4, k=1:3
+                    d.dotdadq[p,di] += s.rij[k]*(d.dadq[k,i,p,di]-d.dadq[k,j,p,di])
+                end
+                r2 = s.rij[1]*s.rij[1]+s.rij[2]*s.rij[2]+s.rij[3]*s.rij[3]
+                r1 = sqrt(r2)
+                ardot = s.aij[1]*s.rij[1]+s.aij[2]*s.rij[2]+s.aij[3]*s.rij[3]
+                fac1 = coeff/r1^5
+                fac2 = 3*ardot
+                for k=1:3
+                    fac = fac1*(s.rij[k]*fac2- r2*s.aij[k])
+                    #v[k,i] += m[j]*fac
+                    s.v[k,i],s.verror[k,i] = comp_sum(s.v[k,i],s.verror[k,i],s.m[j]*fac)
+                    #v[k,j] -= m[i]*fac
+                    s.v[k,j],s.verror[k,j] = comp_sum(s.v[k,j],s.verror[k,j],-s.m[i]*fac)
+                    # Mass derivative (first part is easy):
+                    d.jac_phi[indi+3+k,indj+7] += fac
+                    d.jac_phi[indj+3+k,indi+7] -= fac
+                    # Position derivatives:
+                    fac *= 5.0/r2
+                    for p=1:3
+                        d.jac_phi[indi+3+k,indi+p] -= fac*s.m[j]*s.rij[p]
+                        d.jac_phi[indi+3+k,indj+p] += fac*s.m[j]*s.rij[p]
+                        d.jac_phi[indj+3+k,indj+p] -= fac*s.m[i]*s.rij[p]
+                        d.jac_phi[indj+3+k,indi+p] += fac*s.m[i]*s.rij[p]
+                    end
+                    # Diagonal position terms:
+                    fac = fac1*fac2
+                    d.jac_phi[indi+3+k,indi+k] += fac*s.m[j]
+                    d.jac_phi[indi+3+k,indj+k] -= fac*s.m[j]
+                    d.jac_phi[indj+3+k,indj+k] += fac*s.m[i]
+                    d.jac_phi[indj+3+k,indi+k] -= fac*s.m[i]
+                    # Dot product \delta rij terms:
+                    fac = -2*fac1*s.aij[k]
+                    for p=1:3
+                        fac3 = fac*s.rij[p] + fac1*3.0*s.rij[k]*s.aij[p]
+                        d.jac_phi[indi+3+k,indi+p] += s.m[j]*fac3
+                        d.jac_phi[indi+3+k,indj+p] -= s.m[j]*fac3
+                        d.jac_phi[indj+3+k,indj+p] += s.m[i]*fac3
+                        d.jac_phi[indj+3+k,indi+p] -= s.m[i]*fac3
+                    end
+                    # Diagonal acceleration terms:
+                    fac = -fac1*r2
+                    # Duoh.  For dadq, have to loop over all other parameters!
+                    @inbounds for di=1:n
+                        indd = (di-1)*7
+                        for p=1:3
+                            d.jac_phi[indi+3+k,indd+p] += fac*s.m[j]*(d.dadq[k,i,p,di]-d.dadq[k,j,p,di])
+                            d.jac_phi[indj+3+k,indd+p] -= fac*s.m[i]*(d.dadq[k,i,p,di]-d.dadq[k,j,p,di])
+                        end
+                        # Don't forget mass-dependent term:
+                        d.jac_phi[indi+3+k,indd+7] += fac*s.m[j]*(d.dadq[k,i,4,di]-d.dadq[k,j,4,di])
+                        d.jac_phi[indj+3+k,indd+7] -= fac*s.m[i]*(d.dadq[k,i,4,di]-d.dadq[k,j,4,di])
+                    end
+                    # Now, for the final term:  (\delta a_ij . r_ij ) r_ij
+                    fac = 3.0*fac1*s.rij[k]
+                    @inbounds for di=1:n
+                        indd = (di-1)*7
+                        for p=1:3
+                            d.jac_phi[indi+3+k,indd+p] += fac*s.m[j]*d.dotdadq[p,di]
+                            d.jac_phi[indj+3+k,indd+p] -= fac*s.m[i]*d.dotdadq[p,di]
+                        end
+                        d.jac_phi[indi+3+k,indd+7] += fac*s.m[j]*d.dotdadq[4,di]
+                        d.jac_phi[indj+3+k,indd+7] -= fac*s.m[i]*d.dotdadq[4,di]
+                    end
+                end
+            end
+        end
+    end
+    return
+end
+
 """
 
 Computes the 4th-order correction, with Jacobian, dq/dt, and compensated summation.
@@ -635,6 +867,147 @@ function phisalpha!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array
     return
 end
 
+function phisalpha!(s::State{T},d::Derivatives{T},h::T,alpha::T,pair::Array{Bool,2}) where {T <: Real}
+    s.a .= 0.0
+    d.dadq .= 0.0  # There is no velocity dependence
+    d.dotdadq .= 0.0  # There is no velocity dependence
+    s.rij .= 0.0
+    s.aij .= 0.0
+    coeff::T = alpha*h^3/96*2*GNEWT
+    fac::T = 0.0; fac1::T = 0.0; fac2::T = 0.0; fac3::T = 0.0; r1::T = 0.0; r2::T = 0.0; r3::T = 0.0
+    n::Int64 = s.n
+    @inbounds for i=1:n-1
+        indi = (i-1)*7
+        for j=i+1:n
+            if ~pair[i,j] # correction for Kepler pairs
+                indj = (j-1)*7
+                for k=1:3
+                    s.rij[k] = s.x[k,i] - s.x[k,j]
+                end
+                r2 = s.rij[1]*s.rij[1]+s.rij[2]*s.rij[2]+s.rij[3]*s.rij[3]
+                r3 = r2*sqrt(r2)
+                for k=1:3
+                    fac = GNEWT*s.rij[k]/r3
+                    s.a[k,i] -= s.m[j]*fac
+                    s.a[k,j] += s.m[i]*fac
+                    # Mass derivative of acceleration vector (10/6/17 notes):
+                    # Since there is no velocity dependence, this is fourth parameter.
+                    # Acceleration of ith particle depends on mass of jth particle:
+                    d.dadq[k,i,4,j] -= fac
+                    d.dadq[k,j,4,i] += fac
+                    # x derivative of acceleration vector:
+                    fac *= 3.0/r2
+                    # Dot product x_ij.\delta x_ij means we need to sum over components:
+                    for p=1:3
+                        d.dadq[k,i,p,i] += fac*s.m[j]*s.rij[p]
+                        d.dadq[k,i,p,j] -= fac*s.m[j]*s.rij[p]
+                        d.dadq[k,j,p,j] += fac*s.m[i]*s.rij[p]
+                        d.dadq[k,j,p,i] -= fac*s.m[i]*s.rij[p]
+                    end
+                    # Final term has no dot product, so just diagonal:
+                    fac = GNEWT/r3
+                    d.dadq[k,i,k,i] -= fac*s.m[j]
+                    d.dadq[k,i,k,j] += fac*s.m[j]
+                    d.dadq[k,j,k,j] -= fac*s.m[i]
+                    d.dadq[k,j,k,i] += fac*s.m[i]
+                end
+            end
+        end
+    end
+    # Next, compute \tilde g_i acceleration vector (this is rewritten
+    # slightly to avoid reference to \tilde a_i):
+    # Note that jac_step[(i-1)*7+k,(j-1)*7+p] is the derivative of the kth coordinate
+    # of planet i with respect to the pth coordinate of planet j.
+    indi = 0; indj=0; indd = 0
+    @inbounds for i=1:n-1
+        indi = (i-1)*7
+        for j=i+1:n
+            if ~pair[i,j] # correction for Kepler pairs
+                indj = (j-1)*7
+                for k=1:3
+                    s.aij[k] = s.a[k,i] - s.a[k,j]
+                    s.rij[k] = s.x[k,i] - s.x[k,j]
+                end
+                # Compute dot product of r_ij with \delta a_ij:
+                fill!(d.dotdadq,0.0)
+                @inbounds for di=1:n, p=1:4, k=1:3
+                    d.dotdadq[p,di] += s.rij[k]*(d.dadq[k,i,p,di]-d.dadq[k,j,p,di])
+                end
+                r2 = s.rij[1]*s.rij[1]+s.rij[2]*s.rij[2]+s.rij[3]*s.rij[3]
+                r1 = sqrt(r2)
+                ardot = s.aij[1]*s.rij[1]+s.aij[2]*s.rij[2]+s.aij[3]*s.rij[3]
+                fac1 = coeff/r1^5
+                fac2 = (2*GNEWT*(s.m[i]+s.m[j])/r1 + 3*ardot)
+                for k=1:3
+                    fac = fac1*(s.rij[k]*fac2- r2*s.aij[k])
+                    s.v[k,i],s.verror[k,i] = comp_sum(s.v[k,i],s.verror[k,i], s.m[j]*fac)
+                    s.v[k,j],s.verror[k,j] = comp_sum(s.v[k,j],s.verror[k,j],-s.m[i]*fac)
+                    # Compute time derivative:
+                    d.dqdt_phi[indi+3+k] += 3/h*s.m[j]*fac
+                    d.dqdt_phi[indj+3+k] -= 3/h*s.m[i]*fac
+                    # Mass derivative (first part is easy):
+                    d.jac_phi[indi+3+k,indj+7] += fac
+                    d.jac_phi[indj+3+k,indi+7] -= fac
+                    # Position derivatives:
+                    fac *= 5.0/r2
+                    for p=1:3
+                        d.jac_phi[indi+3+k,indi+p] -= fac*s.m[j]*s.rij[p]
+                        d.jac_phi[indi+3+k,indj+p] += fac*s.m[j]*s.rij[p]
+                        d.jac_phi[indj+3+k,indj+p] -= fac*s.m[i]*s.rij[p]
+                        d.jac_phi[indj+3+k,indi+p] += fac*s.m[i]*s.rij[p]
+                    end
+                    # Second mass derivative:
+                    fac = 2*GNEWT*fac1*s.rij[k]/r1
+                    d.jac_phi[indi+3+k,indi+7] += fac*s.m[j]
+                    d.jac_phi[indi+3+k,indj+7] += fac*s.m[j]
+                    d.jac_phi[indj+3+k,indj+7] -= fac*s.m[i]
+                    d.jac_phi[indj+3+k,indi+7] -= fac*s.m[i]
+                    #  (There's also a mass term in dadq [x]. See below.)
+                    # Diagonal position terms:
+                    fac = fac1*fac2
+                    d.jac_phi[indi+3+k,indi+k] += fac*s.m[j]
+                    d.jac_phi[indi+3+k,indj+k] -= fac*s.m[j]
+                    d.jac_phi[indj+3+k,indj+k] += fac*s.m[i]
+                    d.jac_phi[indj+3+k,indi+k] -= fac*s.m[i]
+                    # Dot product \delta rij terms:
+                    fac = -2*fac1*(s.rij[k]*GNEWT*(s.m[i]+s.m[j])/(r2*r1)+s.aij[k])
+                    for p=1:3
+                        fac3 = fac*s.rij[p] + fac1*3.0*s.rij[k]*s.aij[p]
+                        d.jac_phi[indi+3+k,indi+p] += s.m[j]*fac3
+                        d.jac_phi[indi+3+k,indj+p] -= s.m[j]*fac3
+                        d.jac_phi[indj+3+k,indj+p] += s.m[i]*fac3
+                        d.jac_phi[indj+3+k,indi+p] -= s.m[i]*fac3
+                    end
+                    # Diagonal acceleration terms:
+                    fac = -fac1*r2
+                    # Duoh.  For dadq, have to loop over all other parameters!
+                    @inbounds for di=1:n
+                        indd = (di-1)*7
+                        for p=1:3
+                            d.jac_phi[indi+3+k,indd+p] += fac*s.m[j]*(d.dadq[k,i,p,di]-d.dadq[k,j,p,di])
+                            d.jac_phi[indj+3+k,indd+p] -= fac*s.m[i]*(d.dadq[k,i,p,di]-d.dadq[k,j,p,di])
+                        end
+                        # Don't forget mass-dependent term:
+                        d.jac_phi[indi+3+k,indd+7] += fac*s.m[j]*(d.dadq[k,i,4,di]-d.dadq[k,j,4,di])
+                        d.jac_phi[indj+3+k,indd+7] -= fac*s.m[i]*(d.dadq[k,i,4,di]-d.dadq[k,j,4,di])
+                    end
+                    # Now, for the final term:  (\delta a_ij . r_ij ) r_ij
+                    fac = 3.0*fac1*s.rij[k]
+                    @inbounds for di=1:n
+                        indd = (di-1)*7
+                        for p=1:3
+                            d.jac_phi[indi+3+k,indd+p] += fac*s.m[j]*d.dotdadq[p,di]
+                            d.jac_phi[indj+3+k,indd+p] -= fac*s.m[i]*d.dotdadq[p,di]
+                        end
+                        d.jac_phi[indi+3+k,indd+7] += fac*s.m[j]*d.dotdadq[4,di]
+                        d.jac_phi[indj+3+k,indd+7] -= fac*s.m[i]*d.dotdadq[4,di]
+                    end
+                end
+            end
+        end
+    end
+    return
+end
 """
 
 Carries out a Kepler step and reverse drift for bodies i & j, and computes Jacobian. Uses new version of the code with gamma in favor of s, and full auto-diff of Kepler step.
@@ -709,6 +1082,82 @@ function kepler_driftij_gamma!(m::Array{T,1},x::Array{T,2},v::Array{T,2},xerror:
         dqdt[  k] =  mj*jac_kepler[k,8]
         # Position/velocity derivative, body j:
         dqdt[7+k] = -mi*jac_kepler[k,8]
+    end
+    return
+end
+
+function kepler_driftij_gamma!(s::State{T},d::Derivatives{T},i::Int64,j::Int64,h::T,drift_first::Bool) where {T <: Real}
+    # Initial state:
+    #x0 = zeros(T,NDIM) # x0 = positions of body i relative to j
+    #v0 = zeros(T,NDIM) # v0 = velocities of body i relative to j
+    @inbounds for k=1:NDIM
+        s.x0[k] = s.x[k,i] - s.x[k,j]
+        s.v0[k] = s.v[k,i] - s.v[k,j]
+    end
+    gm = GNEWT*(s.m[i]+s.m[j])
+    # jac_ij should be the Jacobian for going from (x_{0,i},v_{0,i},m_i) &  (x_{0,j},v_{0,j},m_j)
+    # to  (x_i,v_i,m_i) &  (x_j,v_j,m_j), a 14x14 matrix for the 3-dimensional case.
+    # Fill with zeros for now:
+    #jac_ij .= eye(T,14)
+    fill!(d.jac_ij,zero(T))
+    if gm == 0
+        #  Do nothing
+        #  for k=1:3
+        #    x[k,i] += h*v[k,i]
+        #    x[k,j] += h*v[k,j]
+        #  end
+    else
+        s.delxv .= 0.0
+        d.jac_kepler .= 0.0
+        d.jac_mass .= 0.0
+        #jac_delxv_gamma!(x0,v0,gm,h,drift_first,delxv,jac_kepler,jac_mass,false)
+        params = jac_delxv_gamma!(s,gm,h,drift_first)
+        compute_jacobian_gamma!(params...,s.x0,s.v0,d.jac_kepler,d.jac_mass,drift_first,false)
+
+        #  kepler_drift_step!(gm, h, state0, state,jac_kepler,drift_first)
+        mijinv::T = one(T)/(s.m[i] + s.m[j])
+        mi::T = s.m[i]*mijinv # Normalize the masses
+        mj::T = s.m[j]*mijinv
+        @inbounds for k=1:3
+            # Add kepler-drift differences, weighted by masses, to start of step:
+            s.x[k,i],s.xerror[k,i] = comp_sum(s.x[k,i],s.xerror[k,i], mj*s.delxv[k])
+            s.x[k,j],s.xerror[k,j] = comp_sum(s.x[k,j],s.xerror[k,j],-mi*s.delxv[k])
+        end
+        @inbounds for k=1:3
+            s.v[k,i],s.verror[k,i] = comp_sum(s.v[k,i],s.verror[k,i], mj*s.delxv[3+k])
+            s.v[k,j],s.verror[k,j] = comp_sum(s.v[k,j],s.verror[k,j],-mi*s.delxv[3+k])
+        end
+        # Compute Jacobian:
+        @inbounds for l=1:6, k=1:6
+            # Compute derivatives of x_i,v_i with respect to initial conditions:
+            d.jac_ij[  k,  l] += mj*d.jac_kepler[k,l]
+            d.jac_ij[  k,7+l] -= mj*d.jac_kepler[k,l]
+            # Compute derivatives of x_j,v_j with respect to initial conditions:
+            d.jac_ij[7+k,  l] -= mi*d.jac_kepler[k,l]
+            d.jac_ij[7+k,7+l] += mi*d.jac_kepler[k,l]
+        end
+        @inbounds for k=1:6
+            # Compute derivatives of x_i,v_i with respect to the masses:
+            #    println("Old dxv/dm_i: ",-mj*delxv[k]*mijinv + GNEWT*mj*jac_kepler[  k,7])
+            #    jac_ij[   k, 7] = -mj*delxv[k]*mijinv + GNEWT*mj*jac_kepler[  k,7]
+            #    println("New dx/dm_i: ",jac_mass[k]*m[j])
+            d.jac_ij[   k, 7] = d.jac_mass[k]*s.m[j]
+            d.jac_ij[   k,14] =  mi*s.delxv[k]*mijinv + GNEWT*mj*d.jac_kepler[  k,7]
+            # Compute derivatives of x_j,v_j with respect to the masses:
+            d.jac_ij[ 7+k, 7] = -mj*s.delxv[k]*mijinv - GNEWT*mi*d.jac_kepler[  k,7]
+            #    println("Old dxv/dm_j: ",mi*delxv[k]*mijinv - GNEWT*mi*jac_kepler[  k,7])
+            #    jac_ij[ 7+k,14] =  mi*delxv[k]*mijinv - GNEWT*mi*jac_kepler[  k,7]
+            #     println("New dxv/dm_j: ",-jac_mass[k]*m[i])
+            d.jac_ij[ 7+k,14] = -d.jac_mass[k]*s.m[i]
+        end
+    end
+    # The following lines are meant to compute dq/dt for kepler_driftij,
+    # but they currently contain an error (test doesn't pass in test_ah18.jl). [ ]
+    @inbounds for k=1:6
+        # Position/velocity derivative, body i:
+        d.dqdt_ij[  k] =  mj*d.jac_kepler[k,8]
+        # Position/velocity derivative, body j:
+        d.dqdt_ij[7+k] = -mi*d.jac_kepler[k,8]
     end
     return
 end

@@ -208,12 +208,14 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     zero_out!(d)
     fill!(s.dqdt,zilch)
 
-    drift!(s.x,s.v,s.xerror,s.verror,h2,s.n,s.jac_step,s.jac_error)
+    #drift!(s.x,s.v,s.xerror,s.verror,h2,s.n,s.jac_step,s.jac_error)
+    drift_grad!(s,h2)
     # Compute time derivative of drift step:
     @inbounds for i=1:n, k=1:3
         s.dqdt[(i-1)*7+k] = half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
     end
-    kickfast!(s.x,s.v,s.xerror,s.verror,h/6,s.m,s.n,d.jac_kick,d.dqdt_kick,pair)
+    #kickfast!(s.x,s.v,s.xerror,s.verror,h/6,s.m,s.n,d.jac_kick,d.dqdt_kick,pair)
+    kickfast!(s,d,h/6,pair)
     d.dqdt_kick ./= 6 # Since step is h/6
     # Since I removed identity from kickfast, need to add in dqdt:
     s.dqdt .+= d.dqdt_kick .+ *(d.jac_kick,s.dqdt)
@@ -231,11 +233,12 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
         @inbounds for j=i+1:s.n
             indj = (j-1)*7
             if ~pair[i,j]  # Check to see if kicks have not been applied
-                kepler_driftij_gamma!(s.m,s.x,s.v,s.xerror,s.verror,i,j,h2,d.jac_ij,d.dqdt_ij,true)
+                #kepler_driftij_gamma!(s.m,s.x,s.v,s.xerror,s.verror,i,j,h2,d.jac_ij,d.dqdt_ij,true)
+                kepler_driftij_gamma!(s,d,i,j,h2,true)
                 # Pick out indices for bodies i & j:
                 @inbounds for k2=1:sevn, k1=1:7
                     d.jac_tmp1[k1,k2] = s.jac_step[ indi+k1,k2]
-                    d.jac_err1[k1,k2] = s.jac_error[indi+k1,k2]    
+                    d.jac_err1[k1,k2] = s.jac_error[indi+k1,k2]
                 end
                 @inbounds for k2=1:sevn, k1=1:7
                     d.jac_tmp1[7+k1,k2] = s.jac_step[ indj+k1,k2]
@@ -276,8 +279,10 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
             end
         end
     end
-    phic!(s.x,s.v,s.xerror,s.verror,h,s.m,s.n,d.jac_phi,d.dqdt_phi,pair)
-    phisalpha!(s.x,s.v,s.xerror,s.verror,h,s.m,two,s.n,d.jac_phi,d.dqdt_phi,pair) # 10%
+    #phic!(s.x,s.v,s.xerror,s.verror,h,s.m,s.n,d.jac_phi,d.dqdt_phi,pair)
+    phic!(s,d,h,pair)
+    #phisalpha!(s.x,s.v,s.xerror,s.verror,h,s.m,two,s.n,d.jac_phi,d.dqdt_phi,pair) # 10%
+    phisalpha!(s,d,h,two,pair)
     if T == BigFloat
         d.jac_copy .= *(d.jac_phi,s.jac_step)
     else
@@ -295,7 +300,8 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
         @inbounds for j=s.n:-1:i+1
             indj=(j-1)*7
             if ~pair[i,j]  # Check to see if kicks have not been applied
-                kepler_driftij_gamma!(s.m,s.x,s.v,s.xerror,s.verror,i,j,h2,d.jac_ij,d.dqdt_ij,false)
+                #kepler_driftij_gamma!(s.m,s.x,s.v,s.xerror,s.verror,i,j,h2,d.jac_ij,d.dqdt_ij,false)
+                kepler_driftij_gamma!(s,d,i,j,h2,false)
                 # Pick out indices for bodies i & j:
                 # Carry out multiplication on the i/j components of matrix:
                 @inbounds for k2=1:sevn, k1=1:7
@@ -343,8 +349,9 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     end
     fill!(d.dqdt_kick,zilch)
     #kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
-    kickfast!(s.x,s.v,s.xerror,s.verror,h/6,s.m,s.n,d.jac_kick,d.dqdt_kick,pair)
-    d.dqdt_kick ./= 6 # Since step is h/6
+    #kickfast!(s.x,s.v,s.xerror,s.verror,h/6,s.m,s.n,d.jac_kick,d.dqdt_kick,pair)
+    kickfast!(s,d,h/6,pair)
+    d.dqdt_kick ./= 6.0 # Since step is h/6
     # Copy result to dqdt:
     s.dqdt .+= d.dqdt_kick .+ *(d.jac_kick,s.dqdt)
     # Multiply Jacobian from kick step:
@@ -356,7 +363,8 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     # Add back in the identity portion of the Jacobian with compensated summation:
     comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
     # Edit this routine to do compensated summation for Jacobian [x]
-    drift!(s.x,s.v,s.xerror,s.verror,h2,s.n,s.jac_step,s.jac_error)
+    #drift!(s.x,s.v,s.xerror,s.verror,h2,s.n,s.jac_step,s.jac_error)
+    drift_grad!(s,h2)
     # Compute time derivative of drift step:
     @inbounds for i=1:n, k=1:3
         s.dqdt[(i-1)*7+k] += half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
