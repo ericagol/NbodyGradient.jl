@@ -1111,7 +1111,7 @@ function kepler_driftij_gamma!(s::State{T},d::Derivatives{T},i::Int64,j::Int64,h
         d.jac_kepler .= 0.0
         d.jac_mass .= 0.0
         #jac_delxv_gamma!(x0,v0,gm,h,drift_first,delxv,jac_kepler,jac_mass,false)
-        params = jac_delxv_gamma!(s,gm,h,drift_first)
+        params::Tuple = jac_delxv_gamma!(s,gm,h,drift_first)
         compute_jacobian_gamma!(params...,s.x0,s.v0,d.jac_kepler,d.jac_mass,drift_first,false)
 
         #  kepler_drift_step!(gm, h, state0, state,jac_kepler,drift_first)

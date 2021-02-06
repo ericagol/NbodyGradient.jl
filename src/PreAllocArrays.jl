@@ -74,6 +74,8 @@ struct Derivatives{T<:AbstractFloat} <: AbstractDerivatives{T}
     jac_mass::Vector{T}
     dadq::Array{T,4}
     dotdadq::Matrix{T}
+    tmp7n::Vector{T}
+    tmp14::Vector{T}
 
     function Derivatives(::Type{T},n::Integer) where T<:AbstractFloat
         sevn::Int64 = 7*n
@@ -94,9 +96,13 @@ struct Derivatives{T<:AbstractFloat} <: AbstractDerivatives{T}
         dadq = zeros(T,3,n,4,n)
         dotdadq = zeros(T,4,n)
 
+        tmp7n = zeros(T,sevn)
+        tmp14 = zeros(T,14)
+
+
         return new{T}(jac_phi,jac_kick,jac_copy,jac_ij,jac_tmp1,jac_tmp2,jac_err1,
                       dqdt_phi,dqdt_kick,dqdt_ij,dqdt_tmp1,dqdt_tmp2,jac_kepler,jac_mass,
-                      dadq,dotdadq)
+                      dadq,dotdadq,tmp7n,tmp14)
     end
 end
 
@@ -108,8 +114,29 @@ function Base.iterate(d::AbstractDerivatives{T},state=1) where T<:AbstractFloat
     return (getfield(d,fields[state]), state+1)
 end
 
+#function zero_out!(d::AbstractDerivatives{T}) where T<:AbstractFloat
+#    for i::Array{T} in d
+#        i .= zero(T)
+#    end
+#end
+
 function zero_out!(d::AbstractDerivatives{T}) where T<:AbstractFloat
-    for i in d
-        i .= zero(T)
-    end
+    d.jac_phi .= zero(T)
+    d.jac_kick .= zero(T)
+    d.jac_copy .= zero(T)
+    d.jac_ij .= zero(T)
+    d.jac_tmp1 .= zero(T)
+    d.jac_tmp2 .= zero(T)
+    d.jac_err1 .= zero(T)
+    d.dqdt_phi .= zero(T)
+    d.dqdt_kick .= zero(T)
+    d.dqdt_ij .= zero(T)
+    d.dqdt_tmp1 .= zero(T)
+    d.dqdt_tmp2 .= zero(T)
+    d.jac_kepler .= zero(T)
+    d.jac_mass .= zero(T)
+    d.dadq .= zero(T)
+    d.dotdadq .= zero(T)
+    d.tmp7n .= zero(T)
+    d.tmp14 .= zero(T)
 end
