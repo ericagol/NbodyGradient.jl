@@ -114,13 +114,13 @@ function Base.iterate(d::AbstractDerivatives{T},state=1) where T<:AbstractFloat
     return (getfield(d,fields[state]), state+1)
 end
 
-#function zero_out!(d::AbstractDerivatives{T}) where T<:AbstractFloat
-#    for i::Array{T} in d
-#        i .= zero(T)
-#    end
-#end
-
 function zero_out!(d::AbstractDerivatives{T}) where T<:AbstractFloat
+    for i::Array{T} in d
+        i .= zero(T)
+    end
+end
+
+function zero_out!(d::Derivatives{T}) where T<:AbstractFloat
     d.jac_phi .= zero(T)
     d.jac_kick .= zero(T)
     d.jac_copy .= zero(T)
