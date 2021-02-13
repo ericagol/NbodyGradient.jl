@@ -230,7 +230,7 @@ function gd!(i::Int64,j::Int64,x::Matrix{T},v::Matrix{T},dqdt::Array{T}) where T
             +(v[1,j]-v[1,i])*(dqdt[(j-1)*7+1]-dqdt[(i-1)*7+1])+(v[2,j]-v[2,i])*(dqdt[(j-1)*7+2]-dqdt[(i-1)*7+2]))
 end
 function dtbvdq!(i,j,x,v,jac_step,dqdt,dtbvdq)
-    n = size(x)[1]
+    n = size(x)[2]
     # Compute time offset:
     gsky = g!(i,j,x,v)
     # Compute derivative of g with respect to time:
