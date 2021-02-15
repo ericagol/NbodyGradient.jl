@@ -2,16 +2,16 @@
     n = 7
     t0 = 7257.0
     h = 0.01
-    itime = 10.0 
+    itime = 10.0
     tmax = itime + t0
     intr = Integrator(ah18!,h,t0,tmax)
-    
+
     # Read in initial conditions:
     H = [n,ones(Int64, n - 1)...]
     elements = readdlm("elements.txt", ',')[1:n,:]
     ic = ElementsIC(t0,H,elements)
     s = State(ic)
-    
+
     # Holds transit times, derivatives, etc.
     tt = TransitTiming(itime,ic);
 
