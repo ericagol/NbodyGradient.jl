@@ -87,12 +87,12 @@ end
 
 """Shows if the positions, velocities, and Jacobian are finite."""
 Base.show(io::IO,::MIME"text/plain",s::State{T}) where {T} = begin
-    println(io,"State{$T}:"); 
-    println(io,"Positions  : ", all(isfinite.(s.x)) ? "finite" : "infinite!"); 
+    println(io,"State{$T}:");
+    println(io,"Positions  : ", all(isfinite.(s.x)) ? "finite" : "infinite!");
     println(io,"Velocities : ", all(isfinite.(s.v)) ? "finite" : "infinite!");
     println(io,"Jacobian   : ", all(isfinite.(s.jac_step)) ? "finite" : "infinite!");
     return
-end 
+end
 
 #========== Running Methods ==========#
 """
@@ -100,7 +100,7 @@ end
 
 Callable `Integrator` method. Integrate to specific time.
 """
-function (intr::Integrator)(s::State{T},time::T;grad::Bool=true) where T<:AbstractFloat 
+function (intr::Integrator)(s::State{T},time::T;grad::Bool=true) where T<:AbstractFloat
     t0 = s.t[1]
 
     # Calculate number of steps
@@ -138,7 +138,7 @@ function (intr::Integrator)(s::State{T},time::T;grad::Bool=true) where T<:Abstra
     end
 
     s.t[1] = time
-    return 
+    return
 end
 
 """
@@ -179,9 +179,15 @@ end
 Integrate in the direction of tmax.
 """
 function check_step(t0::T,tmax::T) where T<:AbstractFloat
-    if abs(tmax) > abs(t0); return sign(tmax); end
-    if sign(tmax) != sign(t0); return sign(tmax); end
-    return -1 * sign(tmax)
+    if abs(tmax) > abs(t0)
+        return sign(tmax)
+    else
+        if sign(tmax) != sign(t0)
+            return sign(tmax)
+        else
+            return -1 * sign(tmax)
+        end
+    end
 end
 
 
