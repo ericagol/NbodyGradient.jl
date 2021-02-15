@@ -2,8 +2,8 @@ abstract type PreAllocArrays end
 abstract type AbstractDerivatives{T} <: PreAllocArrays end
 
 struct Jacobian{T<:AbstractFloat} <: AbstractDerivatives{T}
-   
-    jac_phi::Matrix{T} 
+
+    jac_phi::Matrix{T}
     jac_kick::Matrix{T}
     jac_copy::Matrix{T}
     jac_ij::Matrix{T}
@@ -33,7 +33,7 @@ struct Jacobian{T<:AbstractFloat} <: AbstractDerivatives{T}
 end
 
 struct dTime{T<:AbstractFloat} <: AbstractDerivatives{T}
-   
+
     jac_phi::Matrix{T}
     jac_kick::Matrix{T}
     jac_ij::Matrix{T}
@@ -42,6 +42,8 @@ struct dTime{T<:AbstractFloat} <: AbstractDerivatives{T}
     dqdt_ij::Vector{T}
     dqdt_tmp1::Vector{T}
     dqdt_tmp2::Vector{T}
+    jac_kepler::Matrix{T}
+    jac_mass::Vector{T}
 
     function dTime(::Type{T},n::Integer) where T<:AbstractFloat
         sevn::Int64 = 7*n
@@ -53,18 +55,21 @@ struct dTime{T<:AbstractFloat} <: AbstractDerivatives{T}
         dqdt_ij = zeros(T,14)
         dqdt_tmp1 = zeros(T,14)
         dqdt_tmp2 = zeros(T,14)
-        return new{T}(jac_phi,jac_kick,jac_ij,dqdt_phi,dqdt_kick,dqdt_ij,dqdt_tmp1,dqdt_tmp2)
+        jac_kepler = zeros(T,6,8)
+        jac_mass = zeros(T,6)
+        return new{T}(jac_phi,jac_kick,jac_ij,dqdt_phi,dqdt_kick,dqdt_ij,
+            dqdt_tmp1,dqdt_tmp2,jac_kepler,jac_mass)
     end
 end
 
 struct Derivatives{T<:AbstractFloat} <: AbstractDerivatives{T}
-    jac_phi::Matrix{T} 
-    jac_kick::Matrix{T} 
-    jac_copy::Matrix{T} 
-    jac_ij::Matrix{T} 
-    jac_tmp1::Matrix{T} 
-    jac_tmp2::Matrix{T} 
-    jac_err1::Matrix{T} 
+    jac_phi::Matrix{T}
+    jac_kick::Matrix{T}
+    jac_copy::Matrix{T}
+    jac_ij::Matrix{T}
+    jac_tmp1::Matrix{T}
+    jac_tmp2::Matrix{T}
+    jac_err1::Matrix{T}
     dqdt_phi::Vector{T}
     dqdt_kick::Vector{T}
     dqdt_ij::Vector{T}

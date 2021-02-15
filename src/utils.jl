@@ -407,3 +407,12 @@ function H8_series(gamma::T,beta::T) where {T <: Real}
     h8 *= gamma^5/(beta*sqrt(abs(beta)))
     return h8::T
 end
+
+# Faster dot product; assumes 3D vector
+@inline function dot_fast(a::Vector{T}, b::Vector{T}) where T<:Real
+    a[1]*b[1] + a[2]*b[2] + a[3]*b[3]
+end
+
+@inline function dot_fast(a::Vector{T}) where T<:Real
+    a[1]*a[1] + a[2]*a[2] + a[3]*a[3]
+end

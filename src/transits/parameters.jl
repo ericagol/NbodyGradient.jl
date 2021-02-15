@@ -2,7 +2,7 @@
 
 function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T,pair::Matrix{Bool};grad::Bool=true) where T<:AbstractFloat
     n = s.n; ntt_max = tt.ntt;
-    grad ? d = Derivatives(T,s.n) : dT = dTime(T,s.n)
+    d = Derivatives(T,s.n)
     s_prior = deepcopy(s)
     # Define error estimate based on Kahan (1965):
     s2 = zero(T)
@@ -60,7 +60,7 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
                     if grad
                         dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,d,dtbvdq,intr,pair) # Search for transit time (integrating 'backward')
                     else
-                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,dT,intr,pair,bv=true)
+                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,d,intr,pair,bv=true)
                     end
                     # Copy transit time, b, vsky and derivatives to TransitParameters structure
                     tt.ttbv[1,i,tt.count[i]] = s.t[1] + dt
