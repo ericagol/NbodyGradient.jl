@@ -104,7 +104,6 @@ struct Derivatives{T<:AbstractFloat} <: AbstractDerivatives{T}
         tmp7n = zeros(T,sevn)
         tmp14 = zeros(T,14)
 
-
         return new{T}(jac_phi,jac_kick,jac_copy,jac_ij,jac_tmp1,jac_tmp2,jac_err1,
                       dqdt_phi,dqdt_kick,dqdt_ij,dqdt_tmp1,dqdt_tmp2,jac_kepler,jac_mass,
                       dadq,dotdadq,tmp7n,tmp14)

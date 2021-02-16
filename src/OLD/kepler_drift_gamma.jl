@@ -594,8 +594,8 @@ else
   dgdotm1dk = rinv*r0inv*(-r0*g2+g2*k*(r+r0-g2*k)*betainv*rinv-k*g1*c1*rinv+k*g2*c1*c2*rinv^2)
 #  dgdotm1dk2 = rinv*(g2*(r+r0-g2*k)*betainv-g1*c1+g2*c1*c2*rinv)
   dgdotm1dk2 = betainv*rinv^2*(-beta*eta^2*g2^3+eta*k*g2*h3+eta*r0*beta*g2*(g3-2g1*g2)+ 
-#       (g2^2*(1+g0)-3*g1*g3)*r0*k + beta*g1*(g3 - g1*g2)*r0^2)
        (h6-beta*g2^3)*r0*k + beta*g1*(g3 - g1*g2)*r0^2)
+#       (g2^2*(1+g0)-3*g1*g3)*r0*k + beta*g1*(g3 - g1*g2)*r0^2)
   dgdotm1dh = k*rinv^3*(g2*c2-r*g1)
   @inbounds for j=1:3
     # Next, compute the \delta v-derivatives:
