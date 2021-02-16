@@ -1,8 +1,9 @@
 
-include("../../src/ttv.jl")
-include("/Users/ericagol/Computer/Julia/regress.jl")
+#include("../../src/ttv.jl")
+#include("/Users/ericagol/Computer/Julia/regress.jl")
 
-using PyPlot
+using NbodyGradient, PyPlot, DelimitedFiles
+include("../../test/linreg.jl")
 
 # This routine takes derivative of transit times with respect
 # to the initial orbital elements.
@@ -30,7 +31,7 @@ h  = 0.07
 tmax = 400.0
 
 # Read in initial conditions:
-elements = readdlm("elements.txt",',')
+elements = readdlm("elements_88.txt",',')[1:n,:]
 # Make masses of planets bigger
 #elements[2,1] *= 10.0
 #elements[3,1] *= 10.0
@@ -98,12 +99,12 @@ for i=2:n
   for j=1:nsub-1
     tti1 = tt_save[j,i,1:count[i]]
     tti_max = tt_save[nsub,i,1:count[i]]
-    diff = tti1-tti_max
+    diff = tti1 .- tti_max
     sigt[i-1,j]=std(diff)
     if i == n
-      plot(tti1,diff/h_list[j]^4,linestyle="dashed",c=ch[j])
+      plot(tti1,diff ./ h_list[j]^4,linestyle="dashed",c=ch[j])
     else
-      plot(tti1,diff/h_list[j]^4,label=hlabel[j],c=ch[j])
+      plot(tti1,diff ./ h_list[j]^4,label=hlabel[j],c=ch[j])
     end
   end
 end
@@ -111,7 +112,7 @@ xlabel("Transit time")
 ylabel("Difference in transit time / h^4")
 legend(loc="lower left")
 
-read(STDIN,Char)
+#read(stdin,Char)
 
 # Make a plot of timing errors versus stepsize:
 ntrans = sum(count)
@@ -128,14 +129,16 @@ for i=2:n
   end
   for j=1:nsub-1
     tti1 = tt_save[j,i,1:count[i]]
-    coeff,cov = regress(fn,tti1-tti_max,sig)
-    diff = tti1-tti_max-coeff[1]-coeff[2]*fn[2,:]
+    #coeff,cov = regress(fn,tti1-tti_max,sig)
+    p = Regression(fn[2,:],tti1 .- tti_max)
+    coeff = [p.α, p.β]
+    diff = tti1 .- tti_max .- coeff[1] .- (coeff[2] * fn[2,:])
     sigt[i-1,j]=std(diff)
 #    print("planet: ",i-1," stepsize: ",j," sig: ",sigt[i-1,j])
     if i == n
-      plot(tti1,diff/h_list[j]^4,linestyle="dashed",c=ch[j])
+      plot(tti1,diff ./ h_list[j]^4,linestyle="dashed",c=ch[j])
     else
-      plot(tti1,diff/h_list[j]^4,label=hlabel[j],c=ch[j])
+      plot(tti1,diff ./ h_list[j]^4,label=hlabel[j],c=ch[j])
     end
   end
 end
@@ -143,20 +146,20 @@ ylabel("TTV difference / h^4")
 xlabel("Transit time")
 legend(loc="lower left")
 
- read(STDIN,Char)
+ #read(stdin,Char)
  clf()
  
  
  # Make a plot of some TTVs:
- loglog(h_list,sigt[1,:]*24.*3600.,".",markersize=15,label="Inner planet")
- loglog(h_list,sigt[1,1]*24.*3600.*(h_list/h[1]).^4,label=L"$\propto h^4$")
- loglog(h_list,sigt[2,:]*24.*3600.,".",markersize=15,label="Outer planet")
- loglog(h_list,sigt[2,1]*24.*3600.*(h_list/h[1]).^4,label=L"$\propto h^4$")
+ loglog(h_list,sigt[1,:] .* 24.0 .* 3600.0,".",markersize=15,label="planet b")
+ loglog(h_list,sigt[1,1] .* 24.0 .* 3600.0 .* (h_list ./ h[1]).^4,label=L"$\propto h^4$")
+ loglog(h_list,sigt[2,:] .* 24.0 .* 3600.0,".",markersize=15,label="planet c")
+ loglog(h_list,sigt[2,1] .* 24.0 .* 3600.0 .* (h_list ./ h[1]).^4,label=L"$\propto h^4$")
  legend(loc = "upper left")
  ylabel("RMS TTV error [sec]")
  xlabel("Step size [day]")
  
- PyPlot.savefig("timing_error_vs_h.pdf",bbox_inches="tight")
+ PyPlot.savefig("timing_error_vs_h_kep88_no_outer.pdf",bbox_inches="tight")
 # read(STDIN,Char)
 # 
 # clf()
