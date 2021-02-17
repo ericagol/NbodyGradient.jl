@@ -1,6 +1,10 @@
 
+using NbodyGradient, LinearAlgebra
+
+export State
+
 #include("../src/ttv.jl")
-include("/Users/ericagol/Software/TRAPPIST1_Spitzer/src/NbodyGradient/src/ttv.jl")
+#include("/Users/ericagol/Software/TRAPPIST1_Spitzer/src/NbodyGradient/src/ttv.jl")
 # Specify the initial conditions for the outer solar
 # system 
 #n=6
@@ -43,6 +47,39 @@ for j=1:n
     xout[:,j] .-= xcm[:];
 end
 
+struct CartesianElements{T} <: NbodyGradient.InitialConditions{T}
+    x::Matrix{T}
+    v::Matrix{T}
+    m::Vector{T}
+    nbody::Int64
+end
+
+ic = CartesianElements(xout,vout,m,5);
+
+function NbodyGradient.State(ic::NbodyGradient.InitialConditions{T}) where T<:AbstractFloat
+    n = ic.nbody
+    x = copy(ic.x)
+    v = copy(ic.v)
+    jac_init = zeros(7*n,7*n)
+    xerror = zeros(T,size(x))
+    verror = zeros(T,size(v))
+    jac_step = Matrix{T}(I,7*n,7*n)
+    dqdt = zeros(T,7*n)
+    dqdt_error = zeros(T,size(dqdt))
+    jac_error = zeros(T,size(jac_step))
+
+    rij = zeros(T,3)
+    a = zeros(T,3,n)
+    aij = zeros(T,3)
+    x0 = zeros(T,3)
+    v0 = zeros(T,3)
+    input = zeros(T,8)
+    delxv = zeros(T,6)
+    rtmp = zeros(T,3)
+    return State(x,v,[0.0],copy(ic.m),jac_step,dqdt,jac_init,xerror,verror,dqdt_error,jac_error,n,
+    rij,a,aij,x0,v0,input,delxv,rtmp)
+end
+
 function compute_energy(m::Array{T,1},x::Array{T,2},v::Array{T,2},n::Int64) where {T <: Real}
   KE = 0.0
   for j=1:n
@@ -51,7 +88,7 @@ function compute_energy(m::Array{T,1},x::Array{T,2},v::Array{T,2},n::Int64) wher
   PE = 0.0
   for j=1:n-1
     for k=j+1:n
-       PE += -GNEWT*m[j]*m[k]/norm(x[:,j] .- x[:,k])
+       PE += -NbodyGradient.GNEWT*m[j]*m[k]/norm(x[:,j] .- x[:,k])
     end
   end
   ang_mom = zeros(3)
@@ -72,9 +109,13 @@ h = 50.0 # 50-day time-step chosen to check conservation of energy/angular momen
 #h = 3.125 # 3.125-day time-step chosen to check conservation of energy/angular momentum with time step
 #h = 1.5625 # 1.5625-day time-step chosen to check conservation of energy/angular momentum with time step
 
-# 4e6 time steps ~ 2 Myr (takes about 9 minutes to run)
-# I've reducd that to ~400,000 to take ~1 minute.
+# 50 days x 1e6 time steps ~ 137,000 yr (takes about 15 seconds to run)
 nstep = 1000000; pair = zeros(Bool,n,n)
+
+grad = false
+s = State(ic)
+pair = zeros(Bool,s.n,s.n)
+if grad; d = Derivatives(T,s.n); end
 
 # Set up array to save the state as a function of time:
 xsave = zeros(3,n,nstep)
@@ -85,13 +126,19 @@ PE = zeros(nstep); KE=zeros(nstep); ang_mom = zeros(3,nstep)
 tstart = time()
 # Carry out the integration:
 for i=1:nstep
-  ah18!(xout,vout,xerror,verror,h,m,n,pair)
-  xsave[:,:,i] .= xout
-  vsave[:,:,i] .= vout
-  KE_step,PE_step,ang_mom_step=compute_energy(m,xout,vout,n)
+  if grad
+    ah18!(s,d,h,pair)
+  else
+    ah18!(s,h,pair)
+  end
+  #ah18!(xout,vout,xerror,verror,h,m,n,pair)
+  xsave[:,:,i] .= s.x
+  vsave[:,:,i] .= s.v
+  KE_step,PE_step,ang_mom_step=compute_energy(s.m,s.x,s.v,n)
   KE[i] = KE_step
   PE[i] = PE_step
   ang_mom[:,i] = ang_mom_step
 end
+s.t[1] = h*nstep
 telapse = time()- tstart
 
