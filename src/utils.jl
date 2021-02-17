@@ -64,11 +64,11 @@ function cubic1(a::T, b::T, c::T) where {T <: Real}
     return
 end
 
-function G3(gamma::T,beta::T;gc=convert(T,0.5)) where {T <: Real}
-    sqb = sqrt(abs(beta))
+function G3(gamma::T,beta::T,sqb::T;gc=convert(T,0.5)) where {T <: Real}
     if gamma < gc
-        return G3_series(gamma,beta)
+        return G3_series(gamma,beta,sqb)
     else
+#        sqb = sqrt(abs(beta))
         if beta >= 0 
             return (gamma-sin(gamma))/(sqb*beta) 
         else 
@@ -77,7 +77,7 @@ function G3(gamma::T,beta::T;gc=convert(T,0.5)) where {T <: Real}
     end
 end
 
-function G3_series(gamma::T,beta::T) where {T <: Real}
+function G3_series(gamma::T,beta::T,sqb::T) where {T <: Real}
     epsilon = eps(gamma)
     # Computes G_3(\beta,s) using a series tailored to the precision of s.
     #x2 = -beta*s^2
@@ -102,7 +102,8 @@ function G3_series(gamma::T,beta::T) where {T <: Real}
             break
         end
     end
-    g3 *= gamma^3/(6*sqrt(abs(beta^3)))
+#    g3 *= gamma^3/(6*sqrt(abs(beta^3)))
+    g3 *= gamma^3/(6*abs(beta)*sqb)
     return g3::T
 end
 
@@ -149,12 +150,12 @@ function H1_series(gamma::T,beta::T) where {T <: Real}
     return h1::T
 end
 
-function H2(gamma::T,beta::T;gc=convert(T,0.5)) where {T <: Real}
-    sqb = sqrt(abs(beta))
+function H2(gamma::T,beta::T,sqb::T;gc=convert(T,0.5)) where {T <: Real}
     #x=sqb*s
     if gamma < gc
-        return H2_series(gamma,beta)
+        return H2_series(gamma,beta,sqb)
     else
+#        sqb = sqrt(abs(beta))
         if beta >= 0
             return (sin(gamma)-gamma*cos(gamma))/(sqb*beta) 
         else 
@@ -163,7 +164,7 @@ function H2(gamma::T,beta::T;gc=convert(T,0.5)) where {T <: Real}
     end
 end
 
-function H2_series(gamma::T,beta::T) where {T <: Real}
+function H2_series(gamma::T,beta::T,sqb::T) where {T <: Real}
     # Computes H_2(\beta,s) using a series tailored to the precision of s.
     epsilon = eps(gamma)
     #x2 = -beta*s^2
@@ -189,24 +190,27 @@ function H2_series(gamma::T,beta::T) where {T <: Real}
             break
         end
     end
-    h2 *= gamma^3/(3*sqrt(abs(beta^3)))
+#    h2 *= gamma^3/(3*sqrt(abs(beta^3)))
+    h2 *= gamma^3/(3*abs(beta)*sqb)
     return h2::T
 end
 
-function H3(gamma::T,beta::T;gc=convert(T,0.5)) where {T <: Real}
+function H3(gamma::T,beta::T,sqb::T;gc=convert(T,0.5)) where {T <: Real}
     # This is H_3 = G_1 G_2 - 3 G_3:
     if gamma < gc
-        return H3_series(gamma,beta)
+        return H3_series(gamma,beta,sqb)
     else
         if beta >= 0
-            return (4*sin(gamma)-sin(gamma)*cos(gamma)-3*gamma)/(beta*sqrt(beta))
+#            return (4*sin(gamma)-sin(gamma)*cos(gamma)-3*gamma)/(beta*sqrt(beta))
+            return (4*sin(gamma)-sin(gamma)*cos(gamma)-3*gamma)/(beta*sqb)
         else
-            return (4*sinh(gamma)-sinh(gamma)*cosh(gamma)-3*gamma)/(beta*sqrt(-beta))
+#            return (4*sinh(gamma)-sinh(gamma)*cosh(gamma)-3*gamma)/(beta*sqrt(-beta))
+            return (4*sinh(gamma)-sinh(gamma)*cosh(gamma)-3*gamma)/(beta*sqb)
         end
     end
 end
 
-function H3_series(gamma::T,beta::T) where {T <: Real}
+function H3_series(gamma::T,beta::T,sqb::T) where {T <: Real}
     # Computes H_3(\beta,s) using a series tailored to the precision of gamma:
     epsilon = eps(gamma)
     #x2 = -beta*s^2
@@ -232,24 +236,27 @@ function H3_series(gamma::T,beta::T) where {T <: Real}
             break
         end
     end
-    h3 *= -gamma^5/(beta*sqrt(abs(beta)))
+#    h3 *= -gamma^5/(beta*sqrt(abs(beta)))
+    h3 *= -gamma^5/(beta*sqb)
     return h3::T
 end
 
-function H5(gamma::T,beta::T;gc=convert(T,0.5)) where {T <: Real}
+function H5(gamma::T,beta::T,sqb::T;gc=convert(T,0.5)) where {T <: Real}
     # This is G_1 G_2 -(2+G_0) G_3 = H_2 - 2 G_3:
     if gamma < gc
-        return H5_series(gamma,beta)
+        return H5_series(gamma,beta,sqb)
     else
         if beta >= 0
-            return (3sin(gamma)-2gamma-gamma*cos(gamma))/(beta*sqrt(beta))
+#            return (3sin(gamma)-2gamma-gamma*cos(gamma))/(beta*sqrt(beta))
+            return (3sin(gamma)-2gamma-gamma*cos(gamma))/(beta*sqb)
         else 
-            return (3sinh(gamma)-2gamma-gamma*cosh(gamma))/(beta*sqrt(-beta))
+#            return (3sinh(gamma)-2gamma-gamma*cosh(gamma))/(beta*sqrt(-beta))
+            return (3sinh(gamma)-2gamma-gamma*cosh(gamma))/(beta*sqb)
         end
     end
 end
 
-function H5_series(gamma::T,beta::T) where {T <: Real}
+function H5_series(gamma::T,beta::T,sqb::T) where {T <: Real}
     # Computes H_5(\beta,s) using a series tailored to the precision of gamma:
     epsilon = eps(gamma)
     #x2 = -beta*s^2
@@ -275,7 +282,8 @@ function H5_series(gamma::T,beta::T) where {T <: Real}
             break
         end
     end
-    h5 *= -gamma^5/(beta*sqrt(abs(beta)))
+#    h5 *= -gamma^5/(beta*sqrt(abs(beta)))
+    h5 *= -gamma^5/(beta*sqb)
     return h5::T
 end
 
@@ -322,20 +330,22 @@ function H6_series(gamma::T,beta::T) where {T <: Real}
     return h6::T
 end
 
-function H7(gamma::T,beta::T;gc=convert(T,0.5)) where {T <: Real}
+function H7(gamma::T,beta::T,sqb::T;gc=convert(T,0.5)) where {T <: Real}
     # This is H_7 = G_1 G_2 (1-2 G_0) + 3 G_0^2 G_3:
     if gamma < gc
-        return H7_series(gamma,beta)
+        return H7_series(gamma,beta,sqb)
     else
         if beta >= 0
-            return (3*cos(gamma)*(gamma*cos(gamma)-sin(gamma))+sin(gamma)^3)/(beta*sqrt(beta))
+#            return (3*cos(gamma)*(gamma*cos(gamma)-sin(gamma))+sin(gamma)^3)/(beta*sqrt(beta))
+            return (3*cos(gamma)*(gamma*cos(gamma)-sin(gamma))+sin(gamma)^3)/(beta*sqb)
         else
-            return (3*cosh(gamma)*(gamma*cosh(gamma)-sinh(gamma))-sinh(gamma)^3)/(beta*sqrt(-beta))
+#            return (3*cosh(gamma)*(gamma*cosh(gamma)-sinh(gamma))-sinh(gamma)^3)/(beta*sqrt(-beta))
+            return (3*cosh(gamma)*(gamma*cosh(gamma)-sinh(gamma))-sinh(gamma)^3)/(beta*sqb)
         end
     end
 end
 
-function H7_series(gamma::T,beta::T) where {T <: Real}
+function H7_series(gamma::T,beta::T,sqb::T) where {T <: Real}
     # Computes H_7(\beta,s) using a series tailored to the precision of gamma:
     epsilon = eps(gamma)
     #x2 = -beta*s^2
@@ -361,24 +371,27 @@ function H7_series(gamma::T,beta::T) where {T <: Real}
             break
         end
     end
-    h7 *= gamma^5/(beta*sqrt(abs(beta)))
+#    h7 *= gamma^5/(beta*sqrt(abs(beta)))
+    h7 *= gamma^5/(beta*sqb)
     return h7::T
 end
 
-function H8(gamma::T,beta::T;gc=convert(T,0.5)) where {T <: Real}
+function H8(gamma::T,beta::T,sqb::T;gc=convert(T,0.5)) where {T <: Real}
     # This is H_8 = G_1 G_2 - 3 G_0 G_3:
     if gamma < gc
-        return H8_series(gamma,beta)
+        return H8_series(gamma,beta,sqb)
     else
         if beta >= 0
-            return (-3gamma*cos(gamma) +sin(gamma) +sin(2gamma))/(beta*sqrt(beta))
+#            return (-3gamma*cos(gamma) +sin(gamma) +sin(2gamma))/(beta*sqrt(beta))
+            return (-3gamma*cos(gamma) +sin(gamma) +sin(2gamma))/(beta*sqb)
         else
-            return (-3gamma*cosh(gamma)+sinh(gamma)+sinh(2gamma))/(beta*sqrt(-beta))
+#            return (-3gamma*cosh(gamma)+sinh(gamma)+sinh(2gamma))/(beta*sqrt(-beta))
+            return (-3gamma*cosh(gamma)+sinh(gamma)+sinh(2gamma))/(beta*sqb)
         end
     end
 end
 
-function H8_series(gamma::T,beta::T) where {T <: Real}
+function H8_series(gamma::T,beta::T,sqb::T) where {T <: Real}
     # Computes H_8(\beta,s) using a series tailored to the precision of gamma:
     epsilon = eps(gamma)
     #x2 = -beta*s^2
@@ -404,7 +417,8 @@ function H8_series(gamma::T,beta::T) where {T <: Real}
             break
         end
     end
-    h8 *= gamma^5/(beta*sqrt(abs(beta)))
+#    h8 *= gamma^5/(beta*sqrt(abs(beta)))
+    h8 *= gamma^5/(beta*sqb)
     return h8::T
 end
 
