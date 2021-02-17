@@ -102,15 +102,15 @@ end
 xerror = zeros(3,n); verror = zeros(3,n); 
 #h = 200.0 # 200-day time-step chosen to be <1/20 of the orbital period of Jupiter
 #h = 100.0 # 100-day time-step chosen to check conservation of energy/angular momentum with time step
-h = 50.0 # 50-day time-step chosen to check conservation of energy/angular momentum with time step
-#h = 25.0 # 25-day time-step chosen to check conservation of energy/angular momentum with time step
+#h = 50.0 # 50-day time-step chosen to check conservation of energy/angular momentum with time step
+h = 25.0 # 25-day time-step chosen to check conservation of energy/angular momentum with time step
 #h = 12.5 # 12.5-day time-step chosen to check conservation of energy/angular momentum with time step
 #h = 6.25 # 6.25-day time-step chosen to check conservation of energy/angular momentum with time step
 #h = 3.125 # 3.125-day time-step chosen to check conservation of energy/angular momentum with time step
 #h = 1.5625 # 1.5625-day time-step chosen to check conservation of energy/angular momentum with time step
 
 # 50 days x 1e6 time steps ~ 137,000 yr (takes about 15 seconds to run)
-nstep = 1000000; pair = zeros(Bool,n,n)
+nstep = 2000000; pair = zeros(Bool,n,n)
 
 grad = false
 s = State(ic)

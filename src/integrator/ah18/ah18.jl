@@ -886,7 +886,7 @@ function jac_delxv_gamma!(s::State{T},k::T,h::T,drift_first::Bool;debug::Bool=fa
     gamma2::T = 3*copy(gamma)
     iter = 0
     ITMAX = 20
-    TOL = sqrt(eps(1.0))
+#    TOL = sqrt(eps(1.0))
     # Compute coefficients: (8/28/19 notes)
     #  c1 = k; c2 = -zeta; c3 = -eta*sqb; c4 = sqb*(eta-h*beta0); c5 = eta*signb*sqb
     c1 = k; c2 = -2zeta; c3 = 2*eta*signb*sqb; c4 = -sqb*h*beta0; c5 = 2eta*signb*sqb
@@ -909,7 +909,8 @@ function jac_delxv_gamma!(s::State{T},k::T,h::T,drift_first::Bool;debug::Bool=fa
         iter +=1
 #        println(iter," ",gamma," ",gamma1," ",gamma2," ",gamma-gamma1)
 #        if iter >= ITMAX || gamma == gamma2 || gamma == gamma1
-        if abs(gamma-gamma1) < TOL*abs(gamma)
+        if gamma == gamma2 || gamma == gamma1
+#        if abs(gamma-gamma1) < TOL*abs(gamma)
             break
         end
     end
