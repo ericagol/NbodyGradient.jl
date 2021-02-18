@@ -1,3 +1,4 @@
+                        
 # Some utility functions
 
 #================================ Compensated Summation =================================#
@@ -33,15 +34,70 @@ Kahan (1965) compenstated summation for `::Matrix{<:Real}`.
 ...
 """
 function comp_sum_matrix!(sum_value::Array{T,2},sum_error::Array{T,2},addend::Array{T,2}) where {T <: Real}
+    tmp = zero(T)
     @inbounds for i in eachindex(sum_value)
         sum_error[i] += addend[i]
         tmp = sum_value[i] + sum_error[i]
-        sum_error[i] = (sum_value[i] - tmp) + sum_error[i]
+#        sum_error[i] = (sum_value[i] - tmp) + sum_error[i]
+        sum_error[i] += sum_value[i] - tmp
         sum_value[i] = tmp
     end
     return
 end
 
+"""
+  Copies portion of Jacobian for multiplication
+"""
+     function copy_submatrix!(s::State{T},d::Derivatives{T},indi::Int64,indj::Int64,sevn::Int64)  where T <: AbstractFloat
+       # Pick out indices for bodies i & j:
+       @inbounds for k2=1:sevn, k1=1:7
+           d.jac_tmp1[k1,k2] = s.jac_step[ indi+k1,k2]
+       end
+       @inbounds for k2=1:sevn, k1=1:7
+           d.jac_err1[k1,k2] = s.jac_error[indi+k1,k2]
+       end
+       @inbounds for k2=1:sevn, k1=1:7
+           d.jac_tmp1[7+k1,k2] = s.jac_step[ indj+k1,k2]
+       end
+       @inbounds for k2=1:sevn, k1=1:7
+           d.jac_err1[7+k1,k2] = s.jac_error[indj+k1,k2]
+       end
+       # Copy current time derivatives for multiplication purposes:
+       @inbounds for k1=1:7
+           d.dqdt_tmp1[  k1] = s.dqdt[indi+k1]
+       end
+       @inbounds for k1=1:7
+           d.dqdt_tmp1[7+k1] = s.dqdt[indj+k1]
+       end
+     return
+     end
+
+"""
+  Copies back:
+"""
+     function ypoc_submatrix!(s::State{T},d::Derivatives{T},indi::Int64,indj::Int64,sevn::Int64)  where T <: AbstractFloat
+       # Copy back to the Jacobian:
+       @inbounds for k2=1:sevn, k1=1:7
+           s.jac_step[ indi+k1,k2]=d.jac_tmp1[k1,k2]
+       end
+       @inbounds for k2=1:sevn, k1=1:7
+           s.jac_error[indi+k1,k2]=d.jac_err1[k1,k2]
+       end
+       @inbounds for k2=1:sevn, k1=1:7
+           s.jac_step[ indj+k1,k2]=d.jac_tmp1[7+k1,k2]
+       end
+       @inbounds for k2=1:sevn, k1=1:7
+           s.jac_error[indj+k1,k2]=d.jac_err1[7+k1,k2]
+       end
+       # Copy back time derivatives:
+       @inbounds for k1=1:7
+           s.dqdt[indi+k1] = d.dqdt_ij[  k1]
+       end
+       @inbounds for k1=1:7
+           s.dqdt[indj+k1] = d.dqdt_ij[7+k1]
+       end
+    return
+    end
 #================================ Integrator Utilities ==================================#
 
 function cubic1(a::T, b::T, c::T) where {T <: Real}
@@ -78,7 +134,7 @@ function G3(gamma::T,beta::T,sqb::T;gc=convert(T,0.5)) where {T <: Real}
 end
 
 function G3_series(gamma::T,beta::T,sqb::T) where {T <: Real}
-    epsilon = eps(gamma)
+    #epsilon = eps(gamma)
     # Computes G_3(\beta,s) using a series tailored to the precision of s.
     #x2 = -beta*s^2
     x2 = -sign(beta)*gamma^2
@@ -122,7 +178,7 @@ end
 
 function H1_series(gamma::T,beta::T) where {T <: Real}
     # Computes H_1(\beta,s) using a series tailored to the precision of s.
-    epsilon = eps(gamma)
+    #epsilon = eps(gamma)
     #x2 = -beta*s^2
     x2 = -sign(beta)*gamma^2
     term = one(T)
@@ -166,7 +222,7 @@ end
 
 function H2_series(gamma::T,beta::T,sqb::T) where {T <: Real}
     # Computes H_2(\beta,s) using a series tailored to the precision of s.
-    epsilon = eps(gamma)
+    #epsilon = eps(gamma)
     #x2 = -beta*s^2
     x2 = -sign(beta)*gamma^2
     term = one(T)
@@ -212,7 +268,7 @@ end
 
 function H3_series(gamma::T,beta::T,sqb::T) where {T <: Real}
     # Computes H_3(\beta,s) using a series tailored to the precision of gamma:
-    epsilon = eps(gamma)
+    #epsilon = eps(gamma)
     #x2 = -beta*s^2
     x2 = -sign(beta)*gamma^2
     term = convert(T,1//30)
@@ -224,13 +280,16 @@ function H3_series(gamma::T,beta::T,sqb::T) where {T <: Real}
     ITMAX = 100
     # Terminate series when required precision reached:
     #while abs(term) > epsilon*abs(h3)
+    four2n = one(T)*4
     while true
         h32 = h31
         h31 = h3
         n += 1
         term *= x2
         term /= (2n+4)*(2n+5)
-        h3 += term*(4^(n+1)-1)
+        four2n *= 4
+#        h3 += term*(4^(n+1)-1)
+        h3 += term*(four2n-1)
         iter += 1
         if iter >= ITMAX || h3 == h32 || h3 == h31
             break
@@ -258,7 +317,7 @@ end
 
 function H5_series(gamma::T,beta::T,sqb::T) where {T <: Real}
     # Computes H_5(\beta,s) using a series tailored to the precision of gamma:
-    epsilon = eps(gamma)
+    #epsilon = eps(gamma)
     #x2 = -beta*s^2
     x2 = -sign(beta)*gamma^2
     term = one(T)/60
@@ -302,7 +361,7 @@ end
 
 function H6_series(gamma::T,beta::T) where {T <: Real}
     # Computes H_6(\beta,s) using a series tailored to the precision of gamma:
-    epsilon = eps(gamma)
+    #epsilon = eps(gamma)
     #x2 = -beta*s^2
     x2 = -sign(beta)*gamma^2
     term = convert(T,1//360)
@@ -314,13 +373,16 @@ function H6_series(gamma::T,beta::T) where {T <: Real}
     ITMAX = 100
     # Terminate series when required precision reached:
     #while abs(term) > epsilon*abs(h6)
+    four2n = one(T)*16
     while true
         h62 = h61
         h61 = h6
         n += 1
         term *= x2
         term /= (2n+5)*(2n+6)
-        h6 += term*(4^(n+2)-3*n-7)
+        four2n *= 4
+#        h6 += term*(4^(n+2)-3*n-7)
+        h6 += term*(four2n-3*n-7)
         iter +=1
         if iter >= ITMAX || h6 == h62 || h6 == h61
             break
@@ -347,7 +409,7 @@ end
 
 function H7_series(gamma::T,beta::T,sqb::T) where {T <: Real}
     # Computes H_7(\beta,s) using a series tailored to the precision of gamma:
-    epsilon = eps(gamma)
+    #epsilon = eps(gamma)
     #x2 = -beta*s^2
     x2 = -sign(beta)*gamma^2
     term = -convert(T,3//20160)*x2
@@ -359,13 +421,18 @@ function H7_series(gamma::T,beta::T,sqb::T) where {T <: Real}
     ITMAX = 100
     # Terminate series when required precision reached:
     #while abs(term) > epsilon*abs(h7)
+    four2n = one(T)*128
+    nine2n = one(T)*729
     while true
         h72 = h71
         h71 = h7
         n += 1
         term *= x2
         term /= (2n+6)*(2n+7)
-        h7 += term*(9^(3+n)-1-(5+2*n)*2^(7+2*n))
+        four2n *= 4
+        nine2n *= 9
+#        h7 += term*(9^(3+n)-1-(5+2*n)*2^(7+2*n))
+        h7 += term*(nine2n-1-(5+2*n)*four2n)
         iter += 1
         if iter >= ITMAX || h7 == h72 || h7 == h71
             break
@@ -393,7 +460,7 @@ end
 
 function H8_series(gamma::T,beta::T,sqb::T) where {T <: Real}
     # Computes H_8(\beta,s) using a series tailored to the precision of gamma:
-    epsilon = eps(gamma)
+    #epsilon = eps(gamma)
     #x2 = -beta*s^2
     x2 = -sign(beta)*gamma^2
     term = convert(T,1//120)
@@ -405,14 +472,18 @@ function H8_series(gamma::T,beta::T,sqb::T) where {T <: Real}
     ITMAX = 100
     # Terminate series when required precision reached:
     #while abs(term) > epsilon*abs(h8)
+    four2n = one(T)*32
     while true
         h82 = h81
         h81 = h8
         n += 1
         term *= x2
         term /= (2n+4)*(2n+5)
-        h8 += term*(2^(5+2n)-14-6n)
+        four2n *= 4
+#        h8 += term*(2^(5+2n)-14-6n)
+        h8 += term*(four2n-14-6n)
         iter +=1
+#        println("H8: ",iter," ",h8," ",gamma," ",beta)
         if iter >= ITMAX || h8 == h82 || h8 == h81
             break
         end
