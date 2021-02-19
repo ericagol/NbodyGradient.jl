@@ -7,5 +7,5 @@ makedocs(sitename="NbodyGradient",
 )
 
 deploydocs(
-    repo = "github.com/langfzac/NbodyGradient.git"
+    repo = "github.com/ericagol/NbodyGradient.git"
 )
