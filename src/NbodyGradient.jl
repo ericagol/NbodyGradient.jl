@@ -17,7 +17,7 @@ const third = 1.0/3.0
 const alpha0 = 0.0
 
 # Types
-export Elements, ElementsIC, CartesianIC
+export Elements, ElementsIC, CartesianIC, InitialConditions
 export State
 export Integrator
 export Jacobian, dTime
