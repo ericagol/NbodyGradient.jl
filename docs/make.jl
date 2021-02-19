@@ -5,3 +5,7 @@ makedocs(sitename="NbodyGradient",
         prettyurls = get(ENV, "CI", nothing) == "true"
     )
 )
+
+deploydocs(
+    repo = "github.com/langfzac/NbodyGradient.git"
+)
