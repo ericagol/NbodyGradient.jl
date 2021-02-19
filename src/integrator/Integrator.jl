@@ -4,16 +4,21 @@ import NbodyGradient: InitialConditions
 abstract type AbstractIntegrator end
 
 """
+    Integrator{T<:AbstractFloat}
 
-Integrator to be used, and relevant parameters.
+Integrator. Used as a functor to integrate a [`State`](@ref).
+
+# Fields
+- `scheme::Function` : The integration scheme to use.
+- `h::T` : Step size.
+- `t0::T` : Initial time.
+- `tmax::T` : Final time.
 """
 mutable struct Integrator{T<:AbstractFloat} <: AbstractIntegrator
     scheme::Function
     h::T
     t0::T
     tmax::T
-
-    Integrator(scheme::Function,h::T,t0::T,tmax::T) where T<:AbstractFloat = new{T}(scheme,h,t0,tmax)
 end
 
 Integrator(h::T,t0::T) where T<:AbstractFloat = Integrator(ah18!,h,t0,t0+h)
@@ -26,8 +31,17 @@ Integrator(h::T,t0::T,tmax::T) where T<:AbstractFloat = Integrator(ah18!,h,t0,tm
 abstract type AbstractState end
 
 """
+    State{T<:AbstractFloat} <: AbstractState
 
 Current state of simulation.
+
+# Fields (relevant to the user)
+- `x::Matrix{T}` : Positions of each body [dimension, body].
+- `v::Matrix{T}` : Velocities of each body [dimension, body].
+- `t::Vector{T}` : Current time of simulation.
+- `m::Vector{T}` : Masses of each body.
+- `jac_step::Matrix{T}` : Current Jacobian.
+- `dqdt::Vector{T}` : Derivative with respect to time.
 """
 struct State{T<:AbstractFloat} <: AbstractState
     x::Matrix{T}
@@ -43,16 +57,24 @@ struct State{T<:AbstractFloat} <: AbstractState
     jac_error::Matrix{T}
     n::Int64
 
-    rij::Vector{T} ## kickfast!, phic!, phisalpha!
-    a::Matrix{T} ## phic!, phisalpha!
-    aij::Vector{T} ## phic!, phisalpha!
-    x0::Vector{T} ## kepler_driftij_gamma!
-    v0::Vector{T} ## kepler_driftij_gamma!
-    input::Vector{T} ## jac_delxv_gamma!
-    delxv::Vector{T} ##  jac_delxv_gamma!
+    rij::Vector{T}
+    a::Matrix{T}
+    aij::Vector{T}
+    x0::Vector{T}
+    v0::Vector{T}
+    input::Vector{T}
+    delxv::Vector{T}
     rtmp::Vector{T}
 end
 
+"""
+    State(ic)
+
+Constructor for [`State`](@ref) type.
+
+# Arguments
+- `ic::InitialConditions{T}` : Initial conditions for the system.
+"""
 function State(ic::InitialConditions{T}) where T<:AbstractFloat
     x,v,jac_init = init_nbody(ic)
     n = ic.nbody
@@ -95,10 +117,18 @@ Base.show(io::IO,::MIME"text/plain",s::State{T}) where {T} = begin
 end
 
 #========== Running Methods ==========#
+
 """
     (::Integrator)(s, time; grad=true)
 
-Callable `Integrator` method. Integrate to specific time.
+Callable [`Integrator`](@ref) method. Integrate to specific time.
+
+# Arguments
+- `s::State{T}` : The current state of the simulation.
+- `time::T` : Time to integrate to.
+
+### Optional
+- `grad::Bool` : Choose whether to calculate gradients. (Default = true)
 """
 function (intr::Integrator)(s::State{T},time::T;grad::Bool=true) where T<:AbstractFloat
     t0 = s.t[1]
@@ -142,8 +172,16 @@ function (intr::Integrator)(s::State{T},time::T;grad::Bool=true) where T<:Abstra
 end
 
 """
+    (::Integrator)(s, N; grad=true)
 
-Take N steps.
+Callable [`Integrator`](@ref) method. Integrate for N steps.
+
+# Arguments
+- `s::State{T}` : The current state of the simulation.
+- `N::Int64` : Number of steps.
+
+### Optional
+- `grad::Bool` : Choose whether to calculate gradients. (Default = true)
 """
 function (intr::Integrator)(s::State{T},N::Int64;grad::Bool=true) where T<:AbstractFloat
     s2 = zero(T) # For compensated summation
@@ -171,13 +209,19 @@ function (intr::Integrator)(s::State{T},N::Int64;grad::Bool=true) where T<:Abstr
     return
 end
 
-"""Integrates to `i.tmax`."""
+"""
+    (::Integrator)(s; grad=true)
+
+Callable [`Integrator`](@ref) method. Integrate to `tmax` -- specified in constructor.
+
+# Arguments
+- `s::State{T}` : The current state of the simulation.
+
+### Optional
+- `grad::Bool` : Choose whether to calculate gradients. (Default = true)
+"""
 (intr::Integrator)(s::State{T};grad::Bool=true) where T<:AbstractFloat = intr(s,intr.tmax,grad=grad)
 
-"""
-
-Integrate in the direction of tmax.
-"""
 function check_step(t0::T,tmax::T) where T<:AbstractFloat
     if abs(tmax) > abs(t0)
         return sign(tmax)
