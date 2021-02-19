@@ -28,10 +28,10 @@ export TransitTiming, TransitParameters, TransitSnapshot
 export ah18!, dh17!
 
 # Source code
-include("utils.jl")
 include("PreAllocArrays.jl")
 include("ics/InitialConditions.jl")
 include("integrator/Integrator.jl")
+include("utils.jl")
 include("outputs/Outputs.jl")
 include("transits/Transits.jl")
 

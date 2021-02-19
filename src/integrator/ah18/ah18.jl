@@ -34,19 +34,20 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
             if ~pair[i,j]  # Check to see if kicks have not been applied
                 kepler_driftij_gamma!(s,d,i,j,h2,true)
                 # Pick out indices for bodies i & j:
-                @inbounds for k2=1:sevn, k1=1:7
-                    d.jac_tmp1[k1,k2] = s.jac_step[ indi+k1,k2]
-                    d.jac_err1[k1,k2] = s.jac_error[indi+k1,k2]
-                end
-                @inbounds for k2=1:sevn, k1=1:7
-                    d.jac_tmp1[7+k1,k2] = s.jac_step[ indj+k1,k2]
-                    d.jac_err1[7+k1,k2] = s.jac_error[indj+k1,k2]
-                end
-                # Copy current time derivatives for multiplication purposes:
-                @inbounds for k1=1:7
-                    d.dqdt_tmp1[  k1] = s.dqdt[indi+k1]
-                    d.dqdt_tmp1[7+k1] = s.dqdt[indj+k1]
-                end
+#                @inbounds for k2=1:sevn, k1=1:7
+#                    d.jac_tmp1[k1,k2] = s.jac_step[ indi+k1,k2]
+#                    d.jac_err1[k1,k2] = s.jac_error[indi+k1,k2]
+#                end
+#                @inbounds for k2=1:sevn, k1=1:7
+#                    d.jac_tmp1[7+k1,k2] = s.jac_step[ indj+k1,k2]
+#                    d.jac_err1[7+k1,k2] = s.jac_error[indj+k1,k2]
+#                end
+#                # Copy current time derivatives for multiplication purposes:
+#                @inbounds for k1=1:7
+#                    d.dqdt_tmp1[  k1] = s.dqdt[indi+k1]
+#                    d.dqdt_tmp1[7+k1] = s.dqdt[indj+k1]
+#                end
+                copy_submatrix!(s,d,indi,indj,sevn)
                 # Carry out multiplication on the i/j components of matrix:
                 if T == BigFloat
                     d.jac_tmp2 .= *(d.jac_ij,d.jac_tmp1)
@@ -56,24 +57,25 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
                 # Add back in the Jacobian with compensated summation:
                 comp_sum_matrix!(d.jac_tmp1,d.jac_err1,d.jac_tmp2)
                 # Copy back to the Jacobian:
-                @inbounds for k2=1:sevn, k1=1:7
-                    s.jac_step[ indi+k1,k2]=d.jac_tmp1[k1,k2]
-                    s.jac_error[indi+k1,k2]=d.jac_err1[k1,k2]
-                end
-                @inbounds for k2=1:sevn, k1=1:7
-                    s.jac_step[ indj+k1,k2]=d.jac_tmp1[7+k1,k2]
-                    s.jac_error[indj+k1,k2]=d.jac_err1[7+k1,k2]
-                end
+#                @inbounds for k2=1:sevn, k1=1:7
+#                    s.jac_step[ indi+k1,k2]=d.jac_tmp1[k1,k2]
+#                    s.jac_error[indi+k1,k2]=d.jac_err1[k1,k2]
+#                end
+#                @inbounds for k2=1:sevn, k1=1:7
+#                    s.jac_step[ indj+k1,k2]=d.jac_tmp1[7+k1,k2]
+#                    s.jac_error[indj+k1,k2]=d.jac_err1[7+k1,k2]
+#                end
                 # Add in partial derivatives with respect to time:
                 # Need to multiply by 1/2 since we're taking 1/2 time step:
                 d.dqdt_ij .*= half
                 mul!(d.tmp14, d.jac_ij, d.dqdt_tmp1)
                 d.dqdt_ij .+= d.dqdt_tmp1 .+ d.tmp14#*(d.jac_ij,d.dqdt_tmp1)
-                # Copy back time derivatives:
-                @inbounds for k1=1:7
-                    s.dqdt[indi+k1] = d.dqdt_ij[  k1]
-                    s.dqdt[indj+k1] = d.dqdt_ij[7+k1]
-                end
+#                # Copy back time derivatives:
+#                @inbounds for k1=1:7
+#                    s.dqdt[indi+k1] = d.dqdt_ij[  k1]
+#                    s.dqdt[indj+k1] = d.dqdt_ij[7+k1]
+#                end
+                ypoc_submatrix!(s,d,indi,indj,sevn)
             end
         end
     end
@@ -99,19 +101,20 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
                 kepler_driftij_gamma!(s,d,i,j,h2,false)
                 # Pick out indices for bodies i & j:
                 # Carry out multiplication on the i/j components of matrix:
-                @inbounds for k2=1:sevn, k1=1:7
-                    d.jac_tmp1[k1,k2] = s.jac_step[ indi+k1,k2]
-                    d.jac_err1[k1,k2] = s.jac_error[indi+k1,k2]
-                end
-                @inbounds for k2=1:sevn, k1=1:7
-                    d.jac_tmp1[7+k1,k2] = s.jac_step[ indj+k1,k2]
-                    d.jac_err1[7+k1,k2] = s.jac_error[indj+k1,k2]
-                end
-                # Copy current time derivatives for multiplication purposes:
-                @inbounds for k1=1:7
-                    d.dqdt_tmp1[  k1] = s.dqdt[indi+k1]
-                    d.dqdt_tmp1[7+k1] = s.dqdt[indj+k1]
-                end
+#                @inbounds for k2=1:sevn, k1=1:7
+#                    d.jac_tmp1[k1,k2] = s.jac_step[ indi+k1,k2]
+#                    d.jac_err1[k1,k2] = s.jac_error[indi+k1,k2]
+#                end
+#                @inbounds for k2=1:sevn, k1=1:7
+#                    d.jac_tmp1[7+k1,k2] = s.jac_step[ indj+k1,k2]
+#                    d.jac_err1[7+k1,k2] = s.jac_error[indj+k1,k2]
+#                end
+#                # Copy current time derivatives for multiplication purposes:
+#                @inbounds for k1=1:7
+#                    d.dqdt_tmp1[  k1] = s.dqdt[indi+k1]
+#                    d.dqdt_tmp1[7+k1] = s.dqdt[indj+k1]
+#                end
+                copy_submatrix!(s,d,indi,indj,sevn)
                 # Carry out multiplication on the i/j components of matrix:
                 if T == BigFloat
                     d.jac_tmp2 .= *(d.jac_ij,d.jac_tmp1)
@@ -121,24 +124,25 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
                 # Add back in the Jacobian with compensated summation:
                 comp_sum_matrix!(d.jac_tmp1,d.jac_err1,d.jac_tmp2)
                 # Copy back to the Jacobian:
-                @inbounds for k2=1:sevn, k1=1:7
-                    s.jac_step[ indi+k1,k2]=d.jac_tmp1[k1,k2]
-                    s.jac_error[indi+k1,k2]=d.jac_err1[k1,k2]
-                end
-                @inbounds for k2=1:sevn, k1=1:7
-                    s.jac_step[ indj+k1,k2]=d.jac_tmp1[7+k1,k2]
-                    s.jac_error[indj+k1,k2]=d.jac_err1[7+k1,k2]
-                end
+#                @inbounds for k2=1:sevn, k1=1:7
+#                    s.jac_step[ indi+k1,k2]=d.jac_tmp1[k1,k2]
+#                    s.jac_error[indi+k1,k2]=d.jac_err1[k1,k2]
+#                end
+#                @inbounds for k2=1:sevn, k1=1:7
+#                    s.jac_step[ indj+k1,k2]=d.jac_tmp1[7+k1,k2]
+#                    s.jac_error[indj+k1,k2]=d.jac_err1[7+k1,k2]
+#                end
                 # Add in partial derivatives with respect to time:
                 # Need to multiply by 1/2 since we're taking 1/2 time step:
                 d.dqdt_ij .*= half
                 mul!(d.tmp14, d.jac_ij, d.dqdt_tmp1)
                 d.dqdt_ij .+= d.dqdt_tmp1 .+ d.tmp14#*(d.jac_ij,d.dqdt_tmp1)
-                # Copy back time derivatives:
-                @inbounds for k1=1:7
-                    s.dqdt[indi+k1] = d.dqdt_ij[  k1]
-                    s.dqdt[indj+k1] = d.dqdt_ij[7+k1]
-                end
+#                # Copy back time derivatives:
+#                @inbounds for k1=1:7
+#                    s.dqdt[indi+k1] = d.dqdt_ij[  k1]
+#                    s.dqdt[indj+k1] = d.dqdt_ij[7+k1]
+#                end
+                ypoc_submatrix!(s,d,indi,indj,sevn)
             end
         end
     end
@@ -374,11 +378,11 @@ function drift_grad!(s::State{T},h::T) where {T <: Real}
     indi::Int64 = 0
     @inbounds for i=1:s.n
         indi = (i-1)*7
-        for j=1:NDIM
+        @inbounds for j=1:NDIM
             s.x[j,i],s.xerror[j,i] = comp_sum(s.x[j,i],s.xerror[j,i],h*s.v[j,i])
         end
         # Now for Jacobian:
-        for k=1:7*s.n, j=1:NDIM
+        @inbounds for k=1:7*s.n, j=1:NDIM
             s.jac_step[indi+j,k],s.jac_error[indi+j,k] = comp_sum(s.jac_step[indi+j,k],s.jac_error[indi+j,k],h*s.jac_step[indi+3+j,k])
         end
     end
@@ -733,6 +737,8 @@ function phisalpha!(s::State{T},d::AbstractDerivatives{T},h::T,alpha::T,pair::Ar
                         indd = (di-1)*7
                         for p=1:3
                             d.jac_phi[indi+3+k,indd+p] += fac*s.m[j]*(d.dadq[k,i,p,di]-d.dadq[k,j,p,di])
+                        end
+                        for p=1:3
                             d.jac_phi[indj+3+k,indd+p] -= fac*s.m[i]*(d.dadq[k,i,p,di]-d.dadq[k,j,p,di])
                         end
                         # Don't forget mass-dependent term:
@@ -745,6 +751,8 @@ function phisalpha!(s::State{T},d::AbstractDerivatives{T},h::T,alpha::T,pair::Ar
                         indd = (di-1)*7
                         for p=1:3
                             d.jac_phi[indi+3+k,indd+p] += fac*s.m[j]*d.dotdadq[p,di]
+                        end
+                        for p=1:3
                             d.jac_phi[indj+3+k,indd+p] -= fac*s.m[i]*d.dotdadq[p,di]
                         end
                         d.jac_phi[indi+3+k,indd+7] += fac*s.m[j]*d.dotdadq[4,di]
@@ -786,7 +794,7 @@ function kepler_driftij_gamma!(s::State{T},d::AbstractDerivatives{T},i::Int64,j:
         d.jac_kepler .= 0.0
         d.jac_mass .= 0.0
         #jac_delxv_gamma!(x0,v0,gm,h,drift_first,delxv,jac_kepler,jac_mass,false)
-        params::Tuple = jac_delxv_gamma!(s,gm,h,drift_first)
+        params::NTuple{22,T} = jac_delxv_gamma!(s,gm,h,drift_first)
         compute_jacobian_gamma!(params...,s.x0,s.v0,d.jac_kepler,d.jac_mass,drift_first,false)
 
         #  kepler_drift_step!(gm, h, state0, state,jac_kepler,drift_first)
