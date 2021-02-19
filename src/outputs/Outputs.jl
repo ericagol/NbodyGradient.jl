@@ -33,7 +33,7 @@ function (intr::Integrator)(s::State{T},o::CartesianOutput{T}) where T<:Abstract
     tmax = t0 + (h * nsteps)
 
     # Preallocate struct of arrays for derivatives (and pair)
-    d = Derivatives(T,s.n) 
+    d = Jacobian(T,s.n) 
     pair = zeros(Bool,s.n,s.n)
     
     for i in 1:nsteps
