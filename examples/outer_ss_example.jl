@@ -99,7 +99,10 @@ function compute_energy(m::Array{T,1},x::Array{T,2},v::Array{T,2},n::Int64) wher
 end
 
 # Now, integrate this forward in time:
-xerror = zeros(3,n); verror = zeros(3,n); 
+hgrid = [1.5625,3.125,6.25,12.5,25.0,50.0,100.0,200.0]
+nstepgrid = [32000000,16000000,8000000,4000000,2000000,1000000,500000,250000]
+nskip = [128,64,32,16,8,4,2,1]
+
 #h = 200.0 # 200-day time-step chosen to be <1/20 of the orbital period of Jupiter
 #h = 100.0 # 100-day time-step chosen to check conservation of energy/angular momentum with time step
 #h = 50.0 # 50-day time-step chosen to check conservation of energy/angular momentum with time step
@@ -110,35 +113,53 @@ h = 25.0 # 25-day time-step chosen to check conservation of energy/angular momen
 #h = 1.5625 # 1.5625-day time-step chosen to check conservation of energy/angular momentum with time step
 
 # 50 days x 1e6 time steps ~ 137,000 yr (takes about 15 seconds to run)
-nstep = 2000000; pair = zeros(Bool,n,n)
-
 grad = false
-s = State(ic)
-pair = zeros(Bool,s.n,s.n)
-if grad; d = Derivatives(T,s.n); end
+nstep = maximum(nstepgrid)
+ngrid = 8
+xsave = zeros(3,n,nstep,ngrid)
+vsave = zeros(3,n,nstep,ngrid)
+PE = zeros(nstep,ngrid); KE=zeros(nstep,ngrid); ang_mom = zeros(3,nstep,ngrid)
+telapse = zeros(ngrid)
+for j=1:8
+  h = hgrid[j]
+  nstep = nstepgrid[j]; 
+  s = State(ic)
+  pair = zeros(Bool,s.n,s.n)
+  if grad; d = Derivatives(T,s.n); end
 
-# Set up array to save the state as a function of time:
-xsave = zeros(3,n,nstep)
-vsave = zeros(3,n,nstep)
-# Save the potential & kinetic energy, as well as angular momentum:
-PE = zeros(nstep); KE=zeros(nstep); ang_mom = zeros(3,nstep)
-# Time the integration:
-tstart = time()
-# Carry out the integration:
-for i=1:nstep
-  if grad
-    ah18!(s,d,h,pair)
-  else
-    ah18!(s,h,pair)
+  # Set up array to save the state as a function of time:
+  # Save the potential & kinetic energy, as well as angular momentum:
+  # Time the integration:
+  tstart = time()
+  # Carry out the integration:
+  for i=1:nstep
+    if grad
+      ah18!(s,d,h,pair)
+    else
+      ah18!(s,h,pair)
+    end
+    xsave[:,:,i,j] .= s.x
+    vsave[:,:,i,j] .= s.v
+    KE_step,PE_step,ang_mom_step=compute_energy(s.m,s.x,s.v,n)
+    KE[i,j] = KE_step
+    PE[i,j] = PE_step
+    ang_mom[:,i,j] = ang_mom_step
   end
-  #ah18!(xout,vout,xerror,verror,h,m,n,pair)
-  xsave[:,:,i] .= s.x
-  vsave[:,:,i] .= s.v
-  KE_step,PE_step,ang_mom_step=compute_energy(s.m,s.x,s.v,n)
-  KE[i] = KE_step
-  PE[i] = PE_step
-  ang_mom[:,i] = ang_mom_step
+  s.t[1] = h*nstep
+  telapse[j] = time()- tstart
+  println("h: ",h," nstep: ",nstep," time: ",telapse[j])
 end
-s.t[1] = h*nstep
-telapse = time()- tstart
 
+using PyPlot,Statistics
+
+for j=8:-1:1
+  plot(collect(1:1:nstepgrid[j])*hgrid[j],KE[1:nstepgrid[j],j] .+ PE[1:nstepgrid[j],j]); println(j," ",hgrid[j]," ",std(KE[1:nstepgrid[j],j] .+ PE[1:nstepgrid[j],j])); Emean[j] = mean(KE[1:nstepgrid[j],j] .+ PE[1:nst
+end
+
+read(stdin,Char)
+
+clf()
+loglog(hgrid,(Emean .- minimum(Emean)) ./abs(minimum(Emean)) ,"o")
+loglog(hgrid,(Emean[8] .- minimum(Emean) ) ./abs(minimum(Emean)) .* (hgrid ./ hgrid[8]).^4 )
+xlabel("Time step [d]")
+ylabel("Fractional change in mean energy")
