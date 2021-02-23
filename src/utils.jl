@@ -1,4 +1,4 @@
-                        
+
 # Some utility functions
 
 #================================ Compensated Summation =================================#

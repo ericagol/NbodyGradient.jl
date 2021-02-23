@@ -81,6 +81,7 @@ struct Derivatives{T<:AbstractFloat} <: AbstractDerivatives{T}
     dotdadq::Matrix{T}
     tmp7n::Vector{T}
     tmp14::Vector{T}
+    ctime::Vector{T}
 
     function Derivatives(::Type{T},n::Integer) where T<:AbstractFloat
         sevn::Int64 = 7*n
@@ -103,10 +104,11 @@ struct Derivatives{T<:AbstractFloat} <: AbstractDerivatives{T}
 
         tmp7n = zeros(T,sevn)
         tmp14 = zeros(T,14)
+        ctime = zeros(T,1)
 
         return new{T}(jac_phi,jac_kick,jac_copy,jac_ij,jac_tmp1,jac_tmp2,jac_err1,
                       dqdt_phi,dqdt_kick,dqdt_ij,dqdt_tmp1,dqdt_tmp2,jac_kepler,jac_mass,
-                      dadq,dotdadq,tmp7n,tmp14)
+                      dadq,dotdadq,tmp7n,tmp14,ctime)
     end
 end
 

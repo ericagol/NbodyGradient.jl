@@ -22,7 +22,10 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     if T == BigFloat
         d.jac_copy .= *(d.jac_kick,s.jac_step)
     else
-        BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
+        start = time()
+        #BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
+        mul!(d.jac_copy, d.jac_kick, s.jac_step)
+        d.ctime[1] += time()-start
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
     comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
@@ -52,7 +55,10 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
                 if T == BigFloat
                     d.jac_tmp2 .= *(d.jac_ij,d.jac_tmp1)
                 else
-                    BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
+                    start = time()
+                    #BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
+                    mul!(d.jac_tmp2, d.jac_ij, d.jac_tmp1)
+                    d.ctime[1] += time()-start
                 end
                 # Add back in the Jacobian with compensated summation:
                 comp_sum_matrix!(d.jac_tmp1,d.jac_err1,d.jac_tmp2)
@@ -84,7 +90,10 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     if T == BigFloat
         d.jac_copy .= *(d.jac_phi,s.jac_step)
     else
-        BLAS.gemm!('N','N',uno,d.jac_phi,s.jac_step,zilch,d.jac_copy)
+        start = time()
+        #BLAS.gemm!('N','N',uno,d.jac_phi,s.jac_step,zilch,d.jac_copy)
+        mul!(d.jac_copy, d.jac_phi, s.jac_step)
+        d.ctime[1] += time()-start
     end
     # Add in time derivative with respect to prior parameters:
     # Copy result to dqdt:
@@ -119,7 +128,10 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
                 if T == BigFloat
                     d.jac_tmp2 .= *(d.jac_ij,d.jac_tmp1)
                 else
-                    BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
+                    start = time()
+                    #BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
+                    mul!(d.jac_tmp2,d.jac_ij,d.jac_tmp1)
+                    d.ctime[1] += time()-start
                 end
                 # Add back in the Jacobian with compensated summation:
                 comp_sum_matrix!(d.jac_tmp1,d.jac_err1,d.jac_tmp2)
@@ -156,7 +168,10 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     if T == BigFloat
         d.jac_copy .= *(d.jac_kick,s.jac_step)
     else
-        BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
+        start = time()
+        #BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
+        mul!(d.jac_copy,d.jac_kick,s.jac_step)
+        d.ctime[1] += time()-start
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
     comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
@@ -180,7 +195,10 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
     if T == BigFloat
         d.jac_copy .= *(d.jac_kick,s.jac_step)
     else
-        BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
+        start = time()
+        #BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
+        mul!(d.jac_copy,d.jac_kick,s.jac_step)
+        d.ctime[1] += time()-start
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
     comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
@@ -205,7 +223,10 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
                 if T == BigFloat
                     d.jac_tmp2 .= *(d.jac_ij,d.jac_tmp1)
                 else
-                    BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
+                    start = time()
+                    #BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
+                    mul!(d.jac_tmp2,d.jac_ij,d.jac_tmp1)
+                    d.ctime[1] += time()-start
                 end
                 # Add back in the Jacobian with compensated summation:
                 comp_sum_matrix!(d.jac_tmp1,d.jac_err1,d.jac_tmp2)
@@ -228,7 +249,10 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
     if T == BigFloat
         d.jac_copy .= *(d.jac_phi,s.jac_step)
     else
-        BLAS.gemm!('N','N',uno,d.jac_phi,s.jac_step,zilch,d.jac_copy)
+        start = time()
+        #BLAS.gemm!('N','N',uno,d.jac_phi,s.jac_step,zilch,d.jac_copy)
+        mul!(d.jac_copy,d.jac_phi,s.jac_step)
+        d.ctime[1] += time()-start
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
     comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
@@ -254,7 +278,10 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
                 if T == BigFloat
                     d.jac_tmp2 .= *(d.jac_ij,d.jac_tmp1)
                 else
-                    BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
+                    start = time()
+                    #BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
+                    mul!(d.jac_tmp2,d.jac_ij,d.jac_tmp1)
+                    d.ctime[1] += time()-start
                 end
                 # Add back in the Jacobian with compensated summation:
                 comp_sum_matrix!(d.jac_tmp1,d.jac_err1,d.jac_tmp2)
@@ -277,7 +304,10 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
     if T == BigFloat
         d.jac_copy .= *(d.jac_kick,s.jac_step)
     else
-        BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
+        start = time()
+        #BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
+        mul!(d.jac_copy,d.jac_kick,s.jac_step)
+        d.ctime[1] += time()-start
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
     comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
