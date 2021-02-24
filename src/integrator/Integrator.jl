@@ -147,6 +147,7 @@ function (intr::Integrator)(s::State{T},time::T;grad::Bool=true) where T<:Abstra
     if grad; d = Derivatives(T,s.n); end
     pair = zeros(Bool,s.n,s.n)
 
+    @timeit to "ah18 loop" begin
     for i in 1:nsteps
         # Take integration step and advance time
         if grad
@@ -154,6 +155,7 @@ function (intr::Integrator)(s::State{T},time::T;grad::Bool=true) where T<:Abstra
         else
             intr.scheme(s,h,pair)
         end
+    end
     end
 
     # Do last step (if needed)

@@ -5,30 +5,32 @@ Carry out AH18 mapping and calculates both the Jacobian and derivative with resp
 function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
     zilch = zero(T); uno = one(T); half::T = 0.5; two::T = 2.0;
     h2::T = half*h; n = s.n; sevn = 7*n; h6::T = h/6.0
-    zero_out!(d)
+    @timeit to "zero out" zero_out!(d)
     fill!(s.dqdt,zilch)
 
-    drift_grad!(s,h2)
+    @timeit to "drift" drift_grad!(s,h2)
     # Compute time derivative of drift step:
+    @timeit to "add loop" begin
     @inbounds for i=1:n, k=1:3
         s.dqdt[(i-1)*7+k] = half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
     end
-    kickfast!(s,d,h6,pair)
-    d.dqdt_kick ./= 6.0 # Since step is h/6
+    end
+    @timeit to "kickfast" kickfast!(s,d,h6,pair)
+    @timeit to "scalar div" d.dqdt_kick ./= 6.0 # Since step is h/6
     # Since I removed identity from kickfast, need to add in dqdt:
     @timeit to "multiply" mul!(d.tmp7n, d.jac_kick, s.dqdt)
-    s.dqdt .+= d.dqdt_kick .+ d.tmp7n #*(d.jac_kick,s.dqdt)
+    @timeit to "dqdt add" s.dqdt .+= d.dqdt_kick .+ d.tmp7n #*(d.jac_kick,s.dqdt)
     # Multiply Jacobian from kick step:
     if T == BigFloat
         d.jac_copy .= *(d.jac_kick,s.jac_step)
     else
         start = time()
-        #BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
-        @timeit to "multiply" mul!(d.jac_copy, d.jac_kick, s.jac_step)
+        @timeit to "BLAS" BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
+        #@timeit to "multiply" mul!(d.jac_copy, d.jac_kick, s.jac_step)
         d.ctime[1] += time()-start
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
-    comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
+    @timeit to "comp_sum" comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
     indi = 0; indj = 0
     @inbounds for i=1:s.n-1
         indi = (i-1)*7
@@ -50,18 +52,18 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
 #                    d.dqdt_tmp1[  k1] = s.dqdt[indi+k1]
 #                    d.dqdt_tmp1[7+k1] = s.dqdt[indj+k1]
 #                end
-                @timeit to "copy submatrix" copy_submatrix!(s,d,indi,indj,sevn)
+                @timeit to "copy" copy_submatrix!(s,d,indi,indj,sevn)
                 # Carry out multiplication on the i/j components of matrix:
                 if T == BigFloat
                     d.jac_tmp2 .= *(d.jac_ij,d.jac_tmp1)
                 else
                     start = time()
-                    #BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
-                    @timeit to "multiply" mul!(d.jac_tmp2, d.jac_ij, d.jac_tmp1)
+                    @timeit to "BLAS" BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
+                    #@timeit to "multiply" mul!(d.jac_tmp2, d.jac_ij, d.jac_tmp1)
                     d.ctime[1] += time()-start
                 end
                 # Add back in the Jacobian with compensated summation:
-                comp_sum_matrix!(d.jac_tmp1,d.jac_err1,d.jac_tmp2)
+                @timeit to "comp_sum" comp_sum_matrix!(d.jac_tmp1,d.jac_err1,d.jac_tmp2)
                 # Copy back to the Jacobian:
 #                @inbounds for k2=1:sevn, k1=1:7
 #                    s.jac_step[ indi+k1,k2]=d.jac_tmp1[k1,k2]
@@ -73,34 +75,34 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
 #                end
                 # Add in partial derivatives with respect to time:
                 # Need to multiply by 1/2 since we're taking 1/2 time step:
-                d.dqdt_ij .*= half
+                @timeit to "scalar mul" d.dqdt_ij .*= half
                 @timeit to "multiply" mul!(d.tmp14, d.jac_ij, d.dqdt_tmp1)
-                d.dqdt_ij .+= d.dqdt_tmp1 .+ d.tmp14#*(d.jac_ij,d.dqdt_tmp1)
+                @timeit to "dqdt add" d.dqdt_ij .+= d.dqdt_tmp1 .+ d.tmp14#*(d.jac_ij,d.dqdt_tmp1)
 #                # Copy back time derivatives:
 #                @inbounds for k1=1:7
 #                    s.dqdt[indi+k1] = d.dqdt_ij[  k1]
 #                    s.dqdt[indj+k1] = d.dqdt_ij[7+k1]
 #                end
-                ypoc_submatrix!(s,d,indi,indj,sevn)
+                @timeit to "ypoc" ypoc_submatrix!(s,d,indi,indj,sevn)
             end
         end
     end
-    phic!(s,d,h,pair)
-    phisalpha!(s,d,h,two,pair)
+    @timeit to "phic" phic!(s,d,h,pair)
+    @timeit to "phisalpha" phisalpha!(s,d,h,two,pair)
     if T == BigFloat
         d.jac_copy .= *(d.jac_phi,s.jac_step)
     else
         start = time()
-        #BLAS.gemm!('N','N',uno,d.jac_phi,s.jac_step,zilch,d.jac_copy)
-        @timeit to "multiply" mul!(d.jac_copy, d.jac_phi, s.jac_step)
+        @timeit to "BLAS" BLAS.gemm!('N','N',uno,d.jac_phi,s.jac_step,zilch,d.jac_copy)
+        #@timeit to "multiply" mul!(d.jac_copy, d.jac_phi, s.jac_step)
         d.ctime[1] += time()-start
     end
     # Add in time derivative with respect to prior parameters:
     # Copy result to dqdt:
     @timeit to "multiply" mul!(d.tmp7n, d.jac_phi, s.dqdt)
-    s.dqdt .+= d.dqdt_phi .+ d.tmp7n #*(d.jac_phi,s.dqdt)
+    @timeit to "dqdt add" s.dqdt .+= d.dqdt_phi .+ d.tmp7n #*(d.jac_phi,s.dqdt)
     # Add back in the identity portion of the Jacobian with compensated summation:
-    comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
+    @timeit to "comp_sum" comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
     indi=0; indj=0
     @inbounds for i=s.n-1:-1:1
         indi=(i-1)*7
@@ -123,18 +125,18 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
 #                    d.dqdt_tmp1[  k1] = s.dqdt[indi+k1]
 #                    d.dqdt_tmp1[7+k1] = s.dqdt[indj+k1]
 #                end
-                copy_submatrix!(s,d,indi,indj,sevn)
+                @timeit to "copy" copy_submatrix!(s,d,indi,indj,sevn)
                 # Carry out multiplication on the i/j components of matrix:
                 if T == BigFloat
                     d.jac_tmp2 .= *(d.jac_ij,d.jac_tmp1)
                 else
                     start = time()
-                    #BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
-                    @timeit to "multiply" mul!(d.jac_tmp2,d.jac_ij,d.jac_tmp1)
+                    @timeit to "BLAS" BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
+                    #@timeit to "multiply" mul!(d.jac_tmp2,d.jac_ij,d.jac_tmp1)
                     d.ctime[1] += time()-start
                 end
                 # Add back in the Jacobian with compensated summation:
-                comp_sum_matrix!(d.jac_tmp1,d.jac_err1,d.jac_tmp2)
+                @timeit to "comp_sum" comp_sum_matrix!(d.jac_tmp1,d.jac_err1,d.jac_tmp2)
                 # Copy back to the Jacobian:
 #                @inbounds for k2=1:sevn, k1=1:7
 #                    s.jac_step[ indi+k1,k2]=d.jac_tmp1[k1,k2]
@@ -146,40 +148,42 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
 #                end
                 # Add in partial derivatives with respect to time:
                 # Need to multiply by 1/2 since we're taking 1/2 time step:
-                d.dqdt_ij .*= half
+                @timeit to "scalar mul" d.dqdt_ij .*= half
                 @timeit to "multiply" mul!(d.tmp14, d.jac_ij, d.dqdt_tmp1)
-                d.dqdt_ij .+= d.dqdt_tmp1 .+ d.tmp14#*(d.jac_ij,d.dqdt_tmp1)
+                @timeit to "dqdt add" d.dqdt_ij .+= d.dqdt_tmp1 .+ d.tmp14#*(d.jac_ij,d.dqdt_tmp1)
 #                # Copy back time derivatives:
 #                @inbounds for k1=1:7
 #                    s.dqdt[indi+k1] = d.dqdt_ij[  k1]
 #                    s.dqdt[indj+k1] = d.dqdt_ij[7+k1]
 #                end
-                ypoc_submatrix!(s,d,indi,indj,sevn)
+                @timeit to "ypoc" ypoc_submatrix!(s,d,indi,indj,sevn)
             end
         end
     end
     fill!(d.dqdt_kick,zilch)
-    kickfast!(s,d,h6,pair)
-    d.dqdt_kick ./= 6.0 # Since step is h/6
+    @timeit to "kickfast" kickfast!(s,d,h6,pair)
+    @timeit to "scalar div" d.dqdt_kick ./= 6.0 # Since step is h/6
     # Copy result to dqdt:
     @timeit to "multiply" mul!(d.tmp7n, d.jac_kick, s.dqdt)
-    s.dqdt .+= d.dqdt_kick .+ d.tmp7n#*(d.jac_kick,s.dqdt)
+    @timeit to "dqdt add" s.dqdt .+= d.dqdt_kick .+ d.tmp7n#*(d.jac_kick,s.dqdt)
     # Multiply Jacobian from kick step:
     if T == BigFloat
         d.jac_copy .= *(d.jac_kick,s.jac_step)
     else
         start = time()
-        #BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
-        @timeit to "multiply" mul!(d.jac_copy,d.jac_kick,s.jac_step)
+        @timeit to "BLAS" BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
+        #@timeit to "multiply" mul!(d.jac_copy,d.jac_kick,s.jac_step)
         d.ctime[1] += time()-start
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
-    comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
+    @timeit to "comp_sum" comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
     # Edit this routine to do compensated summation for Jacobian [x]
-    drift_grad!(s,h2)
+    @timeit to "drift" drift_grad!(s,h2)
     # Compute time derivative of drift step:
+    @timeit to "add loop" begin
     @inbounds for i=1:n, k=1:3
         s.dqdt[(i-1)*7+k] += half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
+    end
     end
 end
 
