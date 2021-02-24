@@ -23,12 +23,14 @@ export Integrator
 export Jacobian, dTime
 export CartesianOutput, ElementsOutput
 export TransitTiming, TransitParameters, TransitSnapshot
+export GHcoeff
 
 # Integrator methods
 export ah18!, dh17!
 
 # Source code
 include("PreAllocArrays.jl")
+include("ghcoeff_struct.jl")
 include("ics/InitialConditions.jl")
 include("integrator/Integrator.jl")
 include("utils.jl")

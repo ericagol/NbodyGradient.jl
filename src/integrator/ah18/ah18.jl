@@ -974,8 +974,12 @@ function jac_delxv_gamma!(s::State{T},k::T,h::T,drift_first::Bool;debug::Bool=fa
     g1bs = 2sx*cx/sqb
     g2bs = 2signb*sx^2*beta0inv
     g0bs = one(T)-beta0*g2bs
-    g3bs = G3(gamma,beta0,sqb)
-    h1 = zero(T); h2 = zero(T)
+#    g3bs = G3(gamma,beta0,sqb)
+    #g3h1h2 = zeros(T,3)
+#    g3bs,h1,h2 = GHcomp!(s.ghc,gamma,beta0,sqb,T(0.05))
+    GHcomp!(s.ghc,gamma,beta0,sqb,T(0.05),s.g3h1h2)
+    g3bs = s.g3h1h2[1]; h1=s.g3h1h2[2]; h2=s.g3h1h2[3]
+#    h1 = zero(T); h2 = zero(T)
     #  if typeof(g1bs) == Float64
     #    println("g1: ",g1bs," g2: ",g2bs," g3: ",g3bs)
     #  end
@@ -996,7 +1000,7 @@ function jac_delxv_gamma!(s::State{T},k::T,h::T,drift_first::Bool;debug::Bool=fa
     else
         # Drift backwards after Kepler step: (1/24/2018)
         # The following line is f-1-h fdot:
-        h1= H1(gamma,beta0); h2= H2(gamma,beta0,sqb)
+        #h1= H1(gamma,beta0); h2= H2(gamma,beta0,sqb)
         #    fm1 =  k*rinv*(g2bs-k*r0inv*H1(gamma,beta0))  # [x]
         fm1 =  k*rinv*(g2bs-k*r0inv*h1)  # [x]
         # This is g-h*dgdt

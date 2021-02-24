@@ -65,6 +65,8 @@ struct State{T<:AbstractFloat} <: AbstractState
     input::Vector{T}
     delxv::Vector{T}
     rtmp::Vector{T}
+    ghc::GHcoeff{T}
+    g3h1h2::Vector{T}
 end
 
 """
@@ -84,7 +86,6 @@ function State(ic::InitialConditions{T}) where T<:AbstractFloat
     dqdt = zeros(T,7*n)
     dqdt_error = zeros(T,size(dqdt))
     jac_error = zeros(T,size(jac_step))
-
     rij = zeros(T,3)
     a = zeros(T,3,n)
     aij = zeros(T,3)
@@ -93,8 +94,10 @@ function State(ic::InitialConditions{T}) where T<:AbstractFloat
     input = zeros(T,8)
     delxv = zeros(T,6)
     rtmp = zeros(T,3)
+    ghc = GHcoeff(T,50)
+    g3h1h2 = zeros(T,3)
     return State(x,v,[ic.t0],ic.m,jac_step,dqdt,jac_init,xerror,verror,dqdt_error,jac_error,ic.nbody,
-    rij,a,aij,x0,v0,input,delxv,rtmp)
+    rij,a,aij,x0,v0,input,delxv,rtmp,ghc,g3h1h2)
 end
 
 function set_state!(s_old::State,s_new::State)
