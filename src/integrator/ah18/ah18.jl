@@ -16,7 +16,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     kickfast!(s,d,h6,pair)
     d.dqdt_kick ./= 6.0 # Since step is h/6
     # Since I removed identity from kickfast, need to add in dqdt:
-    mul!(d.tmp7n, d.jac_kick, s.dqdt)
+    @timeit to "multiply" mul!(d.tmp7n, d.jac_kick, s.dqdt)
     s.dqdt .+= d.dqdt_kick .+ d.tmp7n #*(d.jac_kick,s.dqdt)
     # Multiply Jacobian from kick step:
     if T == BigFloat
@@ -24,7 +24,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     else
         start = time()
         #BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
-        mul!(d.jac_copy, d.jac_kick, s.jac_step)
+        @timeit to "multiply" mul!(d.jac_copy, d.jac_kick, s.jac_step)
         d.ctime[1] += time()-start
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
@@ -35,7 +35,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
         @inbounds for j=i+1:s.n
             indj = (j-1)*7
             if ~pair[i,j]  # Check to see if kicks have not been applied
-                kepler_driftij_gamma!(s,d,i,j,h2,true)
+                @timeit to "kepler_driftij" kepler_driftij_gamma!(s,d,i,j,h2,true)
                 # Pick out indices for bodies i & j:
 #                @inbounds for k2=1:sevn, k1=1:7
 #                    d.jac_tmp1[k1,k2] = s.jac_step[ indi+k1,k2]
@@ -50,14 +50,14 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
 #                    d.dqdt_tmp1[  k1] = s.dqdt[indi+k1]
 #                    d.dqdt_tmp1[7+k1] = s.dqdt[indj+k1]
 #                end
-                copy_submatrix!(s,d,indi,indj,sevn)
+                @timeit to "copy submatrix" copy_submatrix!(s,d,indi,indj,sevn)
                 # Carry out multiplication on the i/j components of matrix:
                 if T == BigFloat
                     d.jac_tmp2 .= *(d.jac_ij,d.jac_tmp1)
                 else
                     start = time()
                     #BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
-                    mul!(d.jac_tmp2, d.jac_ij, d.jac_tmp1)
+                    @timeit to "multiply" mul!(d.jac_tmp2, d.jac_ij, d.jac_tmp1)
                     d.ctime[1] += time()-start
                 end
                 # Add back in the Jacobian with compensated summation:
@@ -74,7 +74,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
                 # Add in partial derivatives with respect to time:
                 # Need to multiply by 1/2 since we're taking 1/2 time step:
                 d.dqdt_ij .*= half
-                mul!(d.tmp14, d.jac_ij, d.dqdt_tmp1)
+                @timeit to "multiply" mul!(d.tmp14, d.jac_ij, d.dqdt_tmp1)
                 d.dqdt_ij .+= d.dqdt_tmp1 .+ d.tmp14#*(d.jac_ij,d.dqdt_tmp1)
 #                # Copy back time derivatives:
 #                @inbounds for k1=1:7
@@ -92,12 +92,12 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     else
         start = time()
         #BLAS.gemm!('N','N',uno,d.jac_phi,s.jac_step,zilch,d.jac_copy)
-        mul!(d.jac_copy, d.jac_phi, s.jac_step)
+        @timeit to "multiply" mul!(d.jac_copy, d.jac_phi, s.jac_step)
         d.ctime[1] += time()-start
     end
     # Add in time derivative with respect to prior parameters:
     # Copy result to dqdt:
-    mul!(d.tmp7n, d.jac_phi, s.dqdt)
+    @timeit to "multiply" mul!(d.tmp7n, d.jac_phi, s.dqdt)
     s.dqdt .+= d.dqdt_phi .+ d.tmp7n #*(d.jac_phi,s.dqdt)
     # Add back in the identity portion of the Jacobian with compensated summation:
     comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
@@ -107,7 +107,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
         @inbounds for j=s.n:-1:i+1
             indj=(j-1)*7
             if ~pair[i,j]  # Check to see if kicks have not been applied
-                kepler_driftij_gamma!(s,d,i,j,h2,false)
+                @timeit to "kepler_driftij" kepler_driftij_gamma!(s,d,i,j,h2,false)
                 # Pick out indices for bodies i & j:
                 # Carry out multiplication on the i/j components of matrix:
 #                @inbounds for k2=1:sevn, k1=1:7
@@ -130,7 +130,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
                 else
                     start = time()
                     #BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
-                    mul!(d.jac_tmp2,d.jac_ij,d.jac_tmp1)
+                    @timeit to "multiply" mul!(d.jac_tmp2,d.jac_ij,d.jac_tmp1)
                     d.ctime[1] += time()-start
                 end
                 # Add back in the Jacobian with compensated summation:
@@ -147,7 +147,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
                 # Add in partial derivatives with respect to time:
                 # Need to multiply by 1/2 since we're taking 1/2 time step:
                 d.dqdt_ij .*= half
-                mul!(d.tmp14, d.jac_ij, d.dqdt_tmp1)
+                @timeit to "multiply" mul!(d.tmp14, d.jac_ij, d.dqdt_tmp1)
                 d.dqdt_ij .+= d.dqdt_tmp1 .+ d.tmp14#*(d.jac_ij,d.dqdt_tmp1)
 #                # Copy back time derivatives:
 #                @inbounds for k1=1:7
@@ -162,7 +162,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     kickfast!(s,d,h6,pair)
     d.dqdt_kick ./= 6.0 # Since step is h/6
     # Copy result to dqdt:
-    mul!(d.tmp7n, d.jac_kick, s.dqdt)
+    @timeit to "multiply" mul!(d.tmp7n, d.jac_kick, s.dqdt)
     s.dqdt .+= d.dqdt_kick .+ d.tmp7n#*(d.jac_kick,s.dqdt)
     # Multiply Jacobian from kick step:
     if T == BigFloat
@@ -170,7 +170,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     else
         start = time()
         #BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
-        mul!(d.jac_copy,d.jac_kick,s.jac_step)
+        @timeit to "multiply" mul!(d.jac_copy,d.jac_kick,s.jac_step)
         d.ctime[1] += time()-start
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
@@ -197,7 +197,7 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
     else
         start = time()
         #BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
-        mul!(d.jac_copy,d.jac_kick,s.jac_step)
+        @timeit to "multiply" mul!(d.jac_copy,d.jac_kick,s.jac_step)
         d.ctime[1] += time()-start
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
@@ -208,7 +208,7 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
         @inbounds for j=i+1:s.n
             indj = (j-1)*7
             if ~pair[i,j]  # Check to see if kicks have not been applied
-                kepler_driftij_gamma!(s,d,i,j,h2,true)
+                @timeit to "kepler_driftij" kepler_driftij_gamma!(s,d,i,j,h2,true)
                 #kepler_driftij_gamma!(s.m,s.x,s.v,s.xerror,s.verror,i,j,h2,d.jac_ij,d.dqdt_ij,true)
                 # Pick out indices for bodies i & j:
                 @inbounds for k2=1:sevn, k1=1:7
@@ -225,7 +225,7 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
                 else
                     start = time()
                     #BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
-                    mul!(d.jac_tmp2,d.jac_ij,d.jac_tmp1)
+                    @timeit to "multiply" mul!(d.jac_tmp2,d.jac_ij,d.jac_tmp1)
                     d.ctime[1] += time()-start
                 end
                 # Add back in the Jacobian with compensated summation:
@@ -251,7 +251,7 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
     else
         start = time()
         #BLAS.gemm!('N','N',uno,d.jac_phi,s.jac_step,zilch,d.jac_copy)
-        mul!(d.jac_copy,d.jac_phi,s.jac_step)
+        @timeit to "multiply" mul!(d.jac_copy,d.jac_phi,s.jac_step)
         d.ctime[1] += time()-start
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
@@ -263,7 +263,7 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
             indj=(j-1)*7
             if ~pair[i,j]  # Check to see if kicks have not been applied
                 #kepler_driftij_gamma!(s.m,s.x,s.v,s.xerror,s.verror,i,j,h2,d.jac_ij,d.dqdt_ij,false)
-                kepler_driftij_gamma!(s,d,i,j,h2,false)
+                @timeit to "kepler_driftij" kepler_driftij_gamma!(s,d,i,j,h2,false)
                 # Pick out indices for bodies i & j:
                 # Carry out multiplication on the i/j components of matrix:
                 @inbounds for k2=1:sevn, k1=1:7
@@ -280,7 +280,7 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
                 else
                     start = time()
                     #BLAS.gemm!('N','N',uno,d.jac_ij,d.jac_tmp1,zilch,d.jac_tmp2)
-                    mul!(d.jac_tmp2,d.jac_ij,d.jac_tmp1)
+                    @timeit to "multiply" mul!(d.jac_tmp2,d.jac_ij,d.jac_tmp1)
                     d.ctime[1] += time()-start
                 end
                 # Add back in the Jacobian with compensated summation:
@@ -306,7 +306,7 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
     else
         start = time()
         #BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
-        mul!(d.jac_copy,d.jac_kick,s.jac_step)
+        @timeit to "multiply" mul!(d.jac_copy,d.jac_kick,s.jac_step)
         d.ctime[1] += time()-start
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
@@ -337,7 +337,7 @@ function ah18!(s::State{T},d::dTime{T},h::T,pair::Matrix{Bool}) where T<:Abstrac
         @inbounds for j=i+1:n
             indj = (j-1)*7
             if ~pair[i,j]  # Check to see if kicks have not been applied
-                kepler_driftij_gamma!(s,d,i,j,h2,true)
+                @timeit to "kepler_driftij" kepler_driftij_gamma!(s,d,i,j,h2,true)
                 # Copy current time derivatives for multiplication purposes:
                 @inbounds for k1=1:7
                     d.dqdt_tmp1[  k1] = s.dqdt[indi+k1]
@@ -369,7 +369,7 @@ function ah18!(s::State{T},d::dTime{T},h::T,pair::Matrix{Bool}) where T<:Abstrac
         @inbounds for j=n:-1:i+1
             if ~pair[i,j]  # Check to see if kicks have not been applied
                 indj=(j-1)*7
-                kepler_driftij_gamma!(s,d,i,j,h2,false)
+                @timeit to "kepler_driftij" kepler_driftij_gamma!(s,d,i,j,h2,false)
                 # Copy current time derivatives for multiplication purposes:
                 @inbounds for k1=1:7
                     d.dqdt_tmp1[  k1] = s.dqdt[indi+k1]
