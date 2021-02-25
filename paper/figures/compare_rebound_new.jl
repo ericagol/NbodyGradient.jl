@@ -19,8 +19,27 @@ tmax = 2500/π
 
 intr = Integrator(h, 0.0, tmax)
 
-for n = 2:11
+function integrate_adj(s::State{T},h::T,tmax::T;grad::Bool=false) where T<:Real
+  pair = ones(Bool,s.n,s.n)
+  # Only include Kepler+drift solver for adjacent planets:
+  for i=2:s.n-1
+    pair[i,i+1] = false
+    pair[i+1,i] = false
+  end
+  if grad; d = NbodyGradient.Derivatives(T,s.n); end
+  N = abs(round(Int64,tmax/h))
+  for _ in 1:N
+    if grad
+      ah18!(s,d,h,pair)
+    else
+      ah18!(s,h,pair)
+    end
+  end
+  s.t[1] = h*N
+  if grad; return d; else return; end
+end
 
+for n = 2:11
   ic = ElementsIC(t0, n, elements[1:n,:])
   s = State(ic)
   tt = TransitTiming(intr.tmax, ic)
@@ -31,11 +50,15 @@ for n = 2:11
   # Time with derivatives
   grad_t = @belapsed intr(s) setup=(s = State($ic))
 
+  # Time with non-adjacent fast-kicks:
+  t_adj = @belapsed integrate_adj(s,h,tmax,grad=false) setup=(s=State($ic))
+  grad_adj = @belapsed integrate_adj(s,h,tmax,grad=true) setup=(s=State($ic))
+
   # Now while calculating transit times and derivatives
   grad_tt = @belapsed intr(s, tt) setup=(s = State($ic); tt = TransitTiming($intr.tmax, $ic))
 
-  println("Nplanet: ", n-1, " No gradient: ", t, " gradient: ", grad_t, " grad w tts: ", grad_tt," ratio: ", grad_t/t)
+  println("Nplanet: ", n-1, " No gradient: ", t, " gradient: ", grad_t, " t adj: ",t_adj," grad t_adj: ",grad_adj," grad w tts: ", grad_tt," ratio: ", grad_t/t)
   open("nbg_times.txt", "a") do io
-    writedlm(io, [n-1 t grad_t grad_tt grad_t/t], ',')
+    writedlm(io, [n-1 t grad_t t_adj grad_adj grad_tt grad_t/t], ',')
   end
 end

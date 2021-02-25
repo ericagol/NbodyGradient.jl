@@ -579,7 +579,8 @@ function phic!(s::State{T},d::AbstractDerivatives{T},h::T,pair::Array{Bool,2}) w
                 end
                 r2 = dot_fast(s.rij)
                 r1 = sqrt(r2)
-                ardot = dot_fast(s.aij,s.rij[1])
+                #ardot = dot_fast(s.aij,s.rij[1])
+                ardot = dot_fast(s.aij,s.rij)
                 fac1 = coeff/r1^5
                 fac2 = 3*ardot
                 for k=1:3
