@@ -54,9 +54,9 @@ function kickfast!(s::State{T},h::T,pair::Array{Bool,2}) where {T <: Real}
                     #r2 += s.rij[k]*s.rij[k]
                 end
                 r2 = dot_fast(s.rij)
-                r3_inv = 1.0/(r2*sqrt(r2))
+                r3_inv = h*GNEWT/(r2*sqrt(r2))
                 for k=1:3
-                    fac = h*GNEWT*s.rij[k]*r3_inv
+                    fac = s.rij[k]*r3_inv
                     s.v[k,i],s.verror[k,i] = comp_sum(s.v[k,i],s.verror[k,i],-s.m[j]*fac)
                     s.v[k,j],s.verror[k,j] = comp_sum(s.v[k,j],s.verror[k,j], s.m[i]*fac)
                 end
@@ -82,9 +82,9 @@ function phic!(s::State{T},h::T,pair::Array{Bool,2}) where {T <: Real}
                 #r2 += s.rij[k]^2
             end
             r2 = dot_fast(s.rij)
-            r3_inv = 1.0/(r2*sqrt(r2))
+            r3_inv = GNEWT/(r2*sqrt(r2))
             for k=1:3
-                fac = GNEWT*s.rij[k]*r3_inv
+                fac = s.rij[k]*r3_inv
                 facv = fac*2*h/3
                 s.v[k,i],s.verror[k,i] = comp_sum(s.v[k,i],s.verror[k,i],-s.m[j]*facv)
                 s.v[k,j],s.verror[k,j] = comp_sum(s.v[k,j],s.verror[k,j],s.m[i]*facv)
@@ -152,7 +152,8 @@ function phisalpha!(s::State{T},h::T,alpha::T,pair::Array{Bool,2}) where {T <: R
                 r2 = dot_fast(s.rij)
                 r1 = sqrt(r2)
                 ardot = dot_fast(s.aij,s.rij)
-                fac1 = coeff/r1^5
+#                fac1 = coeff/r1^5
+                fac1 = coeff/(r2*r2*r1)
                 fac2 = (2*GNEWT*(s.m[i]+s.m[j])/r1 + 3*ardot)
                 for k=1:3
                     fac = fac1*(s.rij[k]*fac2- r2*s.aij[k])

@@ -104,11 +104,12 @@ function cubic1(a::T, b::T, c::T) where {T <: Real}
     a3 = a*third
     Q = a3^2 - b*third
     R = a3^3 + 0.5*(-a3*b + c)
-    if R^2 < Q^3
+    R2 = R^2; Q3=Q^3
+    if R2 < Q3
         # println("Error in cubic solver ",R^2," ",Q^3)
         return -c/b
     else
-        A = -sign(R)*cbrt(abs(R) + sqrt(R*R - Q*Q*Q))
+        A = -sign(R)*cbrt(abs(R) + sqrt(R2 - Q3))
         if A == 0.0
             B = 0.0
         else
@@ -159,7 +160,7 @@ function G3_series(gamma::T,beta::T,sqb::T) where {T <: Real}
         end
     end
 #    g3 *= gamma^3/(6*sqrt(abs(beta^3)))
-    g3 *= gamma^3/(6*abs(beta)*sqb)
+    g3 *= -x2*gamma/(6*beta*sqb)
     return g3::T
 end
 
@@ -202,7 +203,8 @@ function H1_series(gamma::T,beta::T) where {T <: Real}
             break
         end
     end
-    h1 *= gamma^4/(12*beta^2)
+#    h1 *= gamma^4/(12*beta^2)
+    h1 *= x2^2/(12*beta^2)
     return h1::T
 end
 
@@ -247,7 +249,7 @@ function H2_series(gamma::T,beta::T,sqb::T) where {T <: Real}
         end
     end
 #    h2 *= gamma^3/(3*sqrt(abs(beta^3)))
-    h2 *= gamma^3/(3*abs(beta)*sqb)
+    h2 *= -x2*gamma/(3*beta*sqb)
     return h2::T
 end
 
@@ -296,7 +298,7 @@ function H3_series(gamma::T,beta::T,sqb::T) where {T <: Real}
         end
     end
 #    h3 *= -gamma^5/(beta*sqrt(abs(beta)))
-    h3 *= -gamma^5/(beta*sqb)
+    h3 *= -x2^2*gamma/(beta*sqb)
     return h3::T
 end
 
@@ -342,7 +344,7 @@ function H5_series(gamma::T,beta::T,sqb::T) where {T <: Real}
         end
     end
 #    h5 *= -gamma^5/(beta*sqrt(abs(beta)))
-    h5 *= -gamma^5/(beta*sqb)
+    h5 *= -x2^2*gamma/(beta*sqb)
     return h5::T
 end
 
@@ -388,7 +390,8 @@ function H6_series(gamma::T,beta::T) where {T <: Real}
             break
         end
     end
-    h6 *= gamma^6/(beta*abs(beta))
+#    h6 *= gamma^6/(beta*abs(beta))
+    h6 *= -x2^3/(beta^2)
     return h6::T
 end
 
@@ -439,7 +442,7 @@ function H7_series(gamma::T,beta::T,sqb::T) where {T <: Real}
         end
     end
 #    h7 *= gamma^5/(beta*sqrt(abs(beta)))
-    h7 *= gamma^5/(beta*sqb)
+    h7 *= x2^2*gamma/(beta*sqb)
     return h7::T
 end
 
@@ -489,7 +492,7 @@ function H8_series(gamma::T,beta::T,sqb::T) where {T <: Real}
         end
     end
 #    h8 *= gamma^5/(beta*sqrt(abs(beta)))
-    h8 *= gamma^5/(beta*sqb)
+    h8 *= x2^2*gamma/(beta*sqb)
     return h8::T
 end
 
