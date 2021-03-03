@@ -1081,6 +1081,7 @@ function compute_jacobian_gamma!(gamma::T,g0::T,g1::T,g2::T,g3::T,h1::T,h2::T,df
         dfm1dk  = fm1*(1/k+g1*c1*rinv*r0inv/g2-2*betainv*r0inv)
         #  dfm1dk2  = 2g2*betainv-c1*g1*rinv
         h4 = -H1(gamma,beta)*beta
+#        h4 = -h1*beta
         #  h5 = g1*g2-g3*(2+g0)
         h5 = H5(gamma,beta,sqb)
         #  println("H5 : ",g1*g2-g3*(2+g0)," ",H2(gamma,beta,sqb)-2*G3(gamma,beta,sqb)," ",h5)
@@ -1093,7 +1094,9 @@ function compute_jacobian_gamma!(gamma::T,g0::T,g1::T,g2::T,g3::T,h1::T,h2::T,df
         dgmhdxv =  -g2*k*c13*rinv*r0inv-h*c10
         dgmhdvx =  dgmhdxv
         # dgmhdvv =  -d*k*c13*rinv*r0inv+2*g2*h*k*c13*rinv*r0inv+k*c9*betainv*r0inv+hsq*c10
-        h8 = H8(gamma,beta,sqb)
+        h3 = H3(gamma,beta,sqb)
+        #h8 = H8(gamma,beta,sqb)
+        h8 = -2h3+3h5
         dgmhdvv =  2*g2*h*k*c13*rinv*r0inv+hsq*c10+
         k*betainv*rinv*r0inv*(r0^2*h8-beta*h*r0*g2^2 + (h*k+eta*r0)*h6)
         dgmhdh  =  g2*k*r0inv+k*c13*rinv*r0inv+g2*k*(2*k*r0inv-beta)*c13*rinv*r0inv-eta*c10
@@ -1139,7 +1142,8 @@ function compute_jacobian_gamma!(gamma::T,g0::T,g1::T,g2::T,g3::T,h1::T,h2::T,df
         ddfdtdk  = dfdt*(1/k-betainv*r0inv-c17*betainv*rinv*r0inv-c1*(g1*c2-g0*r)*rinv2*r0inv/g1)
         #  ddfdtdk2  = -g1*(-betainv*r0inv-c17*betainv*rinv*r0inv-c1*(g1*c2-g0*r)*rinv2*r0inv/g1)
         #ddfdtdk2  = -(g2*k-r0)*(g1*r-beta*c1)*betainv*rinv2*r0inv
-        ddfdtdk2 = -(g2*k-r0)*(beta*r0*(g3-g1*g2)-beta*eta*g2^2+k*H3(gamma,beta,sqb))*betainv*rinv2*r0inv
+#        ddfdtdk2 = -(g2*k-r0)*(beta*r0*(g3-g1*g2)-beta*eta*g2^2+k*H3(gamma,beta,sqb))*betainv*rinv2*r0inv
+        ddfdtdk2 = -(g2*k-r0)*(beta*r0*(g3-g1*g2)-beta*eta*g2^2+k*h3)*betainv*rinv2*r0inv
         ddfdtdh  = dfdt*(g0*rinv/g1-c2*rinv2-(2*k*r0inv-beta)*c22-eta*c21)
         dgdtmhdfdtm1dxx = c25
         dgdtmhdfdtm1dxv = c26-h*c25
@@ -1152,7 +1156,6 @@ function compute_jacobian_gamma!(gamma::T,g0::T,g1::T,g2::T,g3::T,h1::T,h2::T,df
         dgdtmhdfdtm1dk = rinv*r0inv*(-k*(c13-g2*r0)*betainv*r0inv+c13-k*c13*c17*betainv*rinv*r0inv+k*c1*c12*rinv*r0inv-k*c1*c2*c13*rinv2*r0inv)
         #  dgdtmhdfdtm1dk2 = -(c13-g2*r0)*betainv*r0inv-c13*c17*betainv*rinv*r0inv+c1*c12*rinv*r0inv-c1*c2*c13*rinv2*r0inv
         #dgdtmhdfdtm1dk2 = g2*betainv+rinv*r0inv*(c1*c12+c13*((k*g2-r0)*betainv-c1*c2*rinv))
-        h3 = H3(gamma,beta,sqb)
         dgdtmhdfdtm1dk2 = k*betainv*rinv2*r0inv*(-beta*eta^2*g2^4+eta*g2*(g1*g2^2+g1^2*g3-5*g2*g3)*k+g2*g3*h3*ksq+
                                                   2eta*r0*beta*g2^2*(g3-g1*g2)+(4g3-g0*g3-g1*g2)*(g3-g1*g2)*r0*k+beta*(2g1*g3*g2-g1^2*g2^2-g3^2)*r0^2)
         dgdtmhdfdtm1dh = g1*k*rinv*r0inv+k*c12*rinv2*r0inv-k*c2*c13*rinv3*r0inv-(2*k*r0inv-beta)*c26-eta*c25
@@ -1223,7 +1226,10 @@ function compute_jacobian_gamma!(gamma::T,g0::T,g1::T,g2::T,g3::T,h1::T,h2::T,df
         c19 = 4*eta*h1+3*h2*r0
         c23 = h2*k-r0*g1
         h6 = H6(gamma,beta)
-        h8 = H8(gamma,beta,sqb)
+        #h8 = H8(gamma,beta,sqb)
+        h3 = H3(gamma,beta,sqb)
+        h5 = H5(gamma,beta,sqb)
+        h8 = -2h3+3h5
         # Derivatives of \delta x with respect to x0, v0, k & h:
         dfm1dxx = k*rinv3*betainv*r0inv^4*(k*h1*r^2*r0*(beta-2*k*r0inv)+beta*c3*(r*c23+c14*c2)+c14*r*(k*(r-g2*k)+g0*r0*zeta))
         dfm1dxv = k*rinv2*r0inv*(k*(g2*h2+g1*h1)-2g1*g2*r0+g2*c14*c2*rinv)
@@ -1251,7 +1257,8 @@ function compute_jacobian_gamma!(gamma::T,g0::T,g1::T,g2::T,g3::T,h1::T,h2::T,df
                                     c15*rinv*(beta*g2^2*eta^2+eta*k*h8+h6*ksq+(2eta*g1*g2-k*(g2^2-3g1*g3))*beta*r0+beta*g1^2*r0^2))
         dgmhdk  = rinv*(k*c1*c16*rinv*r0inv+c15-k*c15*c17*betainv*rinv*r0inv-k*c19*betainv*r0inv-k*c1*c2*c15*rinv2*r0inv)
         #  dgmhdk2_old  = c1*c16*rinv-c15*c17*betainv*rinv-c19*betainv-c1*c2*c15*rinv2
-        h7 = H7(gamma,beta,sqb)
+#        h7 = H7(gamma,beta,sqb)
+        h7 = beta*g1*g2^2-g0*h8
         dgmhdk2 =  betainv*rinv2*(r*(2eta^2*(g3*g2-g1*h1) + eta*k*(3g3*h2 - 4g2*h1) +
                                       r0*eta*(beta*g3*(g1*g2 + g0*g3) - 2g0*h6) + (-h6*(g1 + beta*g3) + g2*(2g3 - h2))*r0*k +
                                       (h7 - beta^2*g1*g3^2)*r0^2)- c15*(-beta*eta^2*g2^2 + eta*k*(-h2 + 2g0*g3) - h6*ksq -
@@ -1285,7 +1292,7 @@ function compute_jacobian_gamma!(gamma::T,g0::T,g1::T,g2::T,g3::T,h1::T,h2::T,df
         ddfdtdk  = dfdt*(1/k+c1*(r0-g2*k)*r0inv*rinv2/g1-betainv*r0inv*(1+c17*rinv))
         #  ddfdtdk2  = -g1*(c1*(r0-g2*k)*r0inv*rinv2/g1-betainv*r0inv*(1+c17*rinv))
         #  ddfdtdk2  = r0inv*(g1*c17*betainv*rinv+g1*betainv-g1*c1*c2*rinv2-c1*g0*rinv)
-        h3 = H3(gamma,beta,sqb)
+        #h3 = H3(gamma,beta,sqb)
         ddfdtdk2  = (r0-g2*k)*betainv*r0inv*rinv2*(-eta*beta*g2^2+h3*k+(g3-g1*g2)*beta*r0)
         ddfdtdh  = dfdt*(r0-g2*k)*rinv2/g1
         dgdotm1dxx = rinv2*r0inv3*((eta*g2+g1*r0)*k*c3*rinv+g2*k*(k*(g2*k-r)-g0*r0*zeta)*betainv)
