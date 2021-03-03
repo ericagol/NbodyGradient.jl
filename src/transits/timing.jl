@@ -14,8 +14,8 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T,pai
     # Initial time
     t0 = s.t[1]
     # Number of steps
-#    nsteps = abs(round(Int64,(intr.tmax - t0)/intr.h))
-    nsteps = abs(round(Int64,(intr.tmax)/intr.h))
+    nsteps = abs(round(Int64,(intr.tmax - t0)/intr.h))
+#    nsteps = abs(round(Int64,(intr.tmax)/intr.h))
     # Time step
     h = intr.h * check_step(t0,intr.tmax)
     # Save the g function, which computes the relative sky velocity dotted with relative position
