@@ -19,6 +19,8 @@ tmax = 2500/π
 
 intr = Integrator(h, 0.0, tmax)
 
+# For integrating with only Kepler+drift for adjacent planets & planets+star
+# (more distant planets are handled with fast kicks):
 function integrate_adj(s::State{T},h::T,tmax::T;grad::Bool=false) where T<:Real
   pair = ones(Bool,s.n,s.n)
   # Only include Kepler+drift solver for adjacent planets:

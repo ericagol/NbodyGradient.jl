@@ -3,7 +3,7 @@
 #include("/Users/ericagol/Computer/Julia/regress.jl")
 
 using NbodyGradient, PyPlot, DelimitedFiles
-include("../../test/linreg.jl")
+include("linreg.jl")
 
 # This routine takes derivative of transit times with respect
 # to the initial orbital elements.
@@ -31,7 +31,8 @@ h  = 0.07
 tmax = 400.0
 
 # Read in initial conditions:
-elements = readdlm("elements_88.txt",',')[1:n,:]
+#elements = readdlm("elements_88.txt",',')[1:n,:]
+elements = readdlm("elements.txt",',')[1:n,:]
 # Make masses of planets bigger
 #elements[2,1] *= 10.0
 #elements[3,1] *= 10.0
