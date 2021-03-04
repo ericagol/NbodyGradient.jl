@@ -12,3 +12,5 @@ License:  If using in publications, please include Agol, Hernandez & Langford as
 Paper: In preparation.
 
 Documentation: TBD.
+
+Thanks to NASA, NSF and the Guggenheim Foundation for supporting this work.
