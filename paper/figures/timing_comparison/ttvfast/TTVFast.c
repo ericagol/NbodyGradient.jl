@@ -38,13 +38,13 @@ double Geta[MAX_N_PLANETS];
 double guess[MAX_N_PLANETS][3];
 double factor1[MAX_N_PLANETS], factor2[MAX_N_PLANETS];
 double prev_dot[MAX_N_PLANETS],curr_dot[MAX_N_PLANETS],curr_z[MAX_N_PLANETS];
-int count[MAX_N_PLANETS];
+int count[MAX_N_PLANETS],nstep;
 
 double tdot_result,dotA,dotB,TimeA,TimeB,RVTime;
 int  tplanet;
 double dt;
 int n_planets;
-double Time;
+double Time,Time0;
 double machine_epsilon;
 #include "ttv-map-jacobi.c"
 #include "kepcart2.c"
@@ -95,12 +95,15 @@ void TTVFast(double *params,double dt, double Time, double total,int n_plan,Calc
   }
 
   A(p, dt2);
-
+  nstep = 0;
+  Time0 = Time;
   while(Time < total){
     copy_system(p, p_tmp);
     B(p,dt);
     A(p,dt);
-    Time+=dt;
+    /* Time+=dt; */
+    nstep+=1;
+    Time = Time0 + dt*nstep;
     /* Calculate RV if necessary */
 
     if(j <RV_count){

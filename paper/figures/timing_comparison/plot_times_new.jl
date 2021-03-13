@@ -12,10 +12,11 @@ reb_diff = nbg .- reb
 #plot()
 ax = axes[1]
 for i in 1:3
-    ind = findfirst(isequal(0.0),reb_diff[i,:])
+    ind = findfirst(isequal(0.0),reb[i,:])
     ind = ind === nothing ? ind = 3000 : ind = ind - 5
     tt = nbg[i,1:ind] ; pmean = mean(tt[2:ind] .- tt[1:ind-1]);
     iref = collect(0:1:ind-1)
+    println(labels[i]," ",ind," ",maximum(tt))
     tref = mean(tt .- pmean .* iref) .+ pmean .* iref ; ttv = (tt .- tref) .* 24*60
     ax.plot(nbg[i,1:ind], ttv, label=labels[i],color=color[i])
     ttv = (reb[i,1:ind] .- tref) .* 24*60
@@ -28,7 +29,7 @@ ax.set_ylabel("TTV [minutes]")
 ax.axis([0,4000,-800,800])
 ax = axes[2]
 for i in 4:7
-    ind = findfirst(isequal(0.0),reb_diff[i,:])
+    ind = findfirst(isequal(0.0),reb[i,:])
     ind = ind === nothing ? ind = 3000 : ind = ind - 5
     tt = nbg[i,1:ind] ; pmean = mean(tt[2:ind] .- tt[1:ind-1]);
     iref = collect(0:1:ind-1)
@@ -45,7 +46,7 @@ ax.axis([0,4000,-800,800])
 
 ax = axes[3]
 for i in 1:7
-    ind = findfirst(isequal(0.0),reb_diff[i,:])
+    ind = findfirst(isequal(0.0),reb[i,:])
     ind = ind === nothing ? ind = 3000 : ind = ind - 5
     ax.plot(nbg[i,1:ind], reb_diff[i,1:ind] .* 24*60*60, label=labels[i],color=color[i])
 end
@@ -53,7 +54,7 @@ end
 ax.set_title("Time difference with REBOUND")
 ax.set_ylabel("Transit time diff [sec]")
 ax.set_xlabel("Time [Days]")
-ax.axis([0,4000,-0.02,0.02])
+#ax.axis([0,4000,-0.02,0.02])
 #ax.legend(ncol=2,loc="upper left")
 #read(stdin,Char)
 #savefig("nbg_vs_reb_transit_times.pdf")
@@ -62,14 +63,14 @@ fast_diff = nbg .- fast
 #plot()
 ax = axes[4]
 for i in 1:7
-    ind = findfirst(isequal(0.0),fast_diff[i,:])
+    ind = findfirst(isequal(0.0),fast[i,:])
     ind = ind === nothing ? ind = 3000 : ind = ind - 5
     ax.plot(nbg[i,1:ind], fast_diff[i,1:ind] .* 24*60*60, label=labels[i],color=color[i])
 end
 ax.set_title("Time difference with TTVFast")
 ax.set_ylabel("Transit time diff [sec]")
 ax.set_xlabel("Time [Days]")
-ax.axis([0,4000,-4,4])
+#ax.axis([0,4000,-4,4])
 #ax.legend(ncol=2,loc="upper left")
 #savefig("nbg_vs_ttvfast_transit_times.pdf")
 fig.tight_layout()

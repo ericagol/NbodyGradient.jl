@@ -47,7 +47,7 @@ def compute_tts(pos, vel, elements, tmax, denom):
                 i+=1
                 sim.integrate(sim.t+sim.dt)
 
-    return tts[:,3000]
+    return tts[:,:3000]
 
 if __name__ == "__main__":
     #ntransits = 500

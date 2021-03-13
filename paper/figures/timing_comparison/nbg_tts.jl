@@ -70,7 +70,7 @@ function output_TTVFast_ICs(s::State)
         ttvf_pos[:,i] .-= xstar
         ttvf_vel[:,i] .-= vstar
     end
-    A = [1 0 0; 0 1 0; 0 0 -1]
+    A = [-1 0 0; 0 1 0; 0 0 -1]
     ttvf_pos = (A * ttvf_pos)'
     ttvf_vel = (A * ttvf_vel)'
 
