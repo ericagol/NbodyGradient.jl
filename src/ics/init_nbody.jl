@@ -1,77 +1,86 @@
 """
-    init_nbody(init,t0)
+    init_nbody(ic,t0)
 
 Converts initial orbital elements into Cartesian coordinates.
 
 # Arguments
-- `init::ElementsIC{T<:Real}`: Initial conditions of the system. See [`InitialConditions`](@ref).
+- `ic::ElementsIC{T<:Real}`: Initial conditions of the system. See [`InitialConditions`](@ref).
 # Outputs
 - `x::Array{<:Real,2}`: Cartesian positions of each body.
 - `v::Array{<:Real,2}`: Cartesian velocites of each body.
 - `jac_init::Array{<:Real,2}`: Derivatives of A-matrix and x,v with respect to the masses of each object.
 """
-function init_nbody(init::ElementsIC{T}) where T <: AbstractFloat
+function init_nbody(ic::ElementsIC{T}) where T <: AbstractFloat
 
-    r, rdot, jac_init = kepcalc(init)
+    r, rdot, jac_init = kepcalc(ic)
 
-    Ainv = inv(init.amat)
+    Ainv = inv(ic.amat)
 
     # Cartesian coordinates
-    x = zeros(T,NDIM,init.nbody)
+    x = zeros(T,NDIM,ic.nbody)
     x = permutedims(*(Ainv,r))
-    
-    v = zeros(T,NDIM,init.nbody)
+
+    v = zeros(T,NDIM,ic.nbody)
     v = permutedims(*(Ainv,rdot))
 
     return x,v,jac_init
 end
 
+"""Return the cartesian coordinates."""
+function init_nbody(ic::CartesianIC{T}) where T <: AbstractFloat
+    x = copy(ic.x)
+    v = copy(ic.v)
+    n = size(x)[2]
+    jac_init = Matrix{T}(I,7*n,7*n)
+    return x,v,jac_init
+end
+
 """
-    kepcalc(init,t0)
+    kepcalc(ic,t0)
 
 Computes Kepler's problem for each pair of bodies in the system.
 
 # Arguments
-- `init::ElementsIC{T<:Real}`: Initial conditions structure.
+- `ic::ElementsIC{T<:Real}`: Initial conditions structure.
 # Outputs
 - `rkepler::Array{T<:Real,2}`: Matrix of initial position vectors for each keplerian.
 - `rdotkepler::Array{T<:Real,2}`: Matrix of initial velocity vectors for each keplerian.
 - `jac_init::Array{T<:Real,2}`: Derivatives of the A-matrix and cartesian positions and velocities with respect to the masses of each object.
 """
-function kepcalc(init::ElementsIC{T}) where T<:AbstractFloat
-    n = init.nbody
+function kepcalc(ic::ElementsIC{T}) where T<:AbstractFloat
+    n = ic.nbody
     rkepler = zeros(T,n,NDIM)
     rdotkepler = zeros(T,n,NDIM)
-    if init.der 
+    if ic.der
         jac_kepler = zeros(T,6*n,7*n)
         jac_21 = zeros(T,7,7)
     end
     # Compute Kepler's problem for each binary
     i = 1; b = 0
-    while i < init.nbody
-        ind = Bool.(abs.(init.ϵ[i,:]))
-        μ = sum(init.m[ind])
+    while i < ic.nbody
+        ind = Bool.(abs.(ic.ϵ[i,:]))
+        μ = sum(ic.m[ind])
 
         # Check for a new binary.
         if first(ind) == zero(T)
-            b += 1 
+            b += 1
         end
 
         # Solve Kepler's problem
-        if init.der
-            r,rdot = kepler_init(init.t0,μ,init.elements[i+1+b,2:7],jac_21)
+        if ic.der
+            r,rdot = kepler_init(ic.t0,μ,ic.elements[i+1+b,2:7],jac_21)
         else
-            r,rdot = kepler_init(init.t0,μ,init.elements[i+1+b,2:7])
+            r,rdot = kepler_init(ic.t0,μ,ic.elements[i+1+b,2:7])
         end
         rkepler[i,:] .= r
         rdotkepler[i,:] .= rdot
-        
-        if init.der
+
+        if ic.der
             for j=1:6, k=1:6
                 jac_kepler[(i-1)*6+j,i*7+k] = jac_21[j,k]
             end
             for j in 1:n
-                if init.ϵ[i,j] != 0
+                if ic.ϵ[i,j] != 0
                     for k = 1:6
                         jac_kepler[(i-1)*6+k,j*7] = jac_21[k,7]
                     end
@@ -80,15 +89,15 @@ function kepcalc(init::ElementsIC{T}) where T<:AbstractFloat
         end
         # Check if last binary was a new branch.
         if b > 0
-            b -= 2 
+            b -= 2
         elseif b < 0
             b = 0
             #i += 1
         end
         i += 1
     end
-    if init.der
-        jac_init = d_dm(init,rkepler,rdotkepler,jac_kepler)
+    if ic.der
+        jac_init = d_dm(ic,rkepler,rdotkepler,jac_kepler)
         return rkepler,rdotkepler,jac_init
     else
         return rkepler,rdotkepler,zeros(T,0,0)
@@ -96,23 +105,23 @@ function kepcalc(init::ElementsIC{T}) where T<:AbstractFloat
 end
 
 """
-    d_dm(init,rkepler,rdotkepler,jac_kepler)
+    d_dm(ic,rkepler,rdotkepler,jac_kepler)
 
 Computes derivatives of A-matrix, position, and velocity with respect to the masses of each object.
 
 # Arguments
-- `init::IC`: Initial conditions structure.
+- `ic::IC`: Initial conditions structure.
 - `rkepler::Array{<:Real,2}`: Position vectors for each Keplerian.
 - `rdotkepler::Array{<:Real,2}`: Velocity vectors for each Keplerian.
 - `jac_kepler::Array{<:Real,2}`: Keplerian Jacobian matrix.
 # Outputs
 - `jac_init::Array{<:Real,2}`: Derivatives of the A-matrix and cartesian positions and velocities with respect to the masses of each object.
 """
-function d_dm(init::ElementsIC{T},rkepler::Array{T,2},rdotkepler::Array{T,2},jac_kepler::Array{T,2}) where T <: AbstractFloat
+function d_dm(ic::ElementsIC{T},rkepler::Array{T,2},rdotkepler::Array{T,2},jac_kepler::Array{T,2}) where T <: AbstractFloat
 
-    N = init.nbody
-    m = init.m
-    ϵ = init.ϵ
+    N = ic.nbody
+    m = ic.m
+    ϵ = ic.ϵ
     jac_init = zeros(T,7*N,7*N)
     dAdm = zeros(T,N,N,N)
     dxdm = zeros(T,NDIM,N)
@@ -125,7 +134,7 @@ function d_dm(init::ElementsIC{T},rkepler::Array{T,2},rdotkepler::Array{T,2},jac
     end
 
     # Calculate inverse of dAdm
-    Ainv = inv(init.amat)
+    Ainv = inv(ic.amat)
     dAinvdm = zeros(T,N,N,N)
     for k in 1:N
         dAinvdm[:,:,k] .= -Ainv * dAdm[:,:,k] * Ainv
@@ -174,8 +183,8 @@ function amatrix(ϵ::Array{T,2},m::Array{T,1}) where T<:AbstractFloat
     return A
 end
 
-function amatrix(init::ElementsIC{T}) where T <: Real
-    init.amat .= amatrix(init.ϵ,init.m)
+function amatrix(ic::ElementsIC{T}) where T <: Real
+    ic.amat .= amatrix(ic.ϵ,ic.m)
 end
 
 """
