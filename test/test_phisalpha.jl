@@ -1,7 +1,7 @@
 # Tests the routine phisalpha jacobian.  This routine
 # computes the force gradient correction after Dehnen & Hernandez (2017).
 
-import NbodyGradient:phisalpha!
+import NbodyGradient: phisalpha!, init_nbody
 
 # Next, try computing three-body Keplerian Jacobian:
 

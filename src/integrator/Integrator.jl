@@ -12,7 +12,7 @@ Integrator. Used as a functor to integrate a [`State`](@ref).
 - `scheme::Function` : The integration scheme to use.
 - `h::T` : Step size.
 - `t0::T` : Initial time.
-- `tmax::T` : Final time.
+- `tmax::T` : Duration of simulation.
 """
 mutable struct Integrator{T<:AbstractFloat} <: AbstractIntegrator
     scheme::Function
@@ -212,7 +212,7 @@ end
 """
     (::Integrator)(s; grad=true)
 
-Callable [`Integrator`](@ref) method. Integrate to `tmax` -- specified in constructor.
+Callable [`Integrator`](@ref) method. Integrate from `s.t` to `tmax` -- specified in constructor.
 
 # Arguments
 - `s::State{T}` : The current state of the simulation.
@@ -220,7 +220,7 @@ Callable [`Integrator`](@ref) method. Integrate to `tmax` -- specified in constr
 ### Optional
 - `grad::Bool` : Choose whether to calculate gradients. (Default = true)
 """
-(intr::Integrator)(s::State{T};grad::Bool=true) where T<:AbstractFloat = intr(s,intr.tmax,grad=grad)
+(intr::Integrator)(s::State{T};grad::Bool=true) where T<:AbstractFloat = intr(s,s.t[1]+intr.tmax,grad=grad)
 
 function check_step(t0::T,tmax::T) where T<:AbstractFloat
     if abs(tmax) > abs(t0)
@@ -233,8 +233,6 @@ function check_step(t0::T,tmax::T) where T<:AbstractFloat
         end
     end
 end
-
-
 
 #========== Includes  ==========#
 const ints = ["ahl21"]

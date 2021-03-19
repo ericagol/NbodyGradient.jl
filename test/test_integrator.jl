@@ -31,7 +31,7 @@
     # Setup integrator
     h  = 0.05
     nstep = 100
-    tmax = nstep * h + t0
+    tmax = nstep * h
     AHL21 = Integrator(ahl21!, h, t0, tmax)
 
     # Integrate
@@ -47,7 +47,7 @@
     perturb!(s_big)
 
     h_big = big(h)
-    tmax_big = nstep * h_big + t0_big
+    tmax_big = nstep * h_big
     AHL21_big = Integrator(ahl21!, h_big, t0_big, tmax_big)
 
     AHL21_big(s_big, grad=false)

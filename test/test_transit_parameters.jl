@@ -5,7 +5,7 @@ import NbodyGradient: set_state!, zero_out!, amatrix
     t0 = 7257.93115525 - 7300.0 - 0.5 # Initialize IC before first transit
     h = 0.04
     itime = 10.0 # Time integrator will run
-    tmax = itime + t0
+    tmax = itime
 
     # Setup initial conditions:
     elements = readdlm("elements.txt", ',')[1:N,:]
