@@ -1,3 +1,5 @@
+import NbodyGradient: init_nbody
+
 @testset "init_nbody" begin
 
     elements = "elements.txt"

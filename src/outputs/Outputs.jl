@@ -2,7 +2,7 @@ abstract type AbstractOutput{T} end
 """
 
 Preallocates and holds arrays for positions, velocities, and Jacobian at every integrator step
-""" 
+"""
 # Should add option to choose out intervals, checkpointing, etc.
 struct CartesianOutput{T<:AbstractFloat} <: AbstractOutput{T}
     states::Vector{State{T}}
@@ -27,25 +27,24 @@ function (intr::Integrator)(s::State{T},o::CartesianOutput{T}) where T<:Abstract
     t0 = s.t[1] # Initial time
     time = intr.tmax
     nsteps = o.nstep
-    
+
     # Integrate in proper direction
     h = intr.h * check_step(t0,time)
     tmax = t0 + (h * nsteps)
 
     # Preallocate struct of arrays for derivatives (and pair)
-    d = Derivatives(T,s.n) 
-    pair = zeros(Bool,s.n,s.n)
-    
+    d = Derivatives(T,s.n)
+
     for i in 1:nsteps
         # Save State from current step
         o.states[i] = deepcopy(s)
         # Take integration step and advance time
-        intr.scheme(s,d,h,pair)
+        intr.scheme(s,d,h)
         s.t[1] = t0 +  (h * i)
     end
 
-    # Output to jld2 file if desired 
-    if o.file; save(o.filename,Dict("states" => o.states)); end 
+    # Output to jld2 file if desired
+    if o.file; save(o.filename,Dict("states" => o.states)); end
     return
 end
 

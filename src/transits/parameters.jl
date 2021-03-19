@@ -1,6 +1,6 @@
 # Collection of functions to calculate transit parameters: timing, impact parameter, sky velocity
 
-function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T,pair::Matrix{Bool};grad::Bool=true) where T<:AbstractFloat
+function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T;grad::Bool=true) where T<:AbstractFloat
     n = s.n; ntt_max = tt.ntt;
     d = Derivatives(T,s.n)
     s_prior = deepcopy(s)
@@ -14,7 +14,7 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
     # Initial time
     t0 = s.t[1]
     # Number of steps
-    nsteps = abs(round(Int64,(intr.tmax - t0)/intr.h))
+    nsteps = abs(round(Int64,intr.tmax/intr.h))
     # Time step
     h = intr.h * check_step(t0,intr.tmax)
     # Save the g function, which computes the relative sky velocity dotted with relative position
@@ -30,11 +30,11 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
     param_real = all(isfinite.(s.x)) && all(isfinite.(s.v)) && all(isfinite.(s.m)) && all(isfinite.(s.jac_step))
     #while s.t[1] < (t0+intr.tmax) && param_real
     for _ in 1:nsteps
-        # Carry out a ah18 mapping step and advance time:
+        # Carry out a ahl21 mapping step and advance time:
         if grad
-            intr.scheme(s,d,h,pair)
+            intr.scheme(s,d,h)
         else
-            intr.scheme(s,h,pair)
+            intr.scheme(s,h)
         end
         istep += 1
         s.t[1] = t0 + (istep * h)
@@ -52,15 +52,15 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
             # See if sign of g switches, and if planet is in front of star (by a good amount):
             # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
             if gi > 0 && gsave[i] < 0 && -s.x[3,i] > 0.25*ri && ri < rstar
-                # A transit has occurred between the time steps - integrate ah18! between timesteps
+                # A transit has occurred between the time steps - integrate ahl21! between timesteps
                 tt.count[i] += 1
                 if tt.count[i] <= ntt_max
                     dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
                     set_state!(s,s_prior) # Set state to step after transit occured
                     if grad
-                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,d,dtbvdq,intr,pair) # Search for transit time (integrating 'backward')
+                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,d,dtbvdq,intr) # Search for transit time (integrating 'backward')
                     else
-                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,d,intr,pair,bv=true)
+                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,d,intr,bv=true)
                     end
                     # Copy transit time, b, vsky and derivatives to TransitParameters structure
                     tt.ttbv[1,i,tt.count[i]] = s.t[1] + dt

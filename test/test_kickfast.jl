@@ -40,7 +40,9 @@ m0 = copy(m)
 init = ElementsIC(t0, H, elements)
 ic_big = ElementsIC(big(t0), H, big.(elements))
 s0 = State(init)
+s0.pair .= pair
 s0big = State(ic_big)
+s0big.pair .= pair
 
 # Tilt the orbits a bit:
 s0.x[2,1] = 5e-1 * sqrt(s0.x[1,1]^2 + s0.x[3,1]^2)
@@ -53,8 +55,8 @@ s0.v[2,3] = -5e-1 * sqrt(s0.v[1,2]^2 + s0.v[3,2]^2)
 # Take a step:
 s0big.x .= big.(s0.x)
 s0big.v .= big.(s0.v)
-ah18!(s0,h,pair)
-ah18!(s0big,big(h),pair)
+ahl21!(s0,h)
+ahl21!(s0big,big(h))
 
 # Now, copy these to compute Jacobian (so that I don't step
 # x0 & v0 forward in time):
@@ -64,7 +66,7 @@ s.xerror .= 0.0; s.verror .= 0.0
 d = Derivatives(Float64, s.n);
 s.jac_step .= 0.0
 d.dqdt_kick .= 0.0
-kickfast!(s,d,h,pair)
+kickfast!(s,d,h)
 # Add in identity matrix:
 for i = 1:7 * n
     d.jac_kick[i,i] += 1
@@ -85,7 +87,7 @@ sbig.v .= vsave
 sbig.m .= msave
 sbig.xerror .= 0.0; sbig.verror .= 0.0
 # Carry out step using BigFloat for extra precision:
-kickfast!(sbig,hbig,pair)
+kickfast!(sbig,hbig)
 # Save back to use in derivative calculations
 xsave .= sbig.x
 vsave .= sbig.v
@@ -95,14 +97,14 @@ sbig.xerror .= 0.0; sbig.verror .= 0.0
 # Compute numerical derivatives wrt time:
 dqdt_num = zeros(BigFloat, 7 * n)
 # Vary time:
-kickfast!(sbig,hbig,pair)
+kickfast!(sbig,hbig)
 # Initial positions, velocities & masses:
 sbig = deepcopy(s0big)
 sbig.xerror .= 0.0; sbig.verror .= 0.0
 hbig = big(h)
 dq = dlnq * hbig
 hbig += dq
-kickfast!(sbig,hbig,pair)
+kickfast!(sbig,hbig)
 # Now x & v are final positions & velocities after time step
 for i in 1:n, k in 1:3
     dqdt_num[(i - 1) * 7 +  k] = (sbig.x[k,i] - xsave[k,i]) / dq
@@ -123,7 +125,7 @@ for j = 1:n
             dq = dlnq
             sbig.x[jj,j] = dq
         end
-        kickfast!(sbig, hbig, pair)
+        kickfast!(sbig, hbig)
         # Now x & v are final positions & velocities after time step
         for i = 1:n
             for k = 1:3
@@ -140,8 +142,8 @@ for j = 1:n
             dq = dlnq
             sbig.v[jj,j] = dq
         end
-        kickfast!(sbig, hbig, pair)
-        for i = 1:n
+        kickfast!(sbig, hbig)
+        for i in 1:n
             for k = 1:3
                 jac_step_num[(i - 1) * 7 +  k,(j - 1) * 7 + 3 + jj] = (sbig.x[k,i] - xsave[k,i]) / dq
                 jac_step_num[(i - 1) * 7 + 3 + k,(j - 1) * 7 + 3 + jj] = (sbig.v[k,i] - vsave[k,i]) / dq
@@ -153,7 +155,7 @@ for j = 1:n
     sbig.xerror .= 0.0; sbig.verror .= 0.0
     dq = sbig.m[j] * dlnq
     sbig.m[j] += dq
-    kickfast!(sbig, hbig, pair)
+    kickfast!(sbig, hbig)
     for i = 1:n
         for k = 1:3
             jac_step_num[(i - 1) * 7 +  k,j * 7] = (sbig.x[k,i] - xsave[k,i]) / dq

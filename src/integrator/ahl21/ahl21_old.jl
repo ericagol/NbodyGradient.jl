@@ -1,6 +1,6 @@
-# Old versions of AH18 methods
+# Old versions of AHL21 methods
 
-function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},jac_error::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
+function ahl21!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,jac_step::Array{T,2},jac_error::Array{T,2},pair::Array{Bool,2}) where {T <: Real}
     zilch = zero(T); uno = one(T); half = convert(T,0.5); two = convert(T,2.0)
     h2 = half*h; sevn = 7*n
 
@@ -124,7 +124,7 @@ function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2}
     return
 end
 
-function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,dqdt::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
+function ahl21!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,dqdt::Array{T,1},pair::Array{Bool,2}) where {T <: Real}
     # [Currently this routine is not giving the correct dqdt values. -EA 8/12/2019]
     zilch = zero(T); uno = one(T); half = convert(T,0.5); two = convert(T,2.0)
     h2 = half*h
@@ -238,7 +238,7 @@ function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2}
     return
 end
 
-function ah18!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
+function ahl21!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
     h2 = 0.5*h
     drift!(x,v,xerror,verror,h2,n)
     kickfast!(x,v,xerror,verror,h/6,m,n,pair)
@@ -271,7 +271,7 @@ function drift!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2
             x[j,i],xerror[j,i] = comp_sum(x[j,i],xerror[j,i],h*v[j,i])
         end
         # Now for Jacobian:
-        for k=1:7*n, j=1:NDIM 
+        for k=1:7*n, j=1:NDIM
             jac_step[indi+j,k],jac_error[indi+j,k] = comp_sum(jac_step[indi+j,k],jac_error[indi+j,k],h*jac_step[indi+3+j,k])
         end
     end
@@ -818,7 +818,7 @@ function kepler_driftij_gamma!(m::Array{T,1},x::Array{T,2},v::Array{T,2},xerror:
         end
     end
     # The following lines are meant to compute dq/dt for kepler_driftij,
-    # but they currently contain an error (test doesn't pass in test_ah18.jl). [ ]
+    # but they currently contain an error (test doesn't pass in test_ahl21.jl). [ ]
     @inbounds for k=1:6
         # Position/velocity derivative, body i:
         dqdt[  k] =  mj*jac_kepler[k,8]
@@ -866,7 +866,7 @@ function jac_delxv_gamma!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,drift_first::B
     input = zeros(T,8)
     input[1:3]=x0; input[4:6]=v0; input[7]=k; input[8]=h
     if grad
-        if debug 
+        if debug
             # Also output gamma, r, fm1, dfdt, gmh, dgdtm1, and for debugging:
             delxv_jac = zeros(T,12,8)
         else
@@ -916,19 +916,19 @@ function jac_delxv_gamma!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,drift_first::B
         #  c1 = k; c2 = -zeta; c3 = -eta*sqb; c4 = sqb*(eta-h*beta0); c5 = eta*signb*sqb
         c1 = k; c2 = -2zeta; c3 = 2*eta*signb*sqb; c4 = -sqb*h*beta0; c5 = 2eta*signb*sqb
         # Solve for gamma:
-        while true 
+        while true
             gamma2 = gamma1
             gamma1 = gamma
             xx = 0.5*gamma
             #    xx = gamma
-            if beta0 > 0 
-                sx = sin(xx); cx = cos(xx) 
-            else 
+            if beta0 > 0
+                sx = sin(xx); cx = cos(xx)
+            else
                 sx = sinh(xx); cx = exp(-xx)+sx
             end
             #    gamma -= (c1*gamma+c2*sx+c3*cx+c4)/(c2*cx+c5*sx+c1)
             gamma -= (k*gamma+c2*sx*cx+c3*sx^2+c4)/(2signb*zeta*sx^2+c5*sx*cx+r0*beta0)
-            iter +=1 
+            iter +=1
             if iter >= ITMAX || gamma == gamma2 || gamma == gamma1
                 break
             end
@@ -944,8 +944,8 @@ function jac_delxv_gamma!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,drift_first::B
         end
         # Since we updated gamma, need to recompute:
         xx = 0.5*gamma
-        if beta0 > 0 
-            sx = sin(xx); cx = cos(xx) 
+        if beta0 > 0
+            sx = sin(xx); cx = cos(xx)
         else
             sx = sinh(xx); cx = exp(-xx)+sx
         end
@@ -1094,17 +1094,17 @@ function jac_delxv_gamma!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,drift_first::B
     # Compute coefficients: (8/28/19 notes)
     c1 = k; c2 = -2zeta; c3 = 2*eta*signb*sqb; c4 = -sqb*h*beta0; c5 = 2eta*signb*sqb
     # Solve for gamma:
-    while true 
+    while true
         gamma2 = gamma1
         gamma1 = gamma
         xx = 0.5*gamma
-        if beta0 > 0 
-            sx = sin(xx); cx = cos(xx) 
-        else 
+        if beta0 > 0
+            sx = sin(xx); cx = cos(xx)
+        else
             sx = sinh(xx); cx = exp(-xx)+sx
         end
         gamma -= (k*gamma+c2*sx*cx+c3*sx^2+c4)/(2signb*zeta*sx^2+c5*sx*cx+r0*beta0)
-        iter +=1 
+        iter +=1
         if iter >= ITMAX || gamma == gamma2 || gamma == gamma1
             break
         end
@@ -1113,8 +1113,8 @@ function jac_delxv_gamma!(x0::Array{T,1},v0::Array{T,1},k::T,h::T,drift_first::B
     fill!(delxv,zero(T))
     # Since we updated gamma, need to recompute:
     xx = 0.5*gamma
-    if beta0 > 0 
-        sx = sin(xx); cx = cos(xx) 
+    if beta0 > 0
+        sx = sin(xx); cx = cos(xx)
     else
         sx = sinh(xx); cx = exp(-xx)+sx
     end

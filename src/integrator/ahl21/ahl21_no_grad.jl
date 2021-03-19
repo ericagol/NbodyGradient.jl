@@ -1,29 +1,29 @@
-# The AH18 integrator WITHOUT derivatives.
+# The AHL21 integrator WITHOUT derivatives.
 """
 
-Carries out AH18 mapping with compensated summation, WITHOUT derivatives
+Carries out AHL21 mapping with compensated summation, WITHOUT derivatives
 """
-function ah18!(s::State{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
+function ahl21!(s::State{T},h::T) where T<:AbstractFloat
     h2 = 0.5*h; n = s.n
     drift!(s,h2)
-    kickfast!(s,h/6,pair)
+    kickfast!(s,h/6)
     @inbounds for i=1:n-1
         for j=i+1:n
-            if ~pair[i,j]
+            if ~s.pair[i,j]
                 kepler_driftij_gamma!(s,i,j,h2,true)
             end
         end
     end
-    phic!(s,h,pair)
-    phisalpha!(s,h,convert(T,2),pair)
+    phic!(s,h)
+    phisalpha!(s,h,convert(T,2))
     @inbounds for i=n-1:-1:1
         for j=n:-1:i+1
-            if ~pair[i,j]
+            if ~s.pair[i,j]
                 kepler_driftij_gamma!(s,i,j,h2,false)
             end
         end
     end
-    kickfast!(s,h/6,pair)
+    kickfast!(s,h/6)
     drift!(s,h2)
     return
 end
@@ -43,11 +43,11 @@ end
 
 Computes "fast" kicks for pairs of bodies in lieu of -drift+Kepler with compensated summation
 """
-function kickfast!(s::State{T},h::T,pair::Array{Bool,2}) where {T <: Real}
+function kickfast!(s::State{T},h::T) where {T <: Real}
     s.rij .= zero(T)
     @inbounds for i=1:s.n-1
         for j = i+1:s.n
-            if pair[i,j]
+            if s.pair[i,j]
                 r2 = zero(T)
                 for k=1:3
                     s.rij[k] = s.x[k,i] - s.x[k,j]
@@ -70,12 +70,12 @@ end
 
 Computes correction for pairs which are kicked.
 """
-function phic!(s::State{T},h::T,pair::Array{Bool,2}) where {T <: Real}
+function phic!(s::State{T},h::T) where {T <: Real}
     s.a .= zero(T)
     s.rij .= zero(T)
     s.aij .= zero(T)
     @inbounds for i=1:s.n-1, j = i+1:s.n
-        if pair[i,j] # kick group
+        if s.pair[i,j] # kick group
             r2 = zero(T)
             for k=1:3
                 s.rij[k] = s.x[k,i] - s.x[k,j]
@@ -95,7 +95,7 @@ function phic!(s::State{T},h::T,pair::Array{Bool,2}) where {T <: Real}
     end
     coeff = h^3/36*GNEWT
     @inbounds for i=1:s.n-1 ,j=i+1:s.n
-        if pair[i,j] # kick group
+        if s.pair[i,j] # kick group
             for k=1:3
                 s.aij[k] = s.a[k,i] - s.a[k,j]
                 s.rij[k] = s.x[k,i] - s.x[k,j]
@@ -117,7 +117,7 @@ end
 
 Computes the 4th-order correction with compensated summation.
 """
-function phisalpha!(s::State{T},h::T,alpha::T,pair::Array{Bool,2}) where {T <: Real}
+function phisalpha!(s::State{T},h::T,alpha::T) where {T <: Real}
     s.a .= zero(T)
     s.rij .= zero(T)
     s.aij .= zero(T)
@@ -126,7 +126,7 @@ function phisalpha!(s::State{T},h::T,alpha::T,pair::Array{Bool,2}) where {T <: R
     fac = zero(T); fac1 = zero(T); fac2 = zero(T); r1 = zero(T); r2 = zero(T); r3 = zero(T)
     @inbounds for i=1:s.n-1
         for j = i+1:s.n
-            if ~pair[i,j] # correction for Kepler pairs
+            if ~s.pair[i,j] # correction for Kepler pairs
                 for k=1:3
                     s.rij[k] = s.x[k,i] - s.x[k,j]
                 end
@@ -144,7 +144,7 @@ function phisalpha!(s::State{T},h::T,alpha::T,pair::Array{Bool,2}) where {T <: R
     # slightly to avoid reference to \tilde a_i):
     @inbounds for i=1:s.n-1
         for j=i+1:s.n
-            if ~pair[i,j] # correction for Kepler pairs
+            if ~s.pair[i,j] # correction for Kepler pairs
                 for k=1:3
                     s.aij[k] = s.a[k,i] - s.a[k,j]
                     s.rij[k] = s.x[k,i] - s.x[k,j]

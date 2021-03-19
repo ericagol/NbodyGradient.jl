@@ -1,4 +1,4 @@
-
+import NbodyGradient: kepler_init
 # Runs a simple test of kepler_init.jl
 
 # Not sure why this test can't see these from the module...

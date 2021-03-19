@@ -6,7 +6,7 @@ import NbodyGradient: set_state!, zero_out!, amatrix
     t0 = 7257.93115525 - 7300.0 - 0.5 # Initialize IC before first transit
     h = 0.04
     itime = 10.0
-    tmax = itime + t0
+    tmax = itime
 
     # Setup initial conditions:
     elements = readdlm("elements.txt", ',')[1:N,:]
@@ -18,7 +18,7 @@ import NbodyGradient: set_state!, zero_out!, amatrix
 
     # Calculate transit times and b,vsky
     function calc_times(h;grad=false)
-        intr = Integrator(ah18!, h, 0.0, tmax)
+        intr = Integrator(ahl21!, h, 0.0, tmax)
         s = State(ic)
         ttbv = TransitParameters(itime, ic)
         intr(s, ttbv;grad=grad)
@@ -27,7 +27,7 @@ import NbodyGradient: set_state!, zero_out!, amatrix
 
     # Calculate b,vsky for specified times
     function calc_pd(h, times;grad=false)
-        intr = Integrator(ah18!, h, 0.0, tmax)
+        intr = Integrator(ahl21!, h, 0.0, tmax)
         s = State(ic)
         ts = TransitSeries(times, ic)
         intr(s, ts; grad=grad)
@@ -50,7 +50,7 @@ import NbodyGradient: set_state!, zero_out!, amatrix
     # method for finite diff
     function calc_b(θ,i=1;b=true,times=ttbv.ttbv[1,2,mask])
         elements = reshape(θ,3,7)
-        intr = Integrator(ah18!, h, 0.0, 10.0)
+        intr = Integrator(ahl21!, h, 0.0, 10.0)
         ic = ElementsIC(t0,N,elements)
         s = State(ic)
         pd = Photodynamics(times, ic)

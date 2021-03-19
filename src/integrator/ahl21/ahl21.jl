@@ -1,8 +1,8 @@
 """
 
-Carry out AH18 mapping and calculates both the Jacobian and derivative with respect to the time step.
+Carry out AHL21 mapping and calculates both the Jacobian and derivative with respect to the time step.
 """
-function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
+function ahl21!(s::State{T},d::Derivatives{T},h::T) where T<:AbstractFloat
     zilch = zero(T); uno = one(T); half::T = 0.5; two::T = 2.0;
     h2::T = half*h; n = s.n; sevn = 7*n; h6::T = h/6.0
     zero_out!(d)
@@ -13,7 +13,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     @inbounds for i=1:n, k=1:3
         s.dqdt[(i-1)*7+k] = half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
     end
-    kickfast!(s,d,h6,pair)
+    kickfast!(s,d,h6)
     d.dqdt_kick ./= 6.0 # Since step is h/6
     # Since I removed identity from kickfast, need to add in dqdt:
     mul!(d.tmp7n, d.jac_kick, s.dqdt)
@@ -34,7 +34,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
         indi = (i-1)*7
         @inbounds for j=i+1:s.n
             indj = (j-1)*7
-            if ~pair[i,j]  # Check to see if kicks have not been applied
+            if ~s.pair[i,j]  # Check to see if kicks have not been applied
                 kepler_driftij_gamma!(s,d,i,j,h2,true)
                 # Pick out indices for bodies i & j:
 #                @inbounds for k2=1:sevn, k1=1:7
@@ -85,8 +85,8 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
             end
         end
     end
-    phic!(s,d,h,pair)
-    phisalpha!(s,d,h,two,pair)
+    phic!(s,d,h)
+    phisalpha!(s,d,h,two)
     if T == BigFloat
         d.jac_copy .= *(d.jac_phi,s.jac_step)
     else
@@ -106,7 +106,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
         indi=(i-1)*7
         @inbounds for j=s.n:-1:i+1
             indj=(j-1)*7
-            if ~pair[i,j]  # Check to see if kicks have not been applied
+            if ~s.pair[i,j]  # Check to see if kicks have not been applied
                 kepler_driftij_gamma!(s,d,i,j,h2,false)
                 # Pick out indices for bodies i & j:
                 # Carry out multiplication on the i/j components of matrix:
@@ -159,7 +159,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
         end
     end
     fill!(d.dqdt_kick,zilch)
-    kickfast!(s,d,h6,pair)
+    kickfast!(s,d,h6)
     d.dqdt_kick ./= 6.0 # Since step is h/6
     # Copy result to dqdt:
     mul!(d.tmp7n, d.jac_kick, s.dqdt)
@@ -183,14 +183,14 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     end
 end
 
-function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
+function ahl21!(s::State{T},d::Jacobian{T},h::T) where T<:AbstractFloat
     zilch = zero(T); uno = one(T); half = convert(T,0.5); two = convert(T,2.0); h2 = half*h; sevn = 7*s.n
     zero_out!(d)
 
     #drift!(s.x,s.v,s.xerror,s.verror,h2,s.n,s.jac_step,s.jac_error)
     #kickfast!(s.x,s.v,s.xerror,s.verror,h/6,s.m,s.n,d.jac_kick,d.dqdt_kick,pair)
     drift_grad!(s,h2)
-    kickfast!(s,d,h/6,pair)
+    kickfast!(s,d,h/6)
     # Multiply Jacobian from kick step:
     if T == BigFloat
         d.jac_copy .= *(d.jac_kick,s.jac_step)
@@ -207,7 +207,7 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
         indi = (i-1)*7
         @inbounds for j=i+1:s.n
             indj = (j-1)*7
-            if ~pair[i,j]  # Check to see if kicks have not been applied
+            if ~s.pair[i,j]  # Check to see if kicks have not been applied
                 kepler_driftij_gamma!(s,d,i,j,h2,true)
                 #kepler_driftij_gamma!(s.m,s.x,s.v,s.xerror,s.verror,i,j,h2,d.jac_ij,d.dqdt_ij,true)
                 # Pick out indices for bodies i & j:
@@ -244,8 +244,8 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
     end
     #phic!(s.x,s.v,s.xerror,s.verror,h,s.m,s.n,d.jac_phi,d.dqdt_phi,pair)
     #phisalpha!(s.x,s.v,s.xerror,s.verror,h,s.m,two,s.n,d.jac_phi,d.dqdt_phi,pair) # 10%
-    phic!(s,d,h,pair)
-    phisalpha!(s,d,h,two,pair)
+    phic!(s,d,h)
+    phisalpha!(s,d,h,two)
     if T == BigFloat
         d.jac_copy .= *(d.jac_phi,s.jac_step)
     else
@@ -261,7 +261,7 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
         indi=(i-1)*7
         @inbounds for j=s.n:-1:i+1
             indj=(j-1)*7
-            if ~pair[i,j]  # Check to see if kicks have not been applied
+            if ~s.pair[i,j]  # Check to see if kicks have not been applied
                 #kepler_driftij_gamma!(s.m,s.x,s.v,s.xerror,s.verror,i,j,h2,d.jac_ij,d.dqdt_ij,false)
                 kepler_driftij_gamma!(s,d,i,j,h2,false)
                 # Pick out indices for bodies i & j:
@@ -299,7 +299,7 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
     end
     #kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
     #kickfast!(s.x,s.v,s.xerror,s.verror,h/6,s.m,s.n,d.jac_kick,d.dqdt_kick,pair)
-    kickfast!(s,d,h/6,pair)
+    kickfast!(s,d,h/6)
     # Multiply Jacobian from kick step:
     if T == BigFloat
         d.jac_copy .= *(d.jac_kick,s.jac_step)
@@ -317,7 +317,7 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
     return
 end
 
-function ah18!(s::State{T},d::dTime{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
+function ahl21!(s::State{T},d::dTime{T},h::T) where T<:AbstractFloat
     # [Currently this routine is not giving the correct dqdt values. -EA 8/12/2019]
     n = s.n
     zilch = zero(T); uno = one(T); half = convert(T,0.5); two = convert(T,2.0); h2 = half*h; sevn = 7*n
@@ -328,7 +328,7 @@ function ah18!(s::State{T},d::dTime{T},h::T,pair::Matrix{Bool}) where T<:Abstrac
     @inbounds for i=1:n, k=1:3
         s.dqdt[(i-1)*7+k] = half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
     end
-    kickfast!(s,d,h/6,pair)
+    kickfast!(s,d,h/6)
     d.dqdt_kick ./= 6 # Since step is h/6
     # Since I removed identity from kickfast, need to add in dqdt:
     s.dqdt .+= d.dqdt_kick + *(d.jac_kick,s.dqdt)
@@ -336,7 +336,7 @@ function ah18!(s::State{T},d::dTime{T},h::T,pair::Matrix{Bool}) where T<:Abstrac
         indi = (i-1)*7
         @inbounds for j=i+1:n
             indj = (j-1)*7
-            if ~pair[i,j]  # Check to see if kicks have not been applied
+            if ~s.pair[i,j]  # Check to see if kicks have not been applied
                 kepler_driftij_gamma!(s,d,i,j,h2,true)
                 # Copy current time derivatives for multiplication purposes:
                 @inbounds for k1=1:7
@@ -358,8 +358,8 @@ function ah18!(s::State{T},d::dTime{T},h::T,pair::Matrix{Bool}) where T<:Abstrac
     # Looks like we are missing phic! here: [ ]
     # Since I haven't added dqdt to phic yet, for now, set jac_phi equal to identity matrix
     # (since this is commented out within phisalpha):
-    phic!(s,d,h,pair)
-    phisalpha!(s,d,h,two,pair)
+    phic!(s,d,h)
+    phisalpha!(s,d,h,two)
     # Add in time derivative with respect to prior parameters:
     # Copy result to dqdt:
     s.dqdt .+= d.dqdt_phi + *(d.jac_phi,s.dqdt)
@@ -367,7 +367,7 @@ function ah18!(s::State{T},d::dTime{T},h::T,pair::Matrix{Bool}) where T<:Abstrac
     @inbounds for i=n-1:-1:1
         indi=(i-1)*7
         @inbounds for j=n:-1:i+1
-            if ~pair[i,j]  # Check to see if kicks have not been applied
+            if ~s.pair[i,j]  # Check to see if kicks have not been applied
                 indj=(j-1)*7
                 kepler_driftij_gamma!(s,d,i,j,h2,false)
                 # Copy current time derivatives for multiplication purposes:
@@ -388,7 +388,7 @@ function ah18!(s::State{T},d::dTime{T},h::T,pair::Matrix{Bool}) where T<:Abstrac
         end
     end
     fill!(d.dqdt_kick,zilch)
-    kickfast!(s,d,h/6,pair)
+    kickfast!(s,d,h/6)
     d.dqdt_kick ./= 6 # Since step is h/6
     # Copy result to dqdt:
     s.dqdt .+= d.dqdt_kick + *(d.jac_kick,s.dqdt)
@@ -402,7 +402,7 @@ end
 
 """
 
-AH18 drift step. Drifts all particles with compensated summation. (with Jacobian)
+AHL21 drift step. Drifts all particles with compensated summation. (with Jacobian)
 """
 function drift_grad!(s::State{T},h::T) where {T <: Real}
     indi::Int64 = 0
@@ -421,9 +421,9 @@ end
 
 """
 
-AH18 kick step. Computes "fast" kicks for pairs of bodies (in lieu of -drift+Kepler). Include Jacobian and compensated summation.
+AHL21 kick step. Computes "fast" kicks for pairs of bodies (in lieu of -drift+Kepler). Include Jacobian and compensated summation.
 """
-function kickfast!(s::State{T},d::AbstractDerivatives{T},h::T,pair::Array{Bool,2}) where {T <: Real}
+function kickfast!(s::State{T},d::AbstractDerivatives{T},h::T) where {T <: Real}
     n::Int64 = s.n
     s.rij .= 0.0
     # Getting rid of identity since we will add that back in in calling routines:
@@ -433,7 +433,7 @@ function kickfast!(s::State{T},d::AbstractDerivatives{T},h::T,pair::Array{Bool,2
         indi = (i-1)*7
         for j=i+1:n
             indj = (j-1)*7
-            if pair[i,j]
+            if s.pair[i,j]
                 for k=1:3
                     s.rij[k] = s.x[k,i] - s.x[k,j]
                 end
@@ -481,7 +481,7 @@ end
 
 Computes correction for pairs which are kicked, with Jacobian, dq/dt, and compensated summation.
 """
-function phic!(s::State{T},d::AbstractDerivatives{T},h::T,pair::Array{Bool,2}) where {T <: Real}
+function phic!(s::State{T},d::AbstractDerivatives{T},h::T) where {T <: Real}
     s.a .= 0.0
     s.rij .= 0.0
     s.aij .= 0.0
@@ -496,7 +496,7 @@ function phic!(s::State{T},d::AbstractDerivatives{T},h::T,pair::Array{Bool,2}) w
     @inbounds for i=1:n-1
         indi = (i-1)*7
         for j=i+1:n
-            if pair[i,j]
+            if s.pair[i,j]
                 indj = (j-1)*7
                 for k=1:3
                     s.rij[k] = s.x[k,i] - s.x[k,j]
@@ -566,7 +566,7 @@ function phic!(s::State{T},d::AbstractDerivatives{T},h::T,pair::Array{Bool,2}) w
     @inbounds for i=1:n-1
         indi = (i-1)*7
         for j=i+1:n
-            if pair[i,j] # correction for Kepler pairs
+            if s.pair[i,j] # correction for Kepler pairs
                 indj = (j-1)*7
                 for k=1:3
                     s.aij[k] = s.a[k,i] - s.a[k,j]
@@ -651,7 +651,7 @@ end
 
 Computes the 4th-order correction, with Jacobian, dq/dt, and compensated summation.
 """
-function phisalpha!(s::State{T},d::AbstractDerivatives{T},h::T,alpha::T,pair::Array{Bool,2}) where {T <: Real}
+function phisalpha!(s::State{T},d::AbstractDerivatives{T},h::T,alpha::T) where {T <: Real}
     s.a .= 0.0
     d.dadq .= 0.0  # There is no velocity dependence
     d.dotdadq .= 0.0  # There is no velocity dependence
@@ -663,7 +663,7 @@ function phisalpha!(s::State{T},d::AbstractDerivatives{T},h::T,alpha::T,pair::Ar
     @inbounds for i=1:n-1
         indi = (i-1)*7
         for j=i+1:n
-            if ~pair[i,j] # correction for Kepler pairs
+            if ~s.pair[i,j] # correction for Kepler pairs
                 indj = (j-1)*7
                 for k=1:3
                     s.rij[k] = s.x[k,i] - s.x[k,j]
@@ -706,7 +706,7 @@ function phisalpha!(s::State{T},d::AbstractDerivatives{T},h::T,alpha::T,pair::Ar
     @inbounds for i=1:n-1
         indi = (i-1)*7
         for j=i+1:n
-            if ~pair[i,j] # correction for Kepler pairs
+            if ~s.pair[i,j] # correction for Kepler pairs
                 indj = (j-1)*7
                 for k=1:3
                     s.aij[k] = s.a[k,i] - s.a[k,j]
@@ -868,7 +868,7 @@ function kepler_driftij_gamma!(s::State{T},d::AbstractDerivatives{T},i::Int64,j:
         end
     end
     # The following lines are meant to compute dq/dt for kepler_driftij,
-    # but they currently contain an error (test doesn't pass in test_ah18.jl). [ ]
+    # but they currently contain an error (test doesn't pass in test_ahl21.jl). [ ]
     @inbounds for k=1:6
         # Position/velocity derivative, body i:
         d.dqdt_ij[  k] =  mj*d.jac_kepler[k,8]
@@ -1186,7 +1186,7 @@ function compute_jacobian_gamma!(gamma::T,g0::T,g1::T,g2::T,g3::T,h1::T,h2::T,df
                 delxv_jac[8,3+i] = drdv0x0*x0[i] - (k*betainv*rinv*(eta*(beta*g2*g3-h8) - h6*k + (g2^2 - 2*g1*g3)*beta*r0) + h*drdv0x0)*v0[i]
                 #                         +(-2g1*h+c18*betainv+(2g2*h-d)*c2*rinv+hsq*r0inv3*(c20*betainv-c2*c3*rinv))*v0[i]
                 #      delxv_jac[8,3+i] = ((eta*g2+g1*r0)*rinv+h*betainv*rinv*r0inv3*((3g1*g3 - 2g2^2)*k^3 - ksq*eta*h8 +
-                #            beta*ksq*(g2^2 - 3*g1*g3)*r0 - beta*r0^3 - k*g2*beta*(eta^2*g2 + 2eta*g1*r0 + g0*r0^2)))*x0[i]+(-2g1*h+c18*betainv+((g1*r0-g3*k-2*g0*h)*c2)*betainv*rinv + 
+                #            beta*ksq*(g2^2 - 3*g1*g3)*r0 - beta*r0^3 - k*g2*beta*(eta^2*g2 + 2eta*g1*r0 + g0*r0^2)))*x0[i]+(-2g1*h+c18*betainv+((g1*r0-g3*k-2*g0*h)*c2)*betainv*rinv +
                 #         hsq*((2*g2^2 - 3*g1*g3)*k^3 + beta*r0^3 + ksq*(eta*(g1*g2 - 3*g0*g3) + beta*(3*g1*g3 - g2^2)*r0) +
                 #         k*beta*g2*(eta*(eta*g2 + g1*r0) + r0*(eta*g1 + g0*r0)))*betainv*rinv*r0inv3)*v0[i]
                 delxv_jac[ 9,i] = dfm1dxx*x0[i]+dfm1dxv*v0[i]; delxv_jac[ 9,3+i]=dfm1dvx*x0[i]+dfm1dvv*v0[i]

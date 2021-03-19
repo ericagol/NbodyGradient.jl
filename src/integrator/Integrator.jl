@@ -12,7 +12,7 @@ Integrator. Used as a functor to integrate a [`State`](@ref).
 - `scheme::Function` : The integration scheme to use.
 - `h::T` : Step size.
 - `t0::T` : Initial time.
-- `tmax::T` : Final time.
+- `tmax::T` : Duration of simulation.
 """
 mutable struct Integrator{T<:AbstractFloat} <: AbstractIntegrator
     scheme::Function
@@ -21,11 +21,11 @@ mutable struct Integrator{T<:AbstractFloat} <: AbstractIntegrator
     tmax::T
 end
 
-Integrator(h::T,t0::T) where T<:AbstractFloat = Integrator(ah18!,h,t0,t0+h)
+Integrator(h::T,t0::T) where T<:AbstractFloat = Integrator(ahl21!,h,t0,t0+h)
 Integrator(scheme::Function,h::Real,t0::Real,tmax::Real) = Integrator(scheme,promote(h,t0,tmax)...)
 
-# Default to ah18!
-Integrator(h::T,t0::T,tmax::T) where T<:AbstractFloat = Integrator(ah18!,h,t0,tmax)
+# Default to ahl21!
+Integrator(h::T,t0::T,tmax::T) where T<:AbstractFloat = Integrator(ahl21!,h,t0,tmax)
 
 #========== State ==========#
 abstract type AbstractState end
@@ -56,6 +56,7 @@ struct State{T<:AbstractFloat} <: AbstractState
     dqdt_error::Vector{T}
     jac_error::Matrix{T}
     n::Int64
+    pair::Matrix{Bool}
 
     rij::Vector{T}
     a::Matrix{T}
@@ -84,6 +85,7 @@ function State(ic::InitialConditions{T}) where T<:AbstractFloat
     dqdt = zeros(T,7*n)
     dqdt_error = zeros(T,size(dqdt))
     jac_error = zeros(T,size(jac_step))
+    pair = zeros(Bool,n,n)
 
     rij = zeros(T,3)
     a = zeros(T,3,n)
@@ -94,7 +96,7 @@ function State(ic::InitialConditions{T}) where T<:AbstractFloat
     delxv = zeros(T,6)
     rtmp = zeros(T,3)
     return State(x,v,[ic.t0],ic.m,jac_step,dqdt,jac_init,xerror,verror,dqdt_error,jac_error,ic.nbody,
-    rij,a,aij,x0,v0,input,delxv,rtmp)
+    pair,rij,a,aij,x0,v0,input,delxv,rtmp)
 end
 
 function set_state!(s_old::State,s_new::State)
@@ -143,16 +145,15 @@ function (intr::Integrator)(s::State{T},time::T;grad::Bool=true) where T<:Abstra
     #while t0 + (h * nsteps) <= time; nsteps += 1; end
     tmax = t0 + (h * nsteps)
 
-    # Preallocate struct of arrays for derivatives (and pair)
+    # Preallocate struct of arrays for derivatives
     if grad; d = Derivatives(T,s.n); end
-    pair = zeros(Bool,s.n,s.n)
 
     for i in 1:nsteps
         # Take integration step and advance time
         if grad
-            intr.scheme(s,d,h,pair)
+            intr.scheme(s,d,h)
         else
-            intr.scheme(s,h,pair)
+            intr.scheme(s,h)
         end
     end
 
@@ -161,9 +162,9 @@ function (intr::Integrator)(s::State{T},time::T;grad::Bool=true) where T<:Abstra
     if tmax != time
         hf = time - tmax
         if grad
-            intr.scheme(s,d,hf,pair)
+            intr.scheme(s,d,hf)
         else
-            intr.scheme(s,hf,pair)
+            intr.scheme(s,hf)
         end
     end
 
@@ -186,9 +187,8 @@ Callable [`Integrator`](@ref) method. Integrate for N steps.
 function (intr::Integrator)(s::State{T},N::Int64;grad::Bool=true) where T<:AbstractFloat
     s2 = zero(T) # For compensated summation
 
-    # Preallocate struct of arrays for derivatives (and pair)
+    # Preallocate struct of arrays for derivatives
     if grad; d = Derivatives(T,s.n); end
-    pair = zeros(Bool,s.n,s.n)
 
     # check to see if backward step
     if N < 0; intr.h *= -1; N *= -1; end
@@ -197,9 +197,9 @@ function (intr::Integrator)(s::State{T},N::Int64;grad::Bool=true) where T<:Abstr
     for n in 1:N
         # Take integration step and advance time
         if grad
-            intr.scheme(s,d,h,pair)
+            intr.scheme(s,d,h)
         else
-            intr.scheme(s,h,pair)
+            intr.scheme(s,h)
         end
         s.t[1],s2 = comp_sum(s.t[1],s2,intr.h)
     end
@@ -212,7 +212,7 @@ end
 """
     (::Integrator)(s; grad=true)
 
-Callable [`Integrator`](@ref) method. Integrate to `tmax` -- specified in constructor.
+Callable [`Integrator`](@ref) method. Integrate from `s.t` to `tmax` -- specified in constructor.
 
 # Arguments
 - `s::State{T}` : The current state of the simulation.
@@ -220,7 +220,7 @@ Callable [`Integrator`](@ref) method. Integrate to `tmax` -- specified in constr
 ### Optional
 - `grad::Bool` : Choose whether to calculate gradients. (Default = true)
 """
-(intr::Integrator)(s::State{T};grad::Bool=true) where T<:AbstractFloat = intr(s,intr.tmax,grad=grad)
+(intr::Integrator)(s::State{T};grad::Bool=true) where T<:AbstractFloat = intr(s,s.t[1]+intr.tmax,grad=grad)
 
 function check_step(t0::T,tmax::T) where T<:AbstractFloat
     if abs(tmax) > abs(t0)
@@ -234,11 +234,9 @@ function check_step(t0::T,tmax::T) where T<:AbstractFloat
     end
 end
 
-
-
 #========== Includes  ==========#
-const ints = ["ah18"]
+const ints = ["ahl21"]
 for i in ints; include(joinpath(i,"$i.jl")); end
 
-const ints_no_grad = ["ah18","dh17"]
+const ints_no_grad = ["ahl21","dh17"]
 for i in ints_no_grad; include(joinpath(i,"$(i)_no_grad.jl")); end
