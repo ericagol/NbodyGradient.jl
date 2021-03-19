@@ -1,9 +1,9 @@
-# The AH18 integrator WITHOUT derivatives.
+# The AHL21 integrator WITHOUT derivatives.
 """
 
-Carries out AH18 mapping with compensated summation, WITHOUT derivatives
+Carries out AHL21 mapping with compensated summation, WITHOUT derivatives
 """
-function ah18!(s::State{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
+function ahl21!(s::State{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
     h2 = 0.5*h; n = s.n
     drift!(s,h2)
     kickfast!(s,h/6,pair)

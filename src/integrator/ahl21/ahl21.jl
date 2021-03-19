@@ -1,8 +1,8 @@
 """
 
-Carry out AH18 mapping and calculates both the Jacobian and derivative with respect to the time step.
+Carry out AHL21 mapping and calculates both the Jacobian and derivative with respect to the time step.
 """
-function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
+function ahl21!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
     zilch = zero(T); uno = one(T); half::T = 0.5; two::T = 2.0;
     h2::T = half*h; n = s.n; sevn = 7*n; h6::T = h/6.0
     zero_out!(d)
@@ -183,7 +183,7 @@ function ah18!(s::State{T},d::Derivatives{T},h::T,pair::Matrix{Bool}) where T<:A
     end
 end
 
-function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
+function ahl21!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
     zilch = zero(T); uno = one(T); half = convert(T,0.5); two = convert(T,2.0); h2 = half*h; sevn = 7*s.n
     zero_out!(d)
 
@@ -317,7 +317,7 @@ function ah18!(s::State{T},d::Jacobian{T},h::T,pair::Matrix{Bool}) where T<:Abst
     return
 end
 
-function ah18!(s::State{T},d::dTime{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
+function ahl21!(s::State{T},d::dTime{T},h::T,pair::Matrix{Bool}) where T<:AbstractFloat
     # [Currently this routine is not giving the correct dqdt values. -EA 8/12/2019]
     n = s.n
     zilch = zero(T); uno = one(T); half = convert(T,0.5); two = convert(T,2.0); h2 = half*h; sevn = 7*n
@@ -402,7 +402,7 @@ end
 
 """
 
-AH18 drift step. Drifts all particles with compensated summation. (with Jacobian)
+AHL21 drift step. Drifts all particles with compensated summation. (with Jacobian)
 """
 function drift_grad!(s::State{T},h::T) where {T <: Real}
     indi::Int64 = 0
@@ -421,7 +421,7 @@ end
 
 """
 
-AH18 kick step. Computes "fast" kicks for pairs of bodies (in lieu of -drift+Kepler). Include Jacobian and compensated summation.
+AHL21 kick step. Computes "fast" kicks for pairs of bodies (in lieu of -drift+Kepler). Include Jacobian and compensated summation.
 """
 function kickfast!(s::State{T},d::AbstractDerivatives{T},h::T,pair::Array{Bool,2}) where {T <: Real}
     n::Int64 = s.n
@@ -868,7 +868,7 @@ function kepler_driftij_gamma!(s::State{T},d::AbstractDerivatives{T},i::Int64,j:
         end
     end
     # The following lines are meant to compute dq/dt for kepler_driftij,
-    # but they currently contain an error (test doesn't pass in test_ah18.jl). [ ]
+    # but they currently contain an error (test doesn't pass in test_ahl21.jl). [ ]
     @inbounds for k=1:6
         # Position/velocity derivative, body i:
         d.dqdt_ij[  k] =  mj*d.jac_kepler[k,8]
@@ -1186,7 +1186,7 @@ function compute_jacobian_gamma!(gamma::T,g0::T,g1::T,g2::T,g3::T,h1::T,h2::T,df
                 delxv_jac[8,3+i] = drdv0x0*x0[i] - (k*betainv*rinv*(eta*(beta*g2*g3-h8) - h6*k + (g2^2 - 2*g1*g3)*beta*r0) + h*drdv0x0)*v0[i]
                 #                         +(-2g1*h+c18*betainv+(2g2*h-d)*c2*rinv+hsq*r0inv3*(c20*betainv-c2*c3*rinv))*v0[i]
                 #      delxv_jac[8,3+i] = ((eta*g2+g1*r0)*rinv+h*betainv*rinv*r0inv3*((3g1*g3 - 2g2^2)*k^3 - ksq*eta*h8 +
-                #            beta*ksq*(g2^2 - 3*g1*g3)*r0 - beta*r0^3 - k*g2*beta*(eta^2*g2 + 2eta*g1*r0 + g0*r0^2)))*x0[i]+(-2g1*h+c18*betainv+((g1*r0-g3*k-2*g0*h)*c2)*betainv*rinv + 
+                #            beta*ksq*(g2^2 - 3*g1*g3)*r0 - beta*r0^3 - k*g2*beta*(eta^2*g2 + 2eta*g1*r0 + g0*r0^2)))*x0[i]+(-2g1*h+c18*betainv+((g1*r0-g3*k-2*g0*h)*c2)*betainv*rinv +
                 #         hsq*((2*g2^2 - 3*g1*g3)*k^3 + beta*r0^3 + ksq*(eta*(g1*g2 - 3*g0*g3) + beta*(3*g1*g3 - g2^2)*r0) +
                 #         k*beta*g2*(eta*(eta*g2 + g1*r0) + r0*(eta*g1 + g0*r0)))*betainv*rinv*r0inv3)*v0[i]
                 delxv_jac[ 9,i] = dfm1dxx*x0[i]+dfm1dxv*v0[i]; delxv_jac[ 9,3+i]=dfm1dvx*x0[i]+dfm1dvv*v0[i]

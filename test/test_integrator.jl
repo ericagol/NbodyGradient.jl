@@ -32,10 +32,10 @@
     h  = 0.05
     nstep = 100
     tmax = nstep * h + t0
-    AH18 = Integrator(ah18!, h, t0, tmax)
+    AHL21 = Integrator(ahl21!, h, t0, tmax)
 
     # Integrate
-    AH18(s0)
+    AHL21(s0)
     ####################
 
     ##### BigFloat #####
@@ -48,9 +48,9 @@
 
     h_big = big(h)
     tmax_big = nstep * h_big + t0_big
-    AH18_big = Integrator(ah18!, h_big, t0_big, tmax_big)
+    AHL21_big = Integrator(ahl21!, h_big, t0_big, tmax_big)
 
-    AH18_big(s_big, grad=false)
+    AHL21_big(s_big, grad=false)
     ####################
 
     ## Numerical Derivatives ##
@@ -71,7 +71,7 @@
                 dq = dlnq
                 sm.x[jj,j] = -dq
             end
-            AH18_big(sm, grad=false)
+            AHL21_big(sm, grad=false)
 
             sp = deepcopy(State(ic_big))
             perturb!(sp)
@@ -82,7 +82,7 @@
                 dq = dlnq
                 sp.x[jj,j] = dq
             end
-            AH18_big(sp, grad=false)
+            AHL21_big(sp, grad=false)
 
             # Now x & v are final positions & velocities after time step
             for i = 1:n
@@ -102,7 +102,7 @@
                 dq = dlnq
                 sm.v[jj,j] = -dq
             end
-            AH18_big(sm, grad=false)
+            AHL21_big(sm, grad=false)
 
             sp = deepcopy(State(ic_big))
             perturb!(sp)
@@ -113,7 +113,7 @@
                 dq = dlnq
                 sp.v[jj,j] = dq
             end
-            AH18_big(sp;grad=false)
+            AHL21_big(sp;grad=false)
 
             for i = 1:n
                 for k = 1:3
@@ -128,13 +128,13 @@
         perturb!(sm)
         dq = sm.m[j] * dlnq
         sm.m[j] -= dq
-        AH18_big(sm;grad=false)
+        AHL21_big(sm;grad=false)
 
         sp = deepcopy(State(ic_big))
         perturb!(sp)
         dq = sp.m[j] * dlnq
         sp.m[j] += dq
-        AH18_big(sp;grad=false)
+        AHL21_big(sp;grad=false)
         for i = 1:n
             for k = 1:3
                 jac_step_num[(i - 1) * 7 +  k,j * 7] = .5 * (sp.x[k,i] - sm.x[k,i]) / dq
@@ -147,20 +147,20 @@
 
     # dqdt
     s_dt = State(ic)
-    AH18(s_dt, 1)
+    AHL21(s_dt, 1)
     dqdt_num = zeros(BigFloat, 7 * n)
 
     s_dtm = deepcopy(State(ic_big))
     hbig = big(h)
     dq = hbig * dlnq
     hbig -= dq
-    AH18_big = Integrator(ah18!, hbig, t0_big, tmax_big)
-    AH18_big(s_dtm, 1;grad=false)
+    AHL21_big = Integrator(ahl21!, hbig, t0_big, tmax_big)
+    AHL21_big(s_dtm, 1;grad=false)
 
     s_dtp = deepcopy(State(ic_big))
     hbig += 2dq
-    AH18_big = Integrator(ah18!, hbig, t0_big, tmax_big)
-    AH18_big(s_dtp, 1;grad=false)
+    AHL21_big = Integrator(ahl21!, hbig, t0_big, tmax_big)
+    AHL21_big(s_dtp, 1;grad=false)
     for i in 1:n, k in 1:3
         dqdt_num[(i - 1) * 7 +  k] = .5 * (s_dtp.x[k,i] - s_dtm.x[k,i]) / dq
         dqdt_num[(i - 1) * 7 + 3 + k] = .5 * (s_dtp.v[k,i] - s_dtm.v[k,i]) / dq

@@ -30,7 +30,7 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
     param_real = all(isfinite.(s.x)) && all(isfinite.(s.v)) && all(isfinite.(s.m)) && all(isfinite.(s.jac_step))
     #while s.t[1] < (t0+intr.tmax) && param_real
     for _ in 1:nsteps
-        # Carry out a ah18 mapping step and advance time:
+        # Carry out a ahl21 mapping step and advance time:
         if grad
             intr.scheme(s,d,h,pair)
         else
@@ -52,7 +52,7 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
             # See if sign of g switches, and if planet is in front of star (by a good amount):
             # (I'm wondering if the direction condition means that z-coordinate is reversed? EA 12/11/2017)
             if gi > 0 && gsave[i] < 0 && -s.x[3,i] > 0.25*ri && ri < rstar
-                # A transit has occurred between the time steps - integrate ah18! between timesteps
+                # A transit has occurred between the time steps - integrate ahl21! between timesteps
                 tt.count[i] += 1
                 if tt.count[i] <= ntt_max
                     dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate

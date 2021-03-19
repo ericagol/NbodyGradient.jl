@@ -6,11 +6,11 @@ export State
 #include("../src/ttv.jl")
 #include("/Users/ericagol/Software/TRAPPIST1_Spitzer/src/NbodyGradient/src/ttv.jl")
 # Specify the initial conditions for the outer solar
-# system 
+# system
 #n=6
 n=5
 xout = zeros(3,n)
-# Positions at time September 5, 1994 at 0h00 in days (from Hairer, Lubich & Wanner 
+# Positions at time September 5, 1994 at 0h00 in days (from Hairer, Lubich & Wanner
 # 2006, Geometric Numerical Integration, 2nd Edition, Springer, pp. 13-14):
 
 xout .= transpose([-2.079997415328555E-04  7.127853194812450E-03 -1.352450694676177E-05;
@@ -122,7 +122,7 @@ PE = zeros(nstep,ngrid); KE=zeros(nstep,ngrid); ang_mom = zeros(3,nstep,ngrid)
 telapse = zeros(ngrid)
 for j=1:8
   h = hgrid[j]
-  nstep = nstepgrid[j]; 
+  nstep = nstepgrid[j];
   s = State(ic)
   pair = zeros(Bool,s.n,s.n)
   if grad; d = Derivatives(T,s.n); end
@@ -134,9 +134,9 @@ for j=1:8
   # Carry out the integration:
   for i=1:nstep
     if grad
-      ah18!(s,d,h,pair)
+      ahl21!(s,d,h,pair)
     else
-      ah18!(s,h,pair)
+      ahl21!(s,h,pair)
     end
     xsave[:,:,i,j] .= s.x
     vsave[:,:,i,j] .= s.v

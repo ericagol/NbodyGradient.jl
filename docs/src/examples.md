@@ -60,12 +60,12 @@ s.x
 ```
 
 ### Integration
-Now that we have initial conditions, we can construct and run the integrator. First, define an [`Integrator`](@ref), specifying the integration scheme, the time step, initial time, and final time. We'll use the `ah18!` mapping.
+Now that we have initial conditions, we can construct and run the integrator. First, define an [`Integrator`](@ref), specifying the integration scheme, the time step, initial time, and final time. We'll use the `ahl21!` mapping.
 ```@example 1
 h = b.P/30.0 # We want at most 1/20th of the smallest period for a time step
 t0 = 0.0
 tmax = 5*c.P # Integrate for 5 orbital periods of the outer body
-intr = Integrator(ah18!,h,t0,tmax);
+intr = Integrator(ahl21!,h,t0,tmax);
 nothing # hide
 ```
 

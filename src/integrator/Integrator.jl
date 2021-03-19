@@ -21,11 +21,11 @@ mutable struct Integrator{T<:AbstractFloat} <: AbstractIntegrator
     tmax::T
 end
 
-Integrator(h::T,t0::T) where T<:AbstractFloat = Integrator(ah18!,h,t0,t0+h)
+Integrator(h::T,t0::T) where T<:AbstractFloat = Integrator(ahl21!,h,t0,t0+h)
 Integrator(scheme::Function,h::Real,t0::Real,tmax::Real) = Integrator(scheme,promote(h,t0,tmax)...)
 
-# Default to ah18!
-Integrator(h::T,t0::T,tmax::T) where T<:AbstractFloat = Integrator(ah18!,h,t0,tmax)
+# Default to ahl21!
+Integrator(h::T,t0::T,tmax::T) where T<:AbstractFloat = Integrator(ahl21!,h,t0,tmax)
 
 #========== State ==========#
 abstract type AbstractState end
@@ -237,8 +237,8 @@ end
 
 
 #========== Includes  ==========#
-const ints = ["ah18"]
+const ints = ["ahl21"]
 for i in ints; include(joinpath(i,"$i.jl")); end
 
-const ints_no_grad = ["ah18","dh17"]
+const ints_no_grad = ["ahl21","dh17"]
 for i in ints_no_grad; include(joinpath(i,"$(i)_no_grad.jl")); end

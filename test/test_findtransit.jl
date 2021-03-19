@@ -4,7 +4,7 @@
     h = 0.01
     itime = 10.0
     tmax = itime + t0
-    intr = Integrator(ah18!,h,t0,tmax)
+    intr = Integrator(ahl21!,h,t0,tmax)
 
     # Read in initial conditions:
     H = [n,ones(Int64, n - 1)...]
