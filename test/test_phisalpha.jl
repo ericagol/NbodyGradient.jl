@@ -42,9 +42,10 @@ v0[2,3] = -5e-1 * sqrt(v0[1,2]^2 + v0[3,2]^2)
 # Save to state
 s = State(init)
 s.x .= x0; s.v .= v0
+s.pair .= pair
 
 # Take a step:
-ahl21!(s,h,pair)
+ahl21!(s,h)
 x0 .= s.x; v0 .= s.v
 
 # Now, copy these to compute Jacobian (so that I don't step
@@ -52,7 +53,7 @@ x0 .= s.x; v0 .= s.v
 x = copy(s.x); v = copy(s.v); m = copy(s.m)
 # Compute jacobian exactly:
 d = Derivatives(Float64, s.n)
-phisalpha!(s,d,h,alpha,pair)
+phisalpha!(s,d,h,alpha)
 d.jac_phi .+= Matrix{Float64}(I, size(d.jac_phi))
 
 # Now compute numerical derivatives, using BigFloat to avoid
@@ -67,7 +68,7 @@ abig = big(alpha)
 sbig = deepcopy(State(ic_big))
 sbig.x .= xsave; sbig.v .= vsave; sbig.m .= msave
 # Carry out step using BigFloat for extra precision:
-phisalpha!(sbig,hbig,abig,pair)
+phisalpha!(sbig,hbig,abig)
 # Copy back to saves
 xsave .= sbig.x; vsave .= sbig.v; msave .= sbig.m
 # Compute numerical derivatives wrt time:
@@ -78,7 +79,7 @@ dq = dlnq * hbig
 hbig += dq
 sbig = deepcopy(State(ic_big))
 sbig.x .= big.(x0); sbig.v .= big.(v0); sbig.m .= big.(m0)
-phisalpha!(sbig,hbig,abig,pair)
+phisalpha!(sbig,hbig,abig)
 
 # Now x & v are final positions & velocities after time step
 for i in 1:n, k in 1:3
@@ -101,7 +102,7 @@ for j = 1:n
             dq = dlnq
             sbig.x[jj,j] = dq
         end
-        phisalpha!(sbig, hbig, abig, pair)
+        phisalpha!(sbig, hbig, abig)
         # Now x & v are final positions & velocities after time step
         for i = 1:n
             for k = 1:3
@@ -119,7 +120,7 @@ for j = 1:n
             dq = dlnq
             sbig.v[jj,j] = dq
         end
-        phisalpha!(sbig, hbig, abig, pair)
+        phisalpha!(sbig, hbig, abig)
 
         for i = 1:n
             for k = 1:3
@@ -133,7 +134,7 @@ for j = 1:n
     sbig.x .= big.(x0); sbig.v .= big.(v0); sbig.m .= big.(m0)
     dq = sbig.m[j] * dlnq
     sbig.m[j] += dq
-    phisalpha!(sbig, hbig, abig, pair)
+    phisalpha!(sbig, hbig, abig)
     for i = 1:n
         for k = 1:3
             jac_step_num[(i - 1) * 7 +  k,j * 7] = (sbig.x[k,i] - xsave[k,i]) / dq

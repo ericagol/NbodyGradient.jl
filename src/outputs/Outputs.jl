@@ -34,13 +34,12 @@ function (intr::Integrator)(s::State{T},o::CartesianOutput{T}) where T<:Abstract
 
     # Preallocate struct of arrays for derivatives (and pair)
     d = Derivatives(T,s.n)
-    pair = zeros(Bool,s.n,s.n)
 
     for i in 1:nsteps
         # Save State from current step
         o.states[i] = deepcopy(s)
         # Take integration step and advance time
-        intr.scheme(s,d,h,pair)
+        intr.scheme(s,d,h)
         s.t[1] = t0 +  (h * i)
     end
 

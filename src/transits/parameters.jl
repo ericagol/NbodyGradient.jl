@@ -1,6 +1,6 @@
 # Collection of functions to calculate transit parameters: timing, impact parameter, sky velocity
 
-function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T,pair::Matrix{Bool};grad::Bool=true) where T<:AbstractFloat
+function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T;grad::Bool=true) where T<:AbstractFloat
     n = s.n; ntt_max = tt.ntt;
     d = Derivatives(T,s.n)
     s_prior = deepcopy(s)
@@ -32,9 +32,9 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
     for _ in 1:nsteps
         # Carry out a ahl21 mapping step and advance time:
         if grad
-            intr.scheme(s,d,h,pair)
+            intr.scheme(s,d,h)
         else
-            intr.scheme(s,h,pair)
+            intr.scheme(s,h)
         end
         istep += 1
         s.t[1] = t0 + (istep * h)
@@ -58,9 +58,9 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
                     dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
                     set_state!(s,s_prior) # Set state to step after transit occured
                     if grad
-                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,d,dtbvdq,intr,pair) # Search for transit time (integrating 'backward')
+                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,d,dtbvdq,intr) # Search for transit time (integrating 'backward')
                     else
-                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,d,intr,pair,bv=true)
+                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,d,intr,bv=true)
                     end
                     # Copy transit time, b, vsky and derivatives to TransitParameters structure
                     tt.ttbv[1,i,tt.count[i]] = s.t[1] + dt

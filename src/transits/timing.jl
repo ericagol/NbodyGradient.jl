@@ -1,6 +1,6 @@
 # Collection of function to compute transit times.
 
-function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T,pair::Matrix{Bool};grad::Bool=true) where T<:AbstractFloat
+function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T;grad::Bool=true) where T<:AbstractFloat
     n = s.n; ntt_max = tt.ntt;
     d = Derivatives(T,s.n);
     s_prior = deepcopy(s)
@@ -33,9 +33,9 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T,pai
     #while s.t[1] < (t0+intr.tmax) && param_real
         # Carry out a ahl21 mapping step and advance time:
         if grad
-            intr.scheme(s,d,h,pair)
+            intr.scheme(s,d,h)
         else
-            intr.scheme(s,h,pair)
+            intr.scheme(s,h)
         end
         istep += 1
         s.t[1] = t0 + (istep * h)
@@ -61,9 +61,9 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T,pai
                     dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
                     set_state!(s,s_prior) # Set state to step after transit occured
                     if grad
-                        dt = findtransit!(tt.ti,i,dt0,s,d,dtdq,intr,pair) # Search for transit time (integrating 'backward')
+                        dt = findtransit!(tt.ti,i,dt0,s,d,dtdq,intr) # Search for transit time (integrating 'backward')
                     else
-                        dt = findtransit!(tt.ti,i,dt0,s,d,intr,pair)
+                        dt = findtransit!(tt.ti,i,dt0,s,d,intr)
                     end
                     # Copy transit time and derivatives to TransitTiming structure
                     tt.tt[i,tt.count[i]] = s.t[1] + dt
@@ -96,7 +96,7 @@ function calc_dtdelements!(s::State{T},tt::TransitTiming{T}) where T <: Abstract
     end
 end
 
-function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},dtbvdq::Array{T},intr::Integrator,pair::Array{Bool,2}) where T<:AbstractFloat
+function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},dtbvdq::Array{T},intr::Integrator) where T<:AbstractFloat
     # Computes the transit time, approximating the motion as a fraction of a AH17 step backward in time.
     # Also computes the Jacobian of the transit time with respect to the initial parameters, dtbvdq[1-3,7,n].
     # Initial guess using linear interpolation:
@@ -121,7 +121,7 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},dtb
         set_state!(s,s_prior)
         # Advance planet state at start of step to estimated transit time:
         zero_out!(d)
-        intr.scheme(s,d,dt0,pair)
+        intr.scheme(s,d,dt0)
         # Compute time offset:
         gsky = g!(i,j,s.x,s.v)
         #  # Compute derivative of g with respect to time:
@@ -145,13 +145,13 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},dtb
     set_state!(s,s_prior)
     zero_out!(d)
     # Compute dgdt with the updated time step.
-    intr.scheme(s,d,dt0,pair)
+    intr.scheme(s,d,dt0)
     #s_prior.jac_step .= s.jac_step
     #s_prior.jac_error .= s.jac_error
     # Need to reset to compute dqdt:
     #set_state!(s,s_prior)
     #zero_out!(dT)
-    #intr.scheme(s,dT,dt0,pair)
+    #intr.scheme(s,dT,dt0)
     ntbv = size(dtbvdq)[1]
     # return the transit time, impact parameter, and sky velocity:
     if ntbv == 3
@@ -164,7 +164,7 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},dtb
     end
 end
 
-function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},intr::Integrator,pair::Array{Bool,2};bv::Bool=false) where T<:AbstractFloat
+function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},intr::Integrator;bv::Bool=false) where T<:AbstractFloat
     # Computes the transit time, approximating the motion as a fraction of a AH17 step backward in time.
     # Initial guess using linear interpolation:
 
@@ -188,7 +188,7 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},int
         set_state!(s,s_prior)
         # Advance planet state at start of step to estimated transit time:
         zero_out!(d)
-        intr.scheme(s,d,dt0,pair)
+        intr.scheme(s,d,dt0)
         # Compute time offset:
         gsky = g!(i,j,s.x,s.v)
         #  # Compute derivative of g with respect to time:
