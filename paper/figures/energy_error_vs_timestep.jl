@@ -98,6 +98,7 @@ telapse = time()- tstart
 # These integrations have already been carried out:  so,
 # just plotting the results:
 
+clf()
 tstep = [1.5625,3.125,6.25,12.5,25.0,50.0,100.0,200.0]
 loglog(tstep,[1.4006621658556116e-23,1.7001179303989925e-23,1.3001711407790665e-22,1.998439479375678e-21,3.2843598552483375e-20,
         5.2089934752740415e-19,8.409447080119717e-18,1.403145134013028e-16],"o",label="Measured scatter in energy")
