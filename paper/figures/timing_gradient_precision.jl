@@ -1,4 +1,4 @@
-12
+
 
 # Makes plot for paper showing that transit timing
 # precision obeys Brouwer's law:
@@ -7,6 +7,26 @@ using PyPlot
 using JLD
 
 @load "../../test/test_ttv_cartesian2_4e4days.jld"
+
+using PyPlot
+
+clf()
+planet = ["Planet b","Planet c"]
+# Plot the difference in the TTVs:
+for i=2:3
+  diff1 = convert(Array{Float64,1},abs.(tt[i,2:count[i]].-tt_big[i,2:count[i]])./h);
+  loglog(tt[i,2:count[i]] .-tt[i,1],diff1,label=planet[i-1]);
+#  diff2 = abs.(tt2[i,2:count[i]].-tt2_big[i,2:count[i]])/elements[i,2];
+#  loglog(tt[i,2:count[i]]-tt[i,1],diff2);
+end
+xlabel("Time since start [days]",fontsize=12)
+ylabel(L"$abs(t\vert_\mathrm{dbl}-t\vert_\mathrm{big})/h$",fontsize=15)
+#loglog([1.0,1024.0],2e-15*[1,2^15],":")
+loglog([1.0,40000.0],0.5e-16*([1.0,40000.0]/h).^1.5,":",label=L"$2^{-52}N^{3/2}$")
+legend()
+tight_layout()
+savefig("transit_time_errors_4e4.pdf",bbox_inches="tight")
+read(stdin,Char)
 
 clf()
 nmed = 10
