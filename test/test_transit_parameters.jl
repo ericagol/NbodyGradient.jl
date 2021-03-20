@@ -2,10 +2,10 @@ import NbodyGradient: set_state!, zero_out!, amatrix
 
 @testset "Transit Parameters" begin
     N = 3
-    t0 = 7257.93115525 - 7300.0 - 0.5 # Initialize IC before first transit 
+    t0 = 7257.93115525 - 7300.0 - 0.5 # Initialize IC before first transit
     h = 0.04
     itime = 10.0 # Time integrator will run
-    tmax = itime + t0
+    tmax = itime
 
     # Setup initial conditions:
     elements = readdlm("elements.txt", ',')[1:N,:]
@@ -16,7 +16,7 @@ import NbodyGradient: set_state!, zero_out!, amatrix
     ic = ElementsIC(t0, N, elements)
 
     function calc_times(h)
-        intr = Integrator(ah18!, h, 0.0, tmax)
+        intr = Integrator(ahl21!, h, 0.0, tmax)
         s = State(ic)
         ttbv = TransitParameters(itime, ic)
         intr(s, ttbv)

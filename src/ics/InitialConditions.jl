@@ -150,6 +150,43 @@ ElementsIC(t0::T,H::Union{Int64,Vector{Int64}},elems::Array{Elements{T},1}) wher
 Base.show(io::IO,::MIME"text/plain",ic::ElementsIC{T}) where {T} = begin
 println(io,"ElementsIC{$T}\nOrbital Elements: "); show(io,"text/plain",ic.elements); end;
 
+"""
+    CartesianIC{T<:AbstractFloat} <: InitialConditions{T}
+
+Initial conditions, specified by the Cartesian coordinates and masses of each body.
+
+# Fields
+- `x::Matrix{T}` : Positions of each body [dimension, body].
+- `v::Matrix{T}` : Velocities of each body [dimension, body].
+- `m::Vector{T}` : masses of each body.
+- `nbody::Int64` : Number of bodies in system.
+- `t0::T` : Initial time.
+"""
+struct CartesianIC{T<:AbstractFloat} <: InitialConditions{T}
+    x::Matrix{T}
+    v::Matrix{T}
+    m::Vector{T}
+    nbody::Int64
+    t0::T
+end
+
+"""Main constructor for `CartesianIC`."""
+function CartesianIC(t0::T, N::Int64, coords::Matrix{T}) where T<:AbstractFloat
+    m = coords[1:N,1]
+    x = permutedims(coords[1:N,2:4])
+    v = permutedims(coords[1:N,5:7])
+    return CartesianIC(x,v,m,N,t0)
+end
+
+"""Allow input of Cartesian coordinate file."""
+function CartesianIC(t0::T, N::Int64, coordinateFile::String) where T <: AbstractFloat
+    coords = readdlm(coordinateFile,',')
+    m = coords[1:N,1]
+    x = permutedims(coords[1:N,2:4])
+    v = permutedims(coords[1:N,5:7])
+    return CartesianIC(x,v,m,N,t0)
+end
+
 # Include ics source files
 const ics = ["kepler","kepler_init","setup_hierarchy","init_nbody"]
 for i in ics; include("$(i).jl"); end

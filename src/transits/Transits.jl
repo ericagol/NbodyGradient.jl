@@ -87,14 +87,10 @@ end
 Integrator method for outputing `TransitTiming` or `TransitParameters`.
 """
 function (i::Integrator)(s::State{T},tt::AbstractOutput;grad::Bool=true) where T<:AbstractFloat
-    #s2 = zero(T) # For compensated summation
-
-    # Preallocate struct of arrays for derivatives (and pair)
-    pair = zeros(Bool,s.n,s.n)
 
     # Run integrator and calculate transit times, with derivatives.
     rstar::T = 1e12 # Need to pass this in.
-    calc_tt!(s,i,tt,rstar,pair;grad=grad)
+    calc_tt!(s,i,tt,rstar;grad=grad)
     if grad
         calc_dtdelements!(s,tt)
     end
@@ -106,14 +102,10 @@ end
 Integrator method for outputting `TransitParameters`.
 """
 function (i::Integrator)(s::State{T},ttbv::TransitParameters;grad::Bool=true) where T<:AbstractFloat
-    #s2 = zero(T) # For compensated summation
-
-    # Preallocate struct of arrays for derivatives (and pair)
-    pair = zeros(Bool,s.n,s.n)
 
     # Run integrator and calculate transit times, with derivatives.
     rstar::T = 1e12 # Need to pass this in.
-    calc_tt!(s,i,ttbv,rstar,pair;grad=grad)
+    calc_tt!(s,i,ttbv,rstar;grad=grad)
     if grad
         calc_dtdelements!(s,ttbv)
     end

@@ -2,9 +2,8 @@
     n = 7
     t0 = 7257.0
     h = 0.01
-    itime = 10.0
-    tmax = itime + t0
-    intr = Integrator(ah18!,h,t0,tmax)
+    tmax = 10.0
+    intr = Integrator(ahl21!,h,t0,tmax)
 
     # Read in initial conditions:
     H = [n,ones(Int64, n - 1)...]
@@ -13,7 +12,7 @@
     s = State(ic)
 
     # Holds transit times, derivatives, etc.
-    tt = TransitTiming(itime,ic);
+    tt = TransitTiming(tmax,ic);
 
     # Run integrator and calculate times
     intr(s,tt,grad=false)

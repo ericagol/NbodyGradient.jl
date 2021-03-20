@@ -1,5 +1,5 @@
 # This code tests the function kepler_driftij_gamma
-import NbodyGradient: kepler_driftij_gamma!, Derivatives
+import NbodyGradient: kepler_driftij_gamma!, Derivatives, init_nbody
 
 @testset "kepler_driftij_gamma" begin
     for drift_first in [true,false]

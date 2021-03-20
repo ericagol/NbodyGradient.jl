@@ -1,3 +1,5 @@
+import NbodyGradient: init_nbody
+
 @testset "init_nbody" begin
 
     elements = "elements.txt"
@@ -33,36 +35,36 @@
     # t0big = big(t0)
     # Now, compute derivatives numerically:
     for j = 1:n_body
-    for k = 1:7
-        elementsbig = big.(elements0)
-        dq0 = dq[k]; if j == 1 && k == 1 ; dq0 = big(1e-15); end
-        elementsbig[j,k] += dq0
-        initp = ElementsIC(t0big, H, elementsbig)
-        xp, vp, _ = init_nbody(initp)
-        elementsbig[j,k] -= 2dq0
-        initm = ElementsIC(t0big, H, elementsbig)
-        xm, vm, _ = init_nbody(initm)
-        for l in 1:n_body, p in 1:3
-            i1 = (l - 1) * 7 + p
-            if k == 1
-                j1 = j * 7
-            else
-                j1 = (j - 1) * 7 + k - 1
+        for k = 1:7
+            elementsbig = big.(elements0)
+            dq0 = dq[k]; if j == 1 && k == 1 ; dq0 = big(1e-15); end
+            elementsbig[j,k] += dq0
+            initp = ElementsIC(t0big, H, elementsbig)
+            xp, vp, _ = init_nbody(initp)
+            elementsbig[j,k] -= 2dq0
+            initm = ElementsIC(t0big, H, elementsbig)
+            xm, vm, _ = init_nbody(initm)
+            for l in 1:n_body, p in 1:3
+                i1 = (l - 1) * 7 + p
+                if k == 1
+                    j1 = j * 7
+                else
+                    j1 = (j - 1) * 7 + k - 1
+                end
+                jac_init_num[i1,  j1] = (xp[p,l] - xm[p,l]) / dq0 * .5
+                jac1 = jac_init[i1,j1]; jac2 = jac_init_num[i1,j1]
+                # if abs(jac1-jac2) > 1e-4*abs(jac1+jac2) && abs(jac1+jac2) > 1e-14
+                #  println(l," ",p," ",j," ",k," ",jac_init_num[i1,j1]," ",jac_init[i1,j1]," ",jac_init_num[i1,j1]/jac_init[i1,j1])
+                # end
+                jac_init_num[i1 + 3,j1] = (vp[p,l] - vm[p,l]) / dq0 * .5
+                jac1 = jac_init[i1 + 3,j1]; jac2 = jac_init_num[i1 + 3,j1]
+                # if abs(jac1-jac2) > 1e-4*abs(jac1+jac2) && abs(jac1+jac2) > 1e-14
+                # println(l," ",p+3," ",j," ",k," ",jac_init_num[i1+3,j1]," ",jac_init[i1+3,j1]," ",jac_init_num[i1+3,j1]/jac_init[i1+3,j1])
+                # end
             end
-            jac_init_num[i1,  j1] = (xp[p,l] - xm[p,l]) / dq0 * .5
-            jac1 = jac_init[i1,j1]; jac2 = jac_init_num[i1,j1]
-          # if abs(jac1-jac2) > 1e-4*abs(jac1+jac2) && abs(jac1+jac2) > 1e-14
-          #  println(l," ",p," ",j," ",k," ",jac_init_num[i1,j1]," ",jac_init[i1,j1]," ",jac_init_num[i1,j1]/jac_init[i1,j1])
-          # end
-            jac_init_num[i1 + 3,j1] = (vp[p,l] - vm[p,l]) / dq0 * .5
-            jac1 = jac_init[i1 + 3,j1]; jac2 = jac_init_num[i1 + 3,j1]
-          # if abs(jac1-jac2) > 1e-4*abs(jac1+jac2) && abs(jac1+jac2) > 1e-14
-          #  println(l," ",p+3," ",j," ",k," ",jac_init_num[i1+3,j1]," ",jac_init[i1+3,j1]," ",jac_init_num[i1+3,j1]/jac_init[i1+3,j1])
-          # end
         end
+        jac_init_num[j * 7,j * 7] = 1.0
     end
-    jac_init_num[j * 7,j * 7] = 1.0
-end
 
     # println("Maximum jac_init-jac_init_num: ",maximum(abs.(jac_init-jac_init_num)))
     # println("Maximum jac_init-jac_init_num: ",maximum(abs.(asinh.(jac_init)-asinh.(jac_init_num))))
@@ -75,12 +77,12 @@ end
     @test isapprox(jac_init, convert(Array{Float64,2}, jac_init_big);norm=maxabs)
     # end
     for i in 1:21, j in 1:21
-    if jac_init_big[i,j] != 0.0
-        dij = abs(jac_init[i,j] / jac_init_big[i,j] - 1)
-        if dij > 1e-12
-            jac_max = dij
-            println(i, " ", j, " ", convert(Float64, jac_max), " ", jac_init[i,j], " ", convert(Float64, jac_init_big[i,j]), " ", convert(Float64, jac_init[i,j] - jac_init_big[i,j]))
+        if jac_init_big[i,j] != 0.0
+            dij = abs(jac_init[i,j] / jac_init_big[i,j] - 1)
+            if dij > 1e-12
+                jac_max = dij
+                println(i, " ", j, " ", convert(Float64, jac_max), " ", jac_init[i,j], " ", convert(Float64, jac_init_big[i,j]), " ", convert(Float64, jac_init[i,j] - jac_init_big[i,j]))
+            end
         end
     end
 end
-    end
