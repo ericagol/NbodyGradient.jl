@@ -44,24 +44,24 @@ ax.set_ylabel("TTV [minutes]")
 ax.legend(ncol=2)
 ax.axis([0,4000,-800,800])
 
-ax = axes[3]
+ax = axes[4]
 for i in 1:7
     ind = findfirst(isequal(0.0),reb[i,:])
     ind = ind === nothing ? ind = 3000 : ind = ind - 5
-    ax.plot(nbg[i,1:ind], reb_diff[i,1:ind] .* 24*60*60, label=labels[i],color=color[i])
+    ax.plot(nbg[i,1:ind], reb_diff[i,1:ind] .* 24*60*60, label=labels[i],color=color[i],".")
 end
 
 ax.set_title("Time difference with REBOUND")
 ax.set_ylabel("Transit time diff [sec]")
 ax.set_xlabel("Time [Days]")
-#ax.axis([0,4000,-0.02,0.02])
+ax.axis([0,4000,-0.000004,0.000004])
 #ax.legend(ncol=2,loc="upper left")
 #read(stdin,Char)
 #savefig("nbg_vs_reb_transit_times.pdf")
 
 fast_diff = nbg .- fast
 #plot()
-ax = axes[4]
+ax = axes[3]
 for i in 1:7
     ind = findfirst(isequal(0.0),fast[i,:])
     ind = ind === nothing ? ind = 3000 : ind = ind - 5
@@ -70,8 +70,9 @@ end
 ax.set_title("Time difference with TTVFast")
 ax.set_ylabel("Transit time diff [sec]")
 ax.set_xlabel("Time [Days]")
-#ax.axis([0,4000,-4,4])
+ax.axis([0,4000,-0.008,0.008])
 #ax.legend(ncol=2,loc="upper left")
 #savefig("nbg_vs_ttvfast_transit_times.pdf")
+
 fig.tight_layout()
 savefig("nbg_vs_ttvfast_vs_rebound_transit_times.pdf")

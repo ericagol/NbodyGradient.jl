@@ -37,12 +37,14 @@ def compute_tts(pos, vel, elements, tmax, denom):
             sim.integrate(sim.t+sim.dt)
             t_new = sim.t
             if y_old*(p[pi].y-p[mi].y)<0. and p[pi].x-p[mi].x>0:
-                while abs(t_new-t_old)>1e-9:
+                iter = 0
+                while abs(t_new-t_old)>1e-12 and iter < 100:
                     if y_old*(p[pi].y-p[0].y)<0.:
                         t_new = sim.t
                     else:
                         t_old = sim.t
                     sim.integrate((t_new+t_old)/2.)
+                    iter += 1
                 tts[pi-1,i] = sim.t
                 i+=1
                 sim.integrate(sim.t+sim.dt)
