@@ -1,4 +1,4 @@
-22
+
 using NbodyGradient, LinearAlgebra, Statistics
 
 export State
