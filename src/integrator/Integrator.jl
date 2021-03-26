@@ -14,15 +14,15 @@ Integrator. Used as a functor to integrate a [`State`](@ref).
 - `t0::T` : Initial time.
 - `tmax::T` : Duration of simulation.
 """
-mutable struct Integrator{T<:AbstractFloat} <: AbstractIntegrator
-    scheme::Function
+mutable struct Integrator{T<:AbstractFloat, schemeT} <: AbstractIntegrator
+    scheme::schemeT
     h::T
     t0::T
     tmax::T
 end
 
 Integrator(h::T,t0::T) where T<:AbstractFloat = Integrator(ahl21!,h,t0,t0+h)
-Integrator(scheme::Function,h::Real,t0::Real,tmax::Real) = Integrator(scheme,promote(h,t0,tmax)...)
+Integrator(scheme,h::Real,t0::Real,tmax::Real) = Integrator(scheme,promote(h,t0,tmax)...)
 
 # Default to ahl21!
 Integrator(h::T,t0::T,tmax::T) where T<:AbstractFloat = Integrator(ahl21!,h,t0,tmax)
