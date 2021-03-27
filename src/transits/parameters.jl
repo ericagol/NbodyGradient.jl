@@ -4,6 +4,7 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
     n = s.n; ntt_max = tt.ntt;
     d = Derivatives(T,s.n)
     s_prior = deepcopy(s)
+    s_transit = deepcopy(s)
     # Define error estimate based on Kahan (1965):
     s2 = zero(T)
     # Set step counter to zero:
@@ -58,9 +59,9 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
                     dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
                     set_state!(s,s_prior) # Set state to step after transit occured
                     if grad
-                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,d,dtbvdq,intr) # Search for transit time (integrating 'backward')
+                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,s_transit,d,dtbvdq,intr) # Search for transit time (integrating 'backward')
                     else
-                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,d,intr,bv=true)
+                        dt,vsky,bsky2 = findtransit!(tt.ti,i,dt0,s,s_transit,d,intr,bv=true)
                     end
                     # Copy transit time, b, vsky and derivatives to TransitParameters structure
                     tt.ttbv[1,i,tt.count[i]] = s.t[1] + dt

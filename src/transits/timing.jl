@@ -4,6 +4,7 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T;gra
     n = s.n; ntt_max = tt.ntt;
     d = Derivatives(T,s.n);
     s_prior = deepcopy(s)
+    s_transit = deepcopy(s)
     # Define error estimate based on Kahan (1965):
     s2 = zero(T)
     # Set step counter to zero:
@@ -28,7 +29,7 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T;gra
     # Loop over time steps:
     dt = zero(T)
     gi = zero(T)
-    param_real = all(isfinite.(s.x)) && all(isfinite.(s.v)) && all(isfinite.(s.m)) && all(isfinite.(s.jac_step))
+    #param_real = all(isfinite.(s.x)) && all(isfinite.(s.v)) && all(isfinite.(s.m)) && all(isfinite.(s.jac_step))
     for _ in 1:nsteps
     #while s.t[1] < (t0+intr.tmax) && param_real
         # Carry out a ahl21 mapping step and advance time:
@@ -39,8 +40,8 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T;gra
         end
         istep += 1
         s.t[1] = t0 + (istep * h)
-        param_real = all(isfinite.(s.x)) && all(isfinite.(s.v)) && all(isfinite.(s.m)) && all(isfinite.(s.jac_step))
-        if ~param_real; break; end
+        #param_real = all(isfinite.(s.x)) && all(isfinite.(s.v)) && all(isfinite.(s.m)) && all(isfinite.(s.jac_step))
+        #if ~param_real; break; end
 
         # Save current state as prior state.
         set_state!(s_prior,s)
@@ -61,9 +62,9 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T;gra
                     dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
                     set_state!(s,s_prior) # Set state to step after transit occured
                     if grad
-                        dt = findtransit!(tt.ti,i,dt0,s,d,dtdq,intr) # Search for transit time (integrating 'backward')
+                        dt = findtransit!(tt.ti,i,dt0,s,s_transit,d,dtdq,intr) # Search for transit time (integrating 'backward')
                     else
-                        dt = findtransit!(tt.ti,i,dt0,s,d,intr)
+                        dt = findtransit!(tt.ti,i,dt0,s,s_transit,d,intr)
                     end
                     # Copy transit time and derivatives to TransitTiming structure
                     tt.tt[i,tt.count[i]] = s.t[1] + dt
@@ -96,13 +97,13 @@ function calc_dtdelements!(s::State{T},tt::TransitTiming{T}) where T <: Abstract
     end
 end
 
-function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},dtbvdq::Array{T},intr::Integrator) where T<:AbstractFloat
+function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},s_prior::State{T},d::Derivatives{T},dtbvdq::Array{T},intr::Integrator) where T<:AbstractFloat
     # Computes the transit time, approximating the motion as a fraction of a AH17 step backward in time.
     # Also computes the Jacobian of the transit time with respect to the initial parameters, dtbvdq[1-3,7,n].
     # Initial guess using linear interpolation:
 
     s.dqdt .= 0.0
-    s_prior = deepcopy(s)
+    set_state!(s_prior,s)
 
     dt = one(T)
     iter = 0
@@ -164,12 +165,12 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},dtb
     end
 end
 
-function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},intr::Integrator;bv::Bool=false) where T<:AbstractFloat
+function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},s_prior::State{T},d::Derivatives{T},intr::Integrator;bv::Bool=false) where T<:AbstractFloat
     # Computes the transit time, approximating the motion as a fraction of a AH17 step backward in time.
     # Initial guess using linear interpolation:
 
     s.dqdt .= 0.0
-    s_prior = deepcopy(s)
+    set_state!(s_prior,s)
 
     dt = one(T)
     iter = 0
