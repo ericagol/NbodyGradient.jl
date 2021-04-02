@@ -1,5 +1,5 @@
 # Collection of functions to calculate transit parameters: timing, impact parameter, sky velocity
-
+#=
 function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T;grad::Bool=true) where T<:AbstractFloat
     n = s.n; ntt_max = tt.ntt;
     d = Derivatives(T,s.n)
@@ -81,7 +81,7 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitParameters{T},rstar::T
     end
     return
 end
-
+=#
 function calc_dtdelements!(s::State{T},ttbv::TransitParameters{T}) where T <: AbstractFloat
     for itbv = 1:3, i=1:s.n, j = 1:ttbv.count[i]
         if j <= ttbv.ntt

@@ -1,5 +1,5 @@
 # Collection of function to compute transit times.
-
+#=
 function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T;grad::Bool=true) where T<:AbstractFloat
     n = s.n; ntt_max = tt.ntt;
     d = Derivatives(T,s.n);
@@ -16,7 +16,7 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T;gra
     t0 = s.t[1]
     # Number of steps
     nsteps = abs(round(Int64,intr.tmax/intr.h))
-#    nsteps = abs(round(Int64,(intr.tmax)/intr.h))
+    # nsteps = abs(round(Int64,(intr.tmax)/intr.h))
     # Time step
     h = intr.h * check_step(t0,intr.tmax+t0)
     # Save the g function, which computes the relative sky velocity dotted with relative position
@@ -61,11 +61,7 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T;gra
                 if tt.count[i] <= ntt_max
                     dt0 = -gsave[i]*h/(gi-gsave[i])  # Starting estimate
                     set_state!(s,s_prior) # Set state to step after transit occured
-                    if grad
-                        dt = findtransit!(tt.ti,i,dt0,s,s_transit,d,dtdq,intr) # Search for transit time (integrating 'backward')
-                    else
-                        dt = findtransit!(tt.ti,i,dt0,s,s_transit,d,intr)
-                    end
+                    dt = findtransit!(tt.ti,i,dt0,s,s_transit,d,tt,intr,grad=grad) # Search for transit time (integrating 'backward')
                     # Copy transit time and derivatives to TransitTiming structure
                     tt.tt[i,tt.count[i]] = s.t[1] + dt
                     if grad
@@ -82,7 +78,7 @@ function calc_tt!(s::State{T},intr::Integrator,tt::TransitTiming{T},rstar::T;gra
     end
     return
 end
-
+=#
 function calc_dtdelements!(s::State{T},tt::TransitTiming{T}) where T <: AbstractFloat
     for i=1:s.n, j=1:tt.count[i]
         if j <= tt.ntt
@@ -97,7 +93,7 @@ function calc_dtdelements!(s::State{T},tt::TransitTiming{T}) where T <: Abstract
     end
 end
 
-function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},s_prior::State{T},d::Derivatives{T},dtbvdq::Array{T},intr::Integrator) where T<:AbstractFloat
+function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},s_prior::State{T},d::Derivatives{T},tt::TransitOutput{T},intr::Integrator;grad::Bool=true) where T<:AbstractFloat
     # Computes the transit time, approximating the motion as a fraction of a AH17 step backward in time.
     # Also computes the Jacobian of the transit time with respect to the initial parameters, dtbvdq[1-3,7,n].
     # Initial guess using linear interpolation:
@@ -142,29 +138,31 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},s_prior::State{T},d::
     #if iter >= 20
     #    println("Exceeded iterations: planet ",j," iter ",iter," dt ",dt," gsky ",gsky," gdot ",gdot, "dt0 ", dt0)
     #end
-    # Compute time derivatives:
-    set_state!(s,s_prior)
-    zero_out!(d)
-    # Compute dgdt with the updated time step.
-    intr.scheme(s,d,dt0)
-    #s_prior.jac_step .= s.jac_step
-    #s_prior.jac_error .= s.jac_error
-    # Need to reset to compute dqdt:
-    #set_state!(s,s_prior)
-    #zero_out!(dT)
-    #intr.scheme(s,dT,dt0)
-    ntbv = size(dtbvdq)[1]
-    # return the transit time, impact parameter, and sky velocity:
-    if ntbv == 3
-        vsky,bsky2 = dtbvdq!(i,j,s.x,s.v,s.jac_step,s.dqdt,dtbvdq)
-        return dt0::T,vsky::T,bsky2::T
-    else
+    if grad
+        # Compute time derivatives:
+        set_state!(s,s_prior)
+        zero_out!(d)
+        # Compute dgdt with the updated time step.
+        intr.scheme(s,d,dt0)
+        if tt isa TransitParameters
+            vsky,bsky2 = dtbvdq!(i,j,s.x,s.v,s.jac_step,s.dqdt,tt.dtbvdq)
+            return dt0::T,vsky::T,bsky2::T
+        end
         # Compute derivative of transit time, impact parameter, and sky velocity.
-        dtbvdq!(i,j,s.x,s.v,s.jac_step,s.dqdt,dtbvdq)
+        dtbvdq!(i,j,s.x,s.v,s.jac_step,s.dqdt,tt.dtdq)
         return dt0::T
     end
+    if tt isa TransitParameters
+        # Compute the sky velocity and impact parameter:
+        vsky = sqrt((s.v[1,j]-s.v[1,i])^2 + (s.v[2,j]-s.v[2,i])^2)
+        bsky2 = (s.x[1,j]-s.x[1,i])^2 + (s.x[2,j]-s.x[2,i])^2
+        # return the transit time, impact parameter, and sky velocity:
+        return dt0::T,vsky::T,bsky2::T
+    end
+    return dt0::T
 end
 
+#=
 function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},s_prior::State{T},d::Derivatives{T},intr::Integrator;bv::Bool=false) where T<:AbstractFloat
     # Computes the transit time, approximating the motion as a fraction of a AH17 step backward in time.
     # Initial guess using linear interpolation:
@@ -220,6 +218,7 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},s_prior::State{T},d::
         return dt0::T
     end
 end
+=#
 
 """Used in computing transit time inside `findtransit3`."""
 function g!(i::Int64,j::Int64,x::Array{T,2},v::Array{T,2}) where {T <: Real}
