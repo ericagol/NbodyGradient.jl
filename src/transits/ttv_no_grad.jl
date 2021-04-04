@@ -1,2 +1,0 @@
-# TTV functions WITHOUT derivatives.
-
