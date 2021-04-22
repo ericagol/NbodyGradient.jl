@@ -22,19 +22,21 @@ intr = Integrator(h, 0.0, tmax)
 # For integrating with only Kepler+drift for adjacent planets & planets+star
 # (more distant planets are handled with fast kicks):
 function integrate_adj(s::State{T},h::T,tmax::T;grad::Bool=false) where T<:Real
-  pair = ones(Bool,s.n,s.n)
   # Only include Kepler+drift solver for adjacent planets:
+  s.pair .= true
+  s.pair[1,:] .= false
+  s.pair[:,1] .= false
   for i=2:s.n-1
-    pair[i,i+1] = false
-    pair[i+1,i] = false
+    s.pair[i,i+1] = false
+    s.pair[i+1,i] = false
   end
   if grad; d = NbodyGradient.Derivatives(T,s.n); end
   N = abs(round(Int64,tmax/h))
   for _ in 1:N
     if grad
-      ah18!(s,d,h,pair)
+      ahl21!(s,d,h)
     else
-      ah18!(s,h,pair)
+      ahl21!(s,h)
     end
   end
   s.t[1] = h*N
