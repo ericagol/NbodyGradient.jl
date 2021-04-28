@@ -7,7 +7,8 @@ using PyPlot
 #nbodygrad_pair = readdlm("nbodygradient_times_pair.txt",',')
 using DelimitedFiles
 #rebound = readdlm("reb_times.txt",',')
-rebound = readdlm("rebound_times_updated.txt",',',comments=true)
+#rebound = readdlm("rebound_times_updated.txt",',',comments=true)
+rebound = readdlm("rebound_times_whfast.txt",',',comments=true)
 nbodygrad = readdlm("nbg_times.txt",',',comments=true)
 
 

@@ -9,7 +9,8 @@ from matplotlib.colors import LogNorm
 from timeit import Timer
 print(rebound.__build__)
 
-def evaluate(order=0,N=0, nplanet = 0, integrator="ias15"):
+#def evaluate(order=0,N=0, nplanet = 0, integrator="ias15"):
+def evaluate(order=0,N=0, nplanet = 0, integrator="whfast"):
     sim = rebound.Simulation()
     sim.integrator = integrator
     sim.add(m=1.)
@@ -75,7 +76,8 @@ def evaluate(order=0,N=0, nplanet = 0, integrator="ias15"):
 #        np.savetxt('rebound_4body_xy.txt',x,delimiter=',')
     return 
 
-def evaluateWithN(order,N,integrator="ias15",nplanet = 0):
+#def evaluateWithN(order,N,integrator="ias15",nplanet = 0):
+def evaluateWithN(order,N,integrator="whfast",nplanet = 0):
     def _e():
         evaluate(order,N,integrator,nplanet)
         pass
