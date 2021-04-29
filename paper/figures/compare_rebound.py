@@ -79,16 +79,28 @@ def evaluate(order=0,N=0, nplanet = 0, integrator="whfast"):
 #def evaluateWithN(order,N,integrator="ias15",nplanet = 0):
 def evaluateWithN(order,N,integrator="whfast",nplanet = 0):
     def _e():
-        evaluate(order,N,integrator,nplanet)
+        evaluate(order,N,nplanet,integrator)
         pass
     return _e
 
+print("WHFAST")
 for i in range(10):
   Nmax = (i+1)*7+1
   repeat = 1
-  t = Timer(evaluateWithN(0,0,i+1))
+  t = Timer(evaluateWithN(0,0,nplanet=i+1))
   var_0 = t.timeit(repeat)/2.
-  t = Timer(evaluateWithN(1,Nmax-1,i+1))
+  t = Timer(evaluateWithN(1,Nmax-1,nplanet=i+1))
+  var_1 =  t.timeit(repeat)/2.
+
+  print("Nplanet: ",i+1," No gradient: ",var_0, " gradient: ", var_1, " ratio: ", var_1/var_0)
+
+print("IAS15")
+for i in range(10):
+  Nmax = (i+1)*7+1
+  repeat = 1
+  t = Timer(evaluateWithN(0,0,nplanet=i+1,integrator="ias15"))
+  var_0 = t.timeit(repeat)/2.
+  t = Timer(evaluateWithN(1,Nmax-1,nplanet=i+1,integrator="ias15"))
   var_1 =  t.timeit(repeat)/2.
 
   print("Nplanet: ",i+1," No gradient: ",var_0, " gradient: ", var_1, " ratio: ", var_1/var_0)
