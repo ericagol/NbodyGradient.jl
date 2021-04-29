@@ -13,8 +13,8 @@ suggestions.  We address each in turn below:
 > the paper more understandable to novices by keeping the main points in the body 
 > of the paper and moving the details. The same applies to the calculation of derivates section.
 
-Thanks for this suggestion.  We have moved much of the math from these sections to
-the appendices.
+Thanks for this suggestion.  We have moved much of the math from sections 3 and
+4 to three appendices.  This shortened the main body of the paper by about 3 pages.
 
 > - I recommend that the authors spend more time in the introduction motivating why 
 > calculating derivatives wrt the initial conditions is useful. They spend a lot of 
