@@ -1,0 +1,72 @@
+
+We would like to thank the referee for reviewing the paper, and for the excellent
+suggestions.  We address each in turn below:
+
+
+> Organizational comments:
+> 
+> - I believe the paper would benefit from moving some of the math to one or more 
+> appendices. In particular, much of the detail in the analytical calculation of 
+> the Kepler-then-drift and drift-then-Kepler corrections could be moved. I understand 
+> that the authors wish to present this derivation as a "main result," and so might 
+> be hesitant to make this change, but I think it is possible to make this part of 
+> the paper more understandable to novices by keeping the main points in the body 
+> of the paper and moving the details. The same applies to the calculation of derivates section.
+
+Thanks for this suggestion.  We have moved much of the math from these sections to
+the appendices.
+
+> - I recommend that the authors spend more time in the introduction motivating why 
+> calculating derivatives wrt the initial conditions is useful. They spend a lot of 
+> time discussing why a general N-body integrator is necessary, but less time 
+> motivating the need to compute derivatives. The authors mention HMC methods, but 
+> could also spend time discussing nonlinear optimizers that require gradients, as 
+> an example. As a side note, they might also mention that photodynamical codes enable 
+> computation of covariances between transit parameters and orbital parameters.
+
+Thanks, we have added extra discussion of this to the introduction.
+
+> - The authors spend some time in section 2 reviewing symplectic integrators, but do 
+> not  complete the logic by showing how the Hamiltonian becomes the next position/
+> momentum step. The DH paper has a good review of this if the authors just want to 
+> refer novice readers to this section. 
+
+Thanks, we added this reference.
+
+> - I recently read an astronomy paper that had published "unit tests" for equations 
+> to check their accuracy (https://ui.adsabs.harvard.edu/abs/2021arXiv210306275L/abstract). 
+> I think a few tests like this would be very helpful for this paper. Of course, this 
+> is a new idea, so this is just a suggestion.
+
+Thanks.  One of us (Eric Agol) was a co-author on that paper, and so we considered
+adding similar 'proofs' to each of the equations.  Although we have not implemented
+this suggestion, we note that we do have unit tests in the github repository which
+check that the code is working properly.  These may be found here:
+
+https://github.com/ericagol/NbodyGradient.jl/tree/master/test
+
+and the tests are called each time a build is generated via continuous integration
+with this script:
+
+https://github.com/ericagol/NbodyGradient.jl/blob/master/test/runtests.jl
+
+However, this does not guarantee that the equations in the manuscript do not contain 
+typos, which was the main purpose of the unit tests for equations.
+
+> Minor comments:
+> - Page 3, first line of right column, "V is the total kinetic energy" -> "potential energy"
+
+  Thanks for catching this  - we made this change.
+
+> - Beginning of section 2: "the advantage of this approach" -> "the advantage of this approach relative to [WH method]"
+
+  This change has been made, and earlier we add the abbereviation "WH" when we first cite Wisdom & Holman (1991). 
+
+> - Section 2, second to last paragraph seems out of place here. Perhaps this could be moved to the end of the section?
+
+  Done.
+
+> - I spent some time puzzling over figure 1. Could the bottom-right-most line (beginning with -T_ij(deltax_kd# be repositioned so that it's clearer which part of the diagram that line is associated with? 
+
+  Thanks. This figure had a typo in it, which we have fixed, and we have now moved the bottom-most-right
+  line to (hopefully) help clarify the figure.
