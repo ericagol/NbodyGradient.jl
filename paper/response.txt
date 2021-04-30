@@ -71,3 +71,11 @@ typos, which was the main purpose of the unit tests for equations.
 
   Thanks. This figure had a typo in it, which we have fixed, and we have now moved the bottom-most-right
   line to (hopefully) help clarify the figure.
+
+In addition to these suggested changes, we have made some additional
+changes to the paper:
+
+1).  We fixed algorithm 2, which had some errors.
+2).  We changed Figure 7 to include comparison with a symplectic algorithm
+(WHFAST), also a part of REBOUND.
+3). 
