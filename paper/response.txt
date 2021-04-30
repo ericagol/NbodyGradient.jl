@@ -31,14 +31,15 @@ Thanks, we have added extra discussion of this to the introduction.
 > momentum step. The DH paper has a good review of this if the authors just want to 
 > refer novice readers to this section. 
 
-Thanks, we added this reference.
+Thanks, we added this reference and an extra sentence to clarify this aspect
+of symplectic integration.
 
 > - I recently read an astronomy paper that had published "unit tests" for equations 
 > to check their accuracy (https://ui.adsabs.harvard.edu/abs/2021arXiv210306275L/abstract). 
 > I think a few tests like this would be very helpful for this paper. Of course, this 
 > is a new idea, so this is just a suggestion.
 
-Thanks.  One of us (Eric Agol) was a co-author on that paper, and so we considered
+Thanks.  Eric Agol was a co-author on that paper, and so we did consider
 adding similar 'proofs' to each of the equations.  Although we have not implemented
 this suggestion, we note that we do have unit tests in the github repository which
 check that the code is working properly.  These may be found here:
