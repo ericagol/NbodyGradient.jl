@@ -99,13 +99,16 @@ function State(ic::InitialConditions{T}) where T<:AbstractFloat
     pair,rij,a,aij,x0,v0,input,delxv,rtmp)
 end
 
-function set_state!(s_old::State,s_new::State)
-    fields = setdiff(fieldnames(State),[:m,:n])
-    for fn in fields
-        f_new = getfield(s_new,fn)
-        f_old = getfield(s_old,fn)
-        f_old .= f_new
-    end
+function set_state!(s_old::State{T},s_new::State{T}) where T<:AbstractFloat
+    s_old.t .= s_new.t
+    s_old.x .= s_new.x
+    s_old.v .= s_new.v
+    s_old.jac_step .= s_new.jac_step
+    s_old.xerror .= s_new.xerror
+    s_old.verror .= s_new.verror
+    s_old.jac_error .= s_new.jac_error
+    s_old.dqdt .= s_new.dqdt
+    s_old.dqdt_error .= s_new.dqdt_error
     return
 end
 

@@ -112,37 +112,12 @@ struct Derivatives{T<:AbstractFloat} <: AbstractDerivatives{T}
     end
 end
 
-function Base.iterate(d::AbstractDerivatives{T},state=1) where T<:AbstractFloat
-    fields = fieldnames(typeof(d))
-    if state > length(fields)
-        return nothing
+"""Zero out each array in Derivatives."""
+@generated function zero_out!(d::Derivatives{T}) where T<:AbstractFloat
+    exprs = Vector{Expr}()
+    for f in fieldnames(Derivatives)
+        expr = :(d.$f .= 0.0)
+        push!(exprs,expr)
     end
-    return (getfield(d,fields[state]), state+1)
-end
-
-function zero_out!(d::AbstractDerivatives{T}) where T<:AbstractFloat
-    for i::Array{T} in d
-        i .= zero(T)
-    end
-end
-
-function zero_out!(d::Derivatives{T}) where T<:AbstractFloat
-    d.jac_phi .= zero(T)
-    d.jac_kick .= zero(T)
-    d.jac_copy .= zero(T)
-    d.jac_ij .= zero(T)
-    d.jac_tmp1 .= zero(T)
-    d.jac_tmp2 .= zero(T)
-    d.jac_err1 .= zero(T)
-    d.dqdt_phi .= zero(T)
-    d.dqdt_kick .= zero(T)
-    d.dqdt_ij .= zero(T)
-    d.dqdt_tmp1 .= zero(T)
-    d.dqdt_tmp2 .= zero(T)
-    d.jac_kepler .= zero(T)
-    d.jac_mass .= zero(T)
-    d.dadq .= zero(T)
-    d.dotdadq .= zero(T)
-    d.tmp7n .= zero(T)
-    d.tmp14 .= zero(T)
+    return Expr(:block, exprs..., nothing)
 end
