@@ -2,7 +2,6 @@
 We would like to thank the referee for reviewing the paper, and for the excellent
 suggestions.  We address each in turn below:
 
-
 > Organizational comments:
 > 
 > - I believe the paper would benefit from moving some of the math to one or more 
@@ -13,8 +12,8 @@ suggestions.  We address each in turn below:
 > the paper more understandable to novices by keeping the main points in the body 
 > of the paper and moving the details. The same applies to the calculation of derivates section.
 
-Thanks for this suggestion.  We have moved much of the math from sections 3 and
-4 to three appendices.  This shortened the main body of the paper by about 3 pages.
+  Thanks for this suggestion.  We have moved much of the math from sections 3 and
+  4 to three appendices.  This shortened the main body of the paper by about 3 pages.
 
 > - I recommend that the authors spend more time in the introduction motivating why 
 > calculating derivatives wrt the initial conditions is useful. They spend a lot of 
@@ -24,35 +23,35 @@ Thanks for this suggestion.  We have moved much of the math from sections 3 and
 > an example. As a side note, they might also mention that photodynamical codes enable 
 > computation of covariances between transit parameters and orbital parameters.
 
-Thanks, we have added extra discussion of this to the introduction.
+  Thanks, we have added extra discussion of this to the introduction.
 
 > - The authors spend some time in section 2 reviewing symplectic integrators, but do 
 > not  complete the logic by showing how the Hamiltonian becomes the next position/
 > momentum step. The DH paper has a good review of this if the authors just want to 
 > refer novice readers to this section. 
 
-Thanks, we added this reference and an extra sentence to clarify this aspect
-of symplectic integration.
+  Thanks, we added this reference and an extra sentence to clarify this aspect
+  of symplectic integration.
 
 > - I recently read an astronomy paper that had published "unit tests" for equations 
 > to check their accuracy (https://ui.adsabs.harvard.edu/abs/2021arXiv210306275L/abstract). 
 > I think a few tests like this would be very helpful for this paper. Of course, this 
 > is a new idea, so this is just a suggestion.
 
-Thanks.  Eric Agol was a co-author on that paper, and so we did consider
-adding similar 'proofs' to each of the equations.  Although we have not implemented
-this suggestion, we note that we do have unit tests in the github repository which
-check that the code is working properly.  These may be found here:
-
-https://github.com/ericagol/NbodyGradient.jl/tree/master/test
-
-and the tests are called each time a build is generated via continuous integration
-with this script:
-
-https://github.com/ericagol/NbodyGradient.jl/blob/master/test/runtests.jl
-
-However, this does not guarantee that the equations in the manuscript do not contain 
-typos, which was the main purpose of the unit tests for equations.
+  Thanks.  Eric Agol was a co-author on that paper, and so we did consider
+  adding similar 'proofs' to each of the equations.  Although we have not implemented
+  this suggestion, we note that we do have unit tests in the github repository which
+  check that the code is working properly.  These may be found here:
+  
+  https://github.com/ericagol/NbodyGradient.jl/tree/master/test
+  
+  and the tests are called each time a build is generated via continuous integration
+  with this script:
+  
+  https://github.com/ericagol/NbodyGradient.jl/blob/master/test/runtests.jl
+  
+  However, this does not guarantee that the equations in the manuscript do not contain 
+  typos, which was the main purpose of the unit tests for equations in Luger et al.
 
 > Minor comments:
 > - Page 3, first line of right column, "V is the total kinetic energy" -> "potential energy"
@@ -72,7 +71,8 @@ typos, which was the main purpose of the unit tests for equations.
   Thanks. This figure had a typo in it, which we have fixed, and we have now moved the bottom-most-right
   line to (hopefully) help clarify the figure.
 
-In addition to these suggested changes, we have made some additional
+
+In addition to these suggested changes, we have made some other
 changes to the paper:
 
 1).  We fixed algorithm 2, which had some errors.
