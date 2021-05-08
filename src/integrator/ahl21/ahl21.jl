@@ -1101,10 +1101,10 @@ function compute_jacobian_gamma!(gamma::T,g0::T,g1::T,g2::T,g3::T,h1::T,h2::T,df
         k*betainv*rinv*r0inv*(r0^2*h8-beta*h*r0*g2^2 + (h*k+eta*r0)*h6)
         dgmhdh  =  g2*k*r0inv+k*c13*rinv*r0inv+g2*k*(2*k*r0inv-beta)*c13*rinv*r0inv-eta*c10
         dgmhdk  =  r0inv*(k*c1*c13*rinv*r0inv+g2*h-g3*r0-k*c9*betainv*r0inv)
-        #  dgmhdk2  =  c1*c13*rinv-c9*betainv
-        #  dgmhdk2 = -betainv*rinv*(h6*g3*ksq+eta*r0*(h6+g2*h4)+r0^2*g0*h5+k*eta*g2*h6+(g1*h6+g3*h4)*k*r0)
-        dgmhdk2 = -(h6*g3*ksq+eta*r0*(h6+g2*h4)+r0^2*g0*h5+k*eta*g2*h6+(g1*h6+g3*h4)*k*r0)
-        #  println("dgmhdk2: ",dgmhdk2," ",-betainv*rinv*(h6*g3*ksq+eta*r0*(h6+g2*h4)+r0^2*g0*h5+k*eta*g2*h6+(g1*h6+g3*h4)*k*r0))
+        #  dgmhdk2  =  -(c1*c13*rinv-c9*betainv)
+        #  dgmhdk2 = betainv*rinv*(h6*g3*ksq+eta*r0*(h6+g2*h4)+r0^2*g0*h5+k*eta*g2*h6+(g1*h6+g3*h4)*k*r0)
+        dgmhdk2 = (h6*g3*ksq+eta*r0*(h6+g2*h4)+r0^2*g0*h5+k*eta*g2*h6+(g1*h6+g3*h4)*k*r0)
+        #  println("dgmhdk2: ",dgmhdk2," ",betainv*rinv*(h6*g3*ksq+eta*r0*(h6+g2*h4)+r0^2*g0*h5+k*eta*g2*h6+(g1*h6+g3*h4)*k*r0))
         @inbounds for j=1:3
             # First, compute the \delta x-derivatives:
             delxv_jac[  j,  j] = fm1
@@ -1116,7 +1116,7 @@ function compute_jacobian_gamma!(gamma::T,g0::T,g1::T,g2::T,g3::T,h1::T,h2::T,df
             delxv_jac[  j,  7] = dfm1dk*x0[j] + dgmhdk*v0[j]
             delxv_jac[  j,  8] = dfm1dh*x0[j] + dgmhdh*v0[j]
             # Compute the mass jacobian separately since otherwise cancellations happen in kepler_driftij_gamma:
-            jac_mass[  j] = (GNEWT*r0inv)^2*betainv*rinv*(dfm1dk2*x0[j]+dgmhdk2*v0[j])
+            jac_mass[  j] = (GNEWT*r0inv)^2*betainv*rinv*(dfm1dk2*x0[j]-dgmhdk2*v0[j])
         end
         # Derivatives of \delta v with respect to x0, v0, k & h:
         c5 = (r0-k*g2)*rinv/g1
