@@ -25,7 +25,7 @@ export CartesianOutput, ElementsOutput
 export TransitTiming, TransitParameters, TransitSnapshot
 
 # Integrator methods
-export ahl21!, dh17!
+export ahl21!, dh17!, ahl21n!
 
 # Source code
 include("PreAllocArrays.jl")
@@ -37,5 +37,6 @@ include("transits/Transits.jl")
 
 # To be cleaned up
 # include("integrator/ah18/ah18_old.jl")
+include("integrator/ahl21/ahl21n.jl")
 
 end
