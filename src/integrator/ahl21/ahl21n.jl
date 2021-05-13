@@ -28,16 +28,17 @@ function keplerij_gamma!(s::State{T},i::Int64,j::Int64,h::T) where {T <: Real}
     mj = s.m[j]*mijinv
 
     # COM drift
-    @inbounds for k in 1:3
-        s.rtmp[k] = (mi*s.v[k,i] + mj*s.v[k,j]) * h
-    end
+    #@inbounds for k in 1:3
+    #    s.rtmp[k] = (mi*s.v[k,i] + mj*s.v[k,j]) * h
+    #end
     @inbounds for k=1:3
         kp3 = 3+k
+        rtmp = (mi*s.v[k,i] + mj*s.v[k,j]) * h
         # Advance center of mass
         s.x[k,i],s.xerror[k,i] = comp_sum(s.x[k,i],s.xerror[k,i], mj*s.delxv[k])
-        s.x[k,i],s.xerror[k,i] = comp_sum(s.x[k,i],s.xerror[k,i], s.rtmp[k])
+        s.x[k,i],s.xerror[k,i] = comp_sum(s.x[k,i],s.xerror[k,i], rtmp)
         s.x[k,j],s.xerror[k,j] = comp_sum(s.x[k,j],s.xerror[k,j],-mi*s.delxv[k])
-        s.x[k,j],s.xerror[k,j] = comp_sum(s.x[k,j],s.xerror[k,j], s.rtmp[k])
+        s.x[k,j],s.xerror[k,j] = comp_sum(s.x[k,j],s.xerror[k,j], rtmp)
 
         s.v[k,i],s.verror[k,i] = comp_sum(s.v[k,i],s.verror[k,i], mj*s.delxv[kp3])
         s.v[k,j],s.verror[k,j] = comp_sum(s.v[k,j],s.verror[k,j],-mi*s.delxv[kp3])
@@ -78,7 +79,8 @@ function kepler_step!(s::State{T},k::T,h::T;grad::Bool=true) where {T <: Real}
     gamma2::T = 3*copy(gamma)
     iter = 0
     ITMAX = 20
-    c1 = k; c2 = -2zeta; c3 = 2*eta*signb*sqb; c4 = -sqb*h*beta0; c5 = 2eta*signb*sqb
+    # c1 = k;
+    c2 = -2zeta; c3 = 2*eta*signb*sqb; c4 = -sqb*h*beta0; c5 = 2eta*signb*sqb
     # Solve for gamma:
     #    while true
     while iter < ITMAX
@@ -99,11 +101,12 @@ function kepler_step!(s::State{T},k::T,h::T;grad::Bool=true) where {T <: Real}
     # Set up a single output array for delx and delv:
     s.delxv .= zero(T)
     # Since we updated gamma, need to recompute:
-    xx = 0.5*gamma
+    xx::T = 0.5*gamma
     if beta0 > 0
-        sx,cs = sincos(xx)
+        sx,cx = sincos(xx)
     else
-        sx = sinh(xx); cx = exp(-xx)+sx
+        sx = sinh(xx)
+        cx = exp(-xx)+sx
     end
     # Now, compute final values.  Compute Wisdom/Hernandez G_i^\beta(s) functions:
     g1bs = 2sx*cx/sqb
@@ -121,8 +124,6 @@ function kepler_step!(s::State{T},k::T,h::T;grad::Bool=true) where {T <: Real}
     @inbounds for j=1:3
         # Compute difference vectors (finish - start) of step:
         s.delxv[  j] = f*s.x0[j]+g*s.v0[j]        # position x_ij(t+h)-x_ij(t) - h*v_ij(t) or -h*v_ij(t+h)
-    end
-    @inbounds for j=1:3
         s.delxv[3+j] = dfdt*s.x0[j]+dgdt*s.v0[j]    # velocity v_ij(t+h)-v_ij(t)
     end
     #if grad
