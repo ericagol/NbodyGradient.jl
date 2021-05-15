@@ -39,9 +39,13 @@ suggestions.  We address each in turn below:
 > is a new idea, so this is just a suggestion.
 
   Thanks.  Eric Agol was a co-author on that paper, and so we did consider
-  adding similar 'proofs' to each of the equations.  Although we have not implemented
-  this suggestion, we note that we do have unit tests in the github repository which
-  check that the code is working properly.  These may be found here:
+  adding similar 'proofs' to each of the equations.  We have now added links in most
+  of the equations to the lines of code in the github repository which implement each
+  line of code, and we have checked that the equations in the paper match those in the
+  code (and we caught one typo, as well as some inconsistencies between the code and
+  the paper).   Although this does not constitute a proof for each equation, we note 
+  that we unit tests in the github repository which check that the code is working 
+  properly, and thus confirm that the equations are correct.  These may be found here:
   
   https://github.com/ericagol/NbodyGradient.jl/tree/master/test
   
@@ -50,9 +54,6 @@ suggestions.  We address each in turn below:
   
   https://github.com/ericagol/NbodyGradient.jl/blob/master/test/runtests.jl
   
-  However, this does not guarantee that the equations in the manuscript do not contain 
-  typos, which was the main purpose of the unit tests for equations in Luger et al.
-
 > Minor comments:
 > - Page 3, first line of right column, "V is the total kinetic energy" -> "potential energy"
 
@@ -72,10 +73,11 @@ suggestions.  We address each in turn below:
   line to (hopefully) help clarify the figure.
 
 
-In addition to these suggested changes, we have made some other
+In addition to these suggested changes (indicated in red), we have made some other
 changes to the paper:
 
 1).  We fixed algorithm 2, which had some errors.
 2).  We changed Figure 7 to include comparison with a symplectic algorithm
 (WHFAST), also a part of REBOUND.
-3). 
+3).  We have added a comparison with WHFAST in Figure 7.
+4).  We have made some other minor changes.
