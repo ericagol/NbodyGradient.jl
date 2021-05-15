@@ -967,7 +967,7 @@ function jac_delxv_gamma!(s::State{T},k::T,h::T,drift_first::Bool;debug::Bool=fa
     # Since we updated gamma, need to recompute:
     xx = 0.5*gamma
     if beta0 > 0
-        sx,cs = sincos(xx)
+        sx,cx = sincos(xx)
     else
         sx = sinh(xx); cx = exp(-xx)+sx
 #        expmx = exp(-xx)
