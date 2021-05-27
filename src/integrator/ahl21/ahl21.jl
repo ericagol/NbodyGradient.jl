@@ -322,7 +322,6 @@ function ahl21!(s::State{T},d::dTime{T},h::T) where T<:AbstractFloat
     zilch = zero(T); uno = one(T); half = convert(T,0.5); two = convert(T,2.0); h2 = half*h; sevn = 7*n
     zero_out!(d)
     fill!(s.dqdt,zilch)
-    end
     kickfast!(s,d,h/6)
     d.dqdt_kick ./= 6 # Since step is h/6
     # Since I removed identity from kickfast, need to add in dqdt:
@@ -331,6 +330,7 @@ function ahl21!(s::State{T},d::dTime{T},h::T) where T<:AbstractFloat
     # Compute time derivative of drift step:
     @inbounds for i=1:n, k=1:3
         s.dqdt[(i-1)*7+k] = half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
+    end
     @inbounds for i=1:n-1
         indi = (i-1)*7
         @inbounds for j=i+1:n
