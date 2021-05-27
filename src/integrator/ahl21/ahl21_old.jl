@@ -17,7 +17,6 @@ function ahl21!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2
     jac_err1 = zeros(T,14,sevn)
     ##
 
-    drift!(x,v,xerror,verror,h2,n,jac_step,jac_error)
     kickfast!(x,v,xerror,verror,h/6,m,n,jac_kick,dqdt_kick,pair)
     # Multiply Jacobian from kick step:
     if T == BigFloat
@@ -27,6 +26,7 @@ function ahl21!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
     comp_sum_matrix!(jac_step,jac_error,jac_copy)
+    drift!(x,v,xerror,verror,h2,n,jac_step,jac_error)
     indi = 0; indj = 0
     @inbounds for i=1:n-1
         indi = (i-1)*7
@@ -109,6 +109,7 @@ function ahl21!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2
             end
         end
     end
+    drift!(x,v,xerror,verror,h2,n,jac_step,jac_error)
     #kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
     kickfast!(x,v,xerror,verror,h/6,m,n,jac_kick,dqdt_kick,pair)
     # Multiply Jacobian from kick step:
@@ -120,7 +121,6 @@ function ahl21!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2
     # Add back in the identity portion of the Jacobian with compensated summation:
     comp_sum_matrix!(jac_step,jac_error,jac_copy)
     # Edit this routine to do compensated summation for Jacobian [x]
-    drift!(x,v,xerror,verror,h2,n,jac_step,jac_error)
     return
 end
 
@@ -140,11 +140,6 @@ function ahl21!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2
     dqdt_tmp2 = zeros(T,14)
     fill!(dqdt,zilch)
     #dqdt_save =copy(dqdt)
-    drift!(x,v,xerror,verror,h2,n)
-    # Compute time derivative of drift step:
-    @inbounds for i=1:n, k=1:3
-        dqdt[(i-1)*7+k] = half*v[k,i] + h2*dqdt[(i-1)*7+3+k]
-    end
     #println("dqdt 1: ",dqdt-dqdt_save)
     #dqdt_save .= dqdt
     kickfast!(x,v,xerror,verror,h/6,m,n,jac_kick,dqdt_kick,pair)
@@ -153,6 +148,11 @@ function ahl21!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2
     dqdt .+= dqdt_kick + *(jac_kick,dqdt)
     #println("dqdt 2: ",dqdt-dqdt_save)
     #dqdt_save .= dqdt
+    drift!(x,v,xerror,verror,h2,n)
+    # Compute time derivative of drift step:
+    @inbounds for i=1:n, k=1:3
+        dqdt[(i-1)*7+k] = half*v[k,i] + h2*dqdt[(i-1)*7+3+k]
+    end
     @inbounds for i=1:n-1
         indi = (i-1)*7
         @inbounds for j=i+1:n
@@ -222,6 +222,11 @@ function ahl21!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2
             end
         end
     end
+    drift!(x,v,xerror,verror,h2,n)
+    # Compute time derivative of drift step:
+    @inbounds for i=1:n, k=1:3
+        dqdt[(i-1)*7+k] += half*v[k,i] + h2*dqdt[(i-1)*7+3+k]
+    end
     fill!(dqdt_kick,zilch)
     kickfast!(x,v,xerror,verror,h/6,m,n,jac_kick,dqdt_kick,pair)
     dqdt_kick /= 6 # Since step is h/6
@@ -229,19 +234,14 @@ function ahl21!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2
     dqdt .+= dqdt_kick + *(jac_kick,dqdt)
     #println("dqdt 8: ",dqdt-dqdt_save)
     #dqdt_save .= dqdt
-    drift!(x,v,xerror,verror,h2,n)
-    # Compute time derivative of drift step:
-    @inbounds for i=1:n, k=1:3
-        dqdt[(i-1)*7+k] += half*v[k,i] + h2*dqdt[(i-1)*7+3+k]
-    end
     #println("dqdt 9: ",dqdt-dqdt_save)
     return
 end
 
 function ahl21!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2},h::T,m::Array{T,1},n::Int64,pair::Array{Bool,2}) where {T <: Real}
     h2 = 0.5*h
-    drift!(x,v,xerror,verror,h2,n)
     kickfast!(x,v,xerror,verror,h/6,m,n,pair)
+    drift!(x,v,xerror,verror,h2,n)
     @inbounds for i=1:n-1
         for j=i+1:n
             if ~pair[i,j]
@@ -258,8 +258,8 @@ function ahl21!(x::Array{T,2},v::Array{T,2},xerror::Array{T,2},verror::Array{T,2
             end
         end
     end
-    kickfast!(x,v,xerror,verror,h/6,m,n,pair)
     drift!(x,v,xerror,verror,h2,n)
+    kickfast!(x,v,xerror,verror,h/6,m,n,pair)
     return
 end
 

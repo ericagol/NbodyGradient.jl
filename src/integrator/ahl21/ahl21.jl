@@ -7,12 +7,6 @@ function ahl21!(s::State{T},d::Derivatives{T},h::T) where T<:AbstractFloat
     h2::T = half*h; n = s.n; sevn = 7*n; h6::T = h/6.0
     zero_out!(d)
     fill!(s.dqdt,zilch)
-
-    drift_grad!(s,h2)
-    # Compute time derivative of drift step:
-    @inbounds for i=1:n, k=1:3
-        s.dqdt[(i-1)*7+k] = half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
-    end
     kickfast!(s,d,h6)
     d.dqdt_kick ./= 6.0 # Since step is h/6
     # Since I removed identity from kickfast, need to add in dqdt:
@@ -26,6 +20,11 @@ function ahl21!(s::State{T},d::Derivatives{T},h::T) where T<:AbstractFloat
         #BLAS.gemm!('N','N',uno,d.jac_kick,s.jac_step,zilch,d.jac_copy)
         mul!(d.jac_copy, d.jac_kick, s.jac_step)
         d.ctime[1] += time()-start
+    end
+    drift_grad!(s,h2)
+    # Compute time derivative of drift step:
+    @inbounds for i=1:n, k=1:3
+        s.dqdt[(i-1)*7+k] = half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
     comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
@@ -158,6 +157,11 @@ function ahl21!(s::State{T},d::Derivatives{T},h::T) where T<:AbstractFloat
             end
         end
     end
+    drift_grad!(s,h2)
+    # Compute time derivative of drift step:
+    @inbounds for i=1:n, k=1:3
+        s.dqdt[(i-1)*7+k] += half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
+    end
     fill!(d.dqdt_kick,zilch)
     kickfast!(s,d,h6)
     d.dqdt_kick ./= 6.0 # Since step is h/6
@@ -176,11 +180,6 @@ function ahl21!(s::State{T},d::Derivatives{T},h::T) where T<:AbstractFloat
     # Add back in the identity portion of the Jacobian with compensated summation:
     comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
     # Edit this routine to do compensated summation for Jacobian [x]
-    drift_grad!(s,h2)
-    # Compute time derivative of drift step:
-    @inbounds for i=1:n, k=1:3
-        s.dqdt[(i-1)*7+k] += half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
-    end
 end
 
 function ahl21!(s::State{T},d::Jacobian{T},h::T) where T<:AbstractFloat
@@ -189,7 +188,6 @@ function ahl21!(s::State{T},d::Jacobian{T},h::T) where T<:AbstractFloat
 
     #drift!(s.x,s.v,s.xerror,s.verror,h2,s.n,s.jac_step,s.jac_error)
     #kickfast!(s.x,s.v,s.xerror,s.verror,h/6,s.m,s.n,d.jac_kick,d.dqdt_kick,pair)
-    drift_grad!(s,h2)
     kickfast!(s,d,h/6)
     # Multiply Jacobian from kick step:
     if T == BigFloat
@@ -202,6 +200,7 @@ function ahl21!(s::State{T},d::Jacobian{T},h::T) where T<:AbstractFloat
     end
     # Add back in the identity portion of the Jacobian with compensated summation:
     comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
+    drift_grad!(s,h2)
     indi = 0; indj = 0
     @inbounds for i=1:s.n-1
         indi = (i-1)*7
@@ -297,6 +296,7 @@ function ahl21!(s::State{T},d::Jacobian{T},h::T) where T<:AbstractFloat
             end
         end
     end
+    drift_grad!(s,h2)
     #kickfast!(x,v,h2,m,n,jac_kick,dqdt_kick,pair)
     #kickfast!(s.x,s.v,s.xerror,s.verror,h/6,s.m,s.n,d.jac_kick,d.dqdt_kick,pair)
     kickfast!(s,d,h/6)
@@ -313,7 +313,6 @@ function ahl21!(s::State{T},d::Jacobian{T},h::T) where T<:AbstractFloat
     comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
     # Edit this routine to do compensated summation for Jacobian [x]
     #drift!(s.x,s.v,s.xerror,s.verror,h2,s.n,s.jac_step,s.jac_error)
-    drift_grad!(s,h2)
     return
 end
 
@@ -323,15 +322,15 @@ function ahl21!(s::State{T},d::dTime{T},h::T) where T<:AbstractFloat
     zilch = zero(T); uno = one(T); half = convert(T,0.5); two = convert(T,2.0); h2 = half*h; sevn = 7*n
     zero_out!(d)
     fill!(s.dqdt,zilch)
-    drift!(s,h2)
-    # Compute time derivative of drift step:
-    @inbounds for i=1:n, k=1:3
-        s.dqdt[(i-1)*7+k] = half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
     end
     kickfast!(s,d,h/6)
     d.dqdt_kick ./= 6 # Since step is h/6
     # Since I removed identity from kickfast, need to add in dqdt:
     s.dqdt .+= d.dqdt_kick + *(d.jac_kick,s.dqdt)
+    drift!(s,h2)
+    # Compute time derivative of drift step:
+    @inbounds for i=1:n, k=1:3
+        s.dqdt[(i-1)*7+k] = half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
     @inbounds for i=1:n-1
         indi = (i-1)*7
         @inbounds for j=i+1:n
@@ -387,16 +386,16 @@ function ahl21!(s::State{T},d::dTime{T},h::T) where T<:AbstractFloat
             end
         end
     end
-    fill!(d.dqdt_kick,zilch)
-    kickfast!(s,d,h/6)
-    d.dqdt_kick ./= 6 # Since step is h/6
-    # Copy result to dqdt:
-    s.dqdt .+= d.dqdt_kick + *(d.jac_kick,s.dqdt)
     drift_grad!(s,h2)
     # Compute time derivative of drift step:
     @inbounds for i=1:n, k=1:3
         s.dqdt[(i-1)*7+k] += half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
     end
+    fill!(d.dqdt_kick,zilch)
+    kickfast!(s,d,h/6)
+    d.dqdt_kick ./= 6 # Since step is h/6
+    # Copy result to dqdt:
+    s.dqdt .+= d.dqdt_kick + *(d.jac_kick,s.dqdt)
     return
 end
 

@@ -5,8 +5,8 @@ Carries out AHL21 mapping with compensated summation, WITHOUT derivatives
 """
 function ahl21!(s::State{T},h::T) where T<:AbstractFloat
     h2 = 0.5*h; n = s.n
-    drift!(s,h2)
     kickfast!(s,h/6)
+    drift!(s,h2)
     @inbounds for i=1:n-1
         for j=i+1:n
             if ~s.pair[i,j]
@@ -23,8 +23,8 @@ function ahl21!(s::State{T},h::T) where T<:AbstractFloat
             end
         end
     end
-    kickfast!(s,h/6)
     drift!(s,h2)
+    kickfast!(s,h/6)
     return
 end
 
