@@ -26,6 +26,7 @@ end
     print("Integrator... ")
     @testset "Integrator" begin
         include("test_kickfast.jl")
+        include("test_phic.jl")
         include("test_kepler_driftij_gamma.jl")
         include("test_phisalpha.jl")
         include("test_integrator.jl")
