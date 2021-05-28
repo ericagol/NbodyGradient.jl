@@ -511,8 +511,8 @@ function phic!(s::State{T},d::AbstractDerivatives{T},h::T) where {T <: Real}
                     #v[k,j] += m[i]*facv
                     s.v[k,j],s.verror[k,j] = comp_sum(s.v[k,j],s.verror[k,j],s.m[i]*facv)
                     # Compute time derivative:
-                    d.dqdt_phi[indi+3+k] -= 3/h*s.m[j]*facv
-                    d.dqdt_phi[indj+3+k] += 3/h*s.m[i]*facv
+                    d.dqdt_phi[indi+3+k] -= 1/h*s.m[j]*facv
+                    d.dqdt_phi[indj+3+k] += 1/h*s.m[i]*facv
                     s.a[k,i] -= s.m[j]*fac
                     s.a[k,j] += s.m[i]*fac
                     # Impulse of ith particle depends on mass of jth particle:
@@ -589,6 +589,9 @@ function phic!(s::State{T},d::AbstractDerivatives{T},h::T) where {T <: Real}
                     s.v[k,i],s.verror[k,i] = comp_sum(s.v[k,i],s.verror[k,i],s.m[j]*fac)
                     #v[k,j] -= m[i]*fac
                     s.v[k,j],s.verror[k,j] = comp_sum(s.v[k,j],s.verror[k,j],-s.m[i]*fac)
+                    # Compute time derivative of 4th order correction
+                    d.dqdt_phi[indi+3+k] += 3/h*s.m[j]*fac
+                    d.dqdt_phi[indj+3+k] -= 3/h*s.m[i]*fac
                     # Mass derivative (first part is easy):
                     d.jac_phi[indi+3+k,indj+7] += fac
                     d.jac_phi[indj+3+k,indi+7] -= fac
