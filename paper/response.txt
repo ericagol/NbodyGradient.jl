@@ -80,4 +80,5 @@ changes to the paper:
 2).  We changed Figure 7 to include comparison with a symplectic algorithm
 (WHFAST), also a part of REBOUND.
 3).  We have added a comparison with WHFAST in Figure 7.
-4).  We have made some other minor changes and corrections throughout.
+4).  We have updated the notation table to include a more complete list of variables.
+5).  We have made some other minor changes and corrections throughout.
