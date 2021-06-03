@@ -39,13 +39,14 @@ suggestions.  We address each in turn below:
 > is a new idea, so this is just a suggestion.
 
   Thanks.  Eric Agol was a co-author on that paper, and so we did consider
-  adding similar 'proofs' to each of the equations.  We have now added links in most
-  of the equations to the lines of code in the github repository which implement each
-  line of code, and we have checked that the equations in the paper match those in the
+  adding similar proofs to each of the equations.  Instead, we have now added links in
+  the equations to the lines of code in the github repository which implement each
+  equation, and we have checked that the equations in the paper match those in the
   code (and we caught one typo, as well as some inconsistencies between the code and
-  the paper).   Although this does not constitute a proof for each equation, we note 
-  that we unit tests in the github repository which check that the code is working 
-  properly, and thus confirm that the equations are correct.  These may be found here:
+  the paper, so this was a great suggestion).   Although this does not constitute a proof 
+  for each equation, we note that we unit tests in the github repository which check that 
+  the code is working properly, and thus confirm that the equations are correct.  
+  These may be found here:
   
   https://github.com/ericagol/NbodyGradient.jl/tree/master/test
   
