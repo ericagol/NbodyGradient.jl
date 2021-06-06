@@ -99,6 +99,17 @@ function State(ic::InitialConditions{T}) where T<:AbstractFloat
     pair,rij,a,aij,x0,v0,input,delxv,rtmp)
 end
 
+function initialize!(s::State{T}, ic::InitialConditions{T}) where T<:Real
+    x,v,jac_init = init_nbody(ic)
+    s.x .= x
+    s.v .= v
+    s.jac_init .= jac_init
+
+    s.xerror .= 0.0
+    s.verror .= 0.0
+    return
+end
+
 function set_state!(s_old::State{T},s_new::State{T}) where T<:AbstractFloat
     s_old.t .= s_new.t
     s_old.x .= s_new.x
