@@ -4,27 +4,16 @@
 Carries out AHL21 mapping with compensated summation, WITHOUT derivatives
 """
 function ahl21!(s::State{T},h::T) where T<:AbstractFloat
-    h2 = 0.5*h; n = s.n
-    kickfast!(s,h/6)
+    h2 = 0.5*h;
+    h6 = h/6
+    kickfast!(s,h6)
     drift!(s,h2)
-    @inbounds for i=1:n-1
-        for j=i+1:n
-            if ~s.pair[i,j]
-                kepler_driftij_gamma!(s,i,j,h2,true)
-            end
-        end
-    end
+    drift_kepler!(s,h2)
     phic!(s,h)
-    phisalpha!(s,h,convert(T,2))
-    @inbounds for i=n-1:-1:1
-        for j=n:-1:i+1
-            if ~s.pair[i,j]
-                kepler_driftij_gamma!(s,i,j,h2,false)
-            end
-        end
-    end
+    phisalpha!(s,h,T(2.0))
+    kepler_drift!(s,h2)
     drift!(s,h2)
-    kickfast!(s,h/6)
+    kickfast!(s,h6)
     return
 end
 
@@ -168,36 +157,54 @@ end
 
 """
 
+Take a combined -drift+kepler step for each pair of bodies.
+"""
+function drift_kepler!(s::State{T}, h::T) where T<:Real
+    n = s.n
+    @inbounds for i in 1:n-1, j in i+1:n
+        if ~s.pair[i,j]
+            kepler_driftij_gamma!(s,i,j,h,true)
+        end
+    end
+    return
+end
+
+"""
+
+Take a combined kepler-drift step for each pair of bodies
+"""
+function kepler_drift!(s::State{T}, h::T) where T<:Real
+    n = s.n
+    @inbounds for i in n-1:-1:1, j in n:-1:i+1
+        if ~s.pair[i,j]
+            kepler_driftij_gamma!(s,i,j,h,false)
+        end
+    end
+    return
+end
+
+"""
+
 Carries out a Kepler step and reverse drift for bodies i & j with compensated summation.
 """
 function kepler_driftij_gamma!(s::State{T},i::Int64,j::Int64,h::T,drift_first::Bool) where {T <: Real}
-    #s.x0 .= zero(T) # x0 = positions of body i relative to j
-    #s.v0 .= zero(T) # v0 = velocities of body i relative to j
     @inbounds for k=1:NDIM
-        s.x0[k] = s.x[k,i] - s.x[k,j]
-        s.v0[k] = s.v[k,i] - s.v[k,j]
+        s.x0[k] = s.x[k,i] - s.x[k,j] # x0 = positions of body i relative to j
+        s.v0[k] = s.v[k,i] - s.v[k,j] # v0 = velocities of body i relative to j
     end
     gm = GNEWT*(s.m[i]+s.m[j])
-    if gm == 0
-        #  Do nothing
-        #  for k=1:3
-        #    x[k,i] += h*v[k,i]
-        #    x[k,j] += h*v[k,j]
-        #  end
-    else
-        # Compute differences in x & v over time step:
-        #delxv = jac_delxv_gamma!(s,gm,h,drift_first)
-        jac_delxv_gamma!(s,gm,h,drift_first,grad=false)
-        mijinv =1.0/(s.m[i] + s.m[j])
-        mi = s.m[i]*mijinv # Normalize the masses
-        mj = s.m[j]*mijinv
-        @inbounds for k=1:3
-            # Add kepler-drift differences, weighted by masses, to start of step:
-            s.x[k,i],s.xerror[k,i] = comp_sum(s.x[k,i],s.xerror[k,i], mj*s.delxv[k])
-            s.x[k,j],s.xerror[k,j] = comp_sum(s.x[k,j],s.xerror[k,j],-mi*s.delxv[k])
-            s.v[k,i],s.verror[k,i] = comp_sum(s.v[k,i],s.verror[k,i], mj*s.delxv[3+k])
-            s.v[k,j],s.verror[k,j] = comp_sum(s.v[k,j],s.verror[k,j],-mi*s.delxv[3+k])
-        end
+    if gm == 0; return; end
+    # Compute differences in x & v over time step:
+    jac_delxv_gamma!(s,gm,h,drift_first,grad=false)
+    mijinv =1.0/(s.m[i] + s.m[j])
+    mi = s.m[i]*mijinv # Normalize the masses
+    mj = s.m[j]*mijinv
+    @inbounds for k=1:3
+        # Add kepler-drift differences, weighted by masses, to start of step:
+        s.x[k,i],s.xerror[k,i] = comp_sum(s.x[k,i],s.xerror[k,i], mj*s.delxv[k])
+        s.x[k,j],s.xerror[k,j] = comp_sum(s.x[k,j],s.xerror[k,j],-mi*s.delxv[k])
+        s.v[k,i],s.verror[k,i] = comp_sum(s.v[k,i],s.verror[k,i], mj*s.delxv[3+k])
+        s.v[k,j],s.verror[k,j] = comp_sum(s.v[k,j],s.verror[k,j],-mi*s.delxv[3+k])
     end
     return
 end
