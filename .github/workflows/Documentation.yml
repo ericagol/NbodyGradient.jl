@@ -2,8 +2,9 @@ name: Documentation
 
 on:
   push:
-    branches:
-      - master
+    paths:
+      - 'src/**'
+      - 'docs/**'
     tags: '*'
   pull_request:
 
