@@ -8,7 +8,7 @@ A set of Julia routines for computing gradients of N-body integrations.
 
 Under development by Eric Agol, David Hernandez and Zach Langford
 
-License:  If using in publications, please include Agol, Hernandez & Langford as co-authors.
+License:  If using in publications, please cite [Agol, Hernandez & Langford (2021)](https://arxiv.org/abs/2106.02188).
 
 Paper: See orange button above.
 
