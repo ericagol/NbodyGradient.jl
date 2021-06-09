@@ -13,11 +13,7 @@ function ahl21!(s::State{T},d::Derivatives{T},h::T) where T<:AbstractFloat
     mul!(d.tmp7n, d.jac_kick, s.dqdt)
     s.dqdt .+= d.dqdt_kick .+ d.tmp7n #*(d.jac_kick,s.dqdt)
     # Multiply Jacobian from kick step:
-    if T == BigFloat
-        d.jac_copy .= *(d.jac_kick,s.jac_step)
-    else
-        mul!(d.jac_copy, d.jac_kick, s.jac_step)
-    end
+    mul!(d.jac_copy, d.jac_kick, s.jac_step)
     drift_grad!(s,h2)
     # Compute time derivative of drift step:
     @inbounds for i=1:n, k=1:3
@@ -34,11 +30,7 @@ function ahl21!(s::State{T},d::Derivatives{T},h::T) where T<:AbstractFloat
                 kepler_driftij_gamma!(s,d,i,j,h2,true)
                 copy_submatrix!(s,d,indi,indj,sevn)
                 # Carry out multiplication on the i/j components of matrix:
-                if T == BigFloat
-                    d.jac_tmp2 .= *(d.jac_ij,d.jac_tmp1)
-                else
-                    mul!(d.jac_tmp2, d.jac_ij, d.jac_tmp1)
-                end
+                mul!(d.jac_tmp2, d.jac_ij, d.jac_tmp1)
                 # Add back in the Jacobian with compensated summation:
                 comp_sum_matrix!(d.jac_tmp1,d.jac_err1,d.jac_tmp2)
                 # Add in partial derivatives with respect to time:
@@ -53,11 +45,7 @@ function ahl21!(s::State{T},d::Derivatives{T},h::T) where T<:AbstractFloat
     end
     phic!(s,d,h)
     phisalpha!(s,d,h,two)
-    if T == BigFloat
-        d.jac_copy .= *(d.jac_phi,s.jac_step)
-    else
-        mul!(d.jac_copy, d.jac_phi, s.jac_step)
-    end
+    mul!(d.jac_copy, d.jac_phi, s.jac_step)
     # Add in time derivative with respect to prior parameters:
     # Copy result to dqdt:
     mul!(d.tmp7n, d.jac_phi, s.dqdt)
@@ -75,11 +63,7 @@ function ahl21!(s::State{T},d::Derivatives{T},h::T) where T<:AbstractFloat
                 # Carry out multiplication on the i/j components of matrix:
                 copy_submatrix!(s,d,indi,indj,sevn)
                 # Carry out multiplication on the i/j components of matrix:
-                if T == BigFloat
-                    d.jac_tmp2 .= *(d.jac_ij,d.jac_tmp1)
-                else
-                    mul!(d.jac_tmp2,d.jac_ij,d.jac_tmp1)
-                end
+                mul!(d.jac_tmp2,d.jac_ij,d.jac_tmp1)
                 # Add back in the Jacobian with compensated summation:
                 comp_sum_matrix!(d.jac_tmp1,d.jac_err1,d.jac_tmp2)
                 # Add in partial derivatives with respect to time:
@@ -104,11 +88,7 @@ function ahl21!(s::State{T},d::Derivatives{T},h::T) where T<:AbstractFloat
     mul!(d.tmp7n, d.jac_kick, s.dqdt)
     s.dqdt .+= d.dqdt_kick .+ d.tmp7n#*(d.jac_kick,s.dqdt)
     # Multiply Jacobian from kick step:
-    if T == BigFloat
-        d.jac_copy .= *(d.jac_kick,s.jac_step)
-    else
-        mul!(d.jac_copy,d.jac_kick,s.jac_step)
-    end
+    mul!(d.jac_copy,d.jac_kick,s.jac_step)
     # Add back in the identity portion of the Jacobian with compensated summation:
     comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
     # Edit this routine to do compensated summation for Jacobian [x]
