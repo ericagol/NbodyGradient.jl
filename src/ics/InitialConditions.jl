@@ -74,13 +74,13 @@ Initial conditions, specified by a hierarchy vector and orbital elements.
 - `m::Vector{T}` : Masses of bodies.
 - `t0::T` : Initial time [Days].
 """
-struct ElementsIC{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: InitialConditions{T}
-    elements::M
+struct ElementsIC{T<:AbstractFloat} <: InitialConditions{T}
+    elements::Matrix{T}
     H::Vector{Int64}
-    ϵ::M
-    amat::M
+    ϵ::Matrix{T}
+    amat::Matrix{T}
     nbody::Int64
-    m::V
+    m::Vector{T}
     t0::T
     der::Bool
 
@@ -96,7 +96,7 @@ struct ElementsIC{T<:AbstractFloat,V<:Vector{T},M<:Matrix{T}} <: InitialConditio
         end
         m = elements[1:nbody,1]
         amat = amatrix(ϵ,m)
-        return new{T,Vector{T},Matrix{T}}(elements,H,ϵ,amat,nbody,m,t0,der);
+        return new{T}(elements,H,ϵ,amat,nbody,m,t0,der);
     end
 end
 
