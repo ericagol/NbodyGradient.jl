@@ -14,7 +14,7 @@ Kahan (1965) compensated summation for `T<:Real`.
 ...
 """
 function comp_sum(sum_value::T,sum_error::T,addend::T) where {T <: Real}
-    tmp = zero(T)    
+    tmp = zero(T)
     sum_error += addend
     tmp = sum_value + sum_error
     sum_error = (sum_value - tmp) + sum_error
@@ -126,9 +126,9 @@ function G3(gamma::T,beta::T,sqb::T;gc=convert(T,0.5)) where {T <: Real}
         return G3_series(gamma,beta,sqb)
     else
 #        sqb = sqrt(abs(beta))
-        if beta >= 0 
-            return (gamma-sin(gamma))/(sqb*beta) 
-        else 
+        if beta >= 0
+            return (gamma-sin(gamma))/(sqb*beta)
+        else
             return (gamma-sinh(gamma))/(sqb*beta)
         end
     end
@@ -171,7 +171,7 @@ function H1(gamma::T,beta::T;gc=convert(T,0.5)) where {T <: Real}
     else
         if beta >= 0
             return (4sin(0.5*gamma)^2 -gamma*sin(gamma))/beta^2
-        else 
+        else
             return (-4sinh(0.5*gamma)^2+gamma*sinh(gamma))/beta^2
         end
     end
@@ -215,8 +215,8 @@ function H2(gamma::T,beta::T,sqb::T;gc=convert(T,0.5)) where {T <: Real}
     else
 #        sqb = sqrt(abs(beta))
         if beta >= 0
-            return (sin(gamma)-gamma*cos(gamma))/(sqb*beta) 
-        else 
+            return (sin(gamma)-gamma*cos(gamma))/(sqb*beta)
+        else
             return (sinh(gamma)-gamma*cosh(gamma))/(sqb*beta)
         end
     end
@@ -243,7 +243,7 @@ function H2_series(gamma::T,beta::T,sqb::T) where {T <: Real}
         term *= x2
         term /= (4n+6)*n
         h2 += term
-        iter += 1 
+        iter += 1
         if iter >= ITMAX || h2 == h22 || h2 == h21
             break
         end
@@ -310,7 +310,7 @@ function H5(gamma::T,beta::T,sqb::T;gc=convert(T,0.5)) where {T <: Real}
         if beta >= 0
 #            return (3sin(gamma)-2gamma-gamma*cos(gamma))/(beta*sqrt(beta))
             return (3sin(gamma)-2gamma-gamma*cos(gamma))/(beta*sqb)
-        else 
+        else
 #            return (3sinh(gamma)-2gamma-gamma*cosh(gamma))/(beta*sqrt(-beta))
             return (3sinh(gamma)-2gamma-gamma*cosh(gamma))/(beta*sqb)
         end
@@ -355,7 +355,7 @@ function H6(gamma::T,beta::T;gc=convert(T,0.5)) where {T <: Real}
     else
         if beta >= 0
             return (9-8cos(gamma) -cos(2gamma) -6gamma*sin(gamma))/(2beta^2)
-        else 
+        else
             return (9-8cosh(gamma)-cosh(2gamma)+6gamma*sinh(gamma))/(2beta^2)
         end
     end
@@ -497,10 +497,10 @@ function H8_series(gamma::T,beta::T,sqb::T) where {T <: Real}
 end
 
 # Faster dot product; assumes 3D vector
-@inline function dot_fast(a::Vector{T}, b::Vector{T}) where T<:Real
+@inline function dot_fast(a::AbstractVector{T}, b::AbstractVector{T}) where T<:Real
     a[1]*b[1] + a[2]*b[2] + a[3]*b[3]
 end
 
-@inline function dot_fast(a::Vector{T}) where T<:Real
+@inline function dot_fast(a::AbstractVector{T}) where T<:Real
     a[1]*a[1] + a[2]*a[2] + a[3]*a[3]
 end

@@ -5,7 +5,7 @@ An N-body itegrator that computes derivatives with respect to initial conditions
 """
 module NbodyGradient
 
-using LinearAlgebra, DelimitedFiles
+using LinearAlgebra, DelimitedFiles, StaticArrays
 using FileIO, JLD2
 
 # Constants used by most functions
