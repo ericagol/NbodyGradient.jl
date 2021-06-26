@@ -136,7 +136,7 @@ Collects `Elements` and produces an `ElementsIC` struct.
 function ElementsIC(t0::T,H::Union{Int64,Vector{Int64}},elems::Elements{T}...) where T <: AbstractFloat
     if H isa Int64; H = [H,ones(Int64,H-1)...]; end
     elements = zeros(T,H[1],7)
-    fields = setdiff(fieldnames(Elements),[:a,:e,:ϖ])
+    fields = [:m, :P, :t0, :ecosϖ, :esinϖ, :I, :Ω]
     for i in eachindex(elems)
         elements[i,:] .= [getfield(elems[i],f) for f in fields]
     end
