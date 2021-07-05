@@ -48,8 +48,8 @@ import NbodyGradient: set_state!, zero_out!, amatrix
         dq0 = big(1e-10)
         ic_big = ElementsIC(big(t0), N, big.(elements))
         elements_big = copy(ic_big.elements)
-        sp = State(ic_big)
-        sm = State(ic_big)
+        sp, dp = dState(ic_big)
+        sm, dm = dState(ic_big)
         ttp = TransitParameters(big(itime), ic_big);
         ttm = TransitParameters(big(itime), ic_big);
         dtde_num = zeros(BigFloat, size(ttp.dtbvdelements));
@@ -57,18 +57,18 @@ import NbodyGradient: set_state!, zero_out!, amatrix
 
         for jq in 1:N
             for iq in 1:7
-                zero_out!(ttp); zero_out!(ttm);
+                zero_out!(ttp); zero_out!(ttm); zero_out!(dp); zero_out!(dm);
                 ic_big.elements .= elements_big
                 ic_big.m .= elements_big[:,1]
                 if iq == 7; ivary = 1; else; ivary = iq + 1; end
                 ic_big.elements[jq,ivary] += dq0
                 if ivary == 1; ic_big.m[jq] += dq0; amatrix(ic_big); end # Masses don't update with elements array
                 initialize!(sp, ic_big)
-                intr_big(sp, ttp; grad=false)
+                intr_big(sp, ttp, dp; grad=false)
                 ic_big.elements[jq,ivary] -= 2dq0
                 if ivary == 1; ic_big.m[jq] -= 2dq0; amatrix(ic_big); end
                 initialize!(sm, ic_big)
-                intr_big(sm, ttm; grad = false)
+                intr_big(sm, ttm, dm; grad=false)
                 for i in 2:N
                     for k in 1:ttm.count[i]
                         for itbv=1:3
