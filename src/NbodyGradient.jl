@@ -18,7 +18,7 @@ const alpha0 = 0.0
 
 # Types
 export Elements, ElementsIC, CartesianIC, InitialConditions
-export State
+export State, dState
 export Integrator
 export Jacobian, dTime
 export CartesianOutput, ElementsOutput

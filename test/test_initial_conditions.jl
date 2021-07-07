@@ -1,37 +1,21 @@
-# Test all IC specification methods
+# Make sure that each IC specification method yields the same orbital elements
+# or Cartesian coordinates.
 using DelimitedFiles
 
-N = 3
-t0 = 7257.93115525 - 7300.0
-H = [N,ones(Int64, N - 1)...]
-
-function get_elements_array_ic()
+function get_elements_ic_array(t0, H, N)
     fname = "elements.txt"
     elements = readdlm(fname, ',', comments=true)[1:N,:]
     ic = ElementsIC(t0, H, elements)
     return ic
 end
 
-function get_cartesian_array_ic()
-    fname = "coordinates.txt"
-    coords = readdlm(fname, ',', comments=true)[1:N,:]
-    ic = CartesianIC(t0, H[1], coords)
-    return ic
-end
-
-function get_elements_file_ic()
+function get_elements_ic_file(t0, H, N)
     fname = "elements.txt"
     ic = ElementsIC(t0, H, fname)
     return ic
 end
 
-function get_cartesian_file_ic()
-    fname = "coordinates.txt"
-    ic = CartesianIC(t0, H[1], fname)
-    return ic
-end
-
-function get_elements_ic()
+function get_elements_ic_elems(t0, H, N)
     fname = "elements.txt"
     elements = readdlm(fname, ',', comments=true)[1:N,:]
     elems = Elements{Float64}[]
@@ -39,27 +23,83 @@ function get_elements_ic()
         push!(elems, Elements(elements[i,:]...))
     end
     ic = ElementsIC(t0, H, elems)
+    return ic
+end
+
+function get_cartesian_ic_file(t0, N)
+    fname = "coordinates.txt"
+    ic = CartesianIC(t0, N, fname)
+    return ic
+end
+
+function get_cartesian_ic_array(t0, N)
+    fname = "coordinates.txt"
+    coords = readdlm(fname, ',', comments=true)[1:N,:]
+    ic = CartesianIC(t0, N, coords)
+    return ic
+end
+
+# Run tests for given H type (int, vector, matrix)
+@generated function run_elements_tests(t0, H, N)
+    inputs = ["file", "array", "elems"]
+    funcs = [Symbol("get_elements_ic_$(i)") for i in inputs]
+    ics = [Symbol("ic_$(i)") for i in inputs]
+
+    # Get ICs for each method
+    setup = Vector{Expr}()
+    for (ic, f) in zip(ics, funcs)
+        ex = :($ic = $f(t0, H, N))
+        push!(setup, ex)
+    end
+
+    # Compare outputs of each method
+    tests = Vector{Expr}()
+    fields = [:elements, :amat]
+    for ic1 in ics, ic2 in ics, f in fields
+        ex = :(@test $ic1.$f == $ic2.$f)
+        push!(tests, ex)
+    end
+    return Expr(:block, setup..., tests...)
+end
+
+# Run tests for given H type (int, vector)
+@generated function run_cartesian_tests(t0, H)
+    inputs = ["file", "array"]
+    funcs = [Symbol("get_cartesian_ic_$(i)") for i in inputs]
+    ics = [Symbol("ic_$(i)") for i in inputs]
+
+    # Get ICs for each method
+    setup = Vector{Expr}()
+    for (ic, f) in zip(ics, funcs)
+        ex = :($ic = $f(t0, H))
+        push!(setup, ex)
+    end
+
+    # Compare the outputs of each method
+    tests = Vector{Expr}()
+    fields = [:x, :v, :m]
+    for ic1 in ics, ic2 in ics, f in fields
+        ex = :(@test $ic1.$f == $ic2.$f)
+        push!(tests, ex)
+    end
+    return Expr(:block, setup..., tests...)
 end
 
 @testset "Initial Conditions" begin
     @testset "Elements" begin
-        ic_file = get_elements_file_ic()
-        ic_array = get_elements_array_ic()
-        ic_elems = get_elements_ic()
+        N = 8
+        t0 = 7257.93115525 - 7300.0
+        H_vec = [N,ones(Int64, N - 1)...]
+        H_mat = NbodyGradient.hierarchy(H_vec)
 
-        @test ic_file.elements == ic_array.elements
-        @test ic_elems.elements == ic_array.elements
-
-        @test ic_file.amat == ic_array.amat
-        @test ic_elems.amat == ic_array.amat
+        run_elements_tests(t0, H_mat, N)
+        run_elements_tests(t0, H_vec, N) # Test hierarchy vector specification
+        run_elements_tests(t0, N, N)     # Test number-of-bodies specification
     end
 
     @testset "Cartesian" begin
-        ic_file = get_cartesian_file_ic()
-        ic_array = get_cartesian_array_ic()
-
-        @test ic_file.x == ic_array.x
-        @test ic_file.v == ic_array.v
-        @test ic_file.m == ic_array.m
+        N = 8
+        t0 = 7257.93115525 - 7300.0
+        run_cartesian_tests(t0, N)
     end
 end

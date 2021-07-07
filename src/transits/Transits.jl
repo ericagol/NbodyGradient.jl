@@ -97,9 +97,7 @@ end
 
 Main integrator method for Transit calculations.
 """
-function (intr::Integrator)(s::State{T}, tt::TransitOutput{T}; grad::Bool=true) where T<:AbstractFloat
-    # Allocate structures
-    d = Derivatives(T, s.n)
+function (intr::Integrator)(s::State{T}, tt::TransitOutput{T}, d::Derivatives{T}; grad::Bool=true) where T<:AbstractFloat
 
     t0 = s.t[1] # Initial time
     nsteps = abs(round(Int64,intr.tmax/intr.h))
@@ -129,6 +127,16 @@ function (intr::Integrator)(s::State{T}, tt::TransitOutput{T}; grad::Bool=true) 
     if grad
         calc_dtdelements!(s,tt)
     end
+end
+
+"""Wrapper so the user doesn't need to create a `Derivatives` type."""
+function (intr::Integrator)(s::State{T}, tt::TransitOutput{T}; grad::Bool=true, return_arrays::Bool=false) where T<:AbstractFloat
+    # Preallocate arrays
+    d = Derivatives(T, s.n)
+
+    intr(s, tt, d, grad=grad)
+    if return_arrays; return d; end # Return preallocated arrays
+    return
 end
 
 """

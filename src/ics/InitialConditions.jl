@@ -67,7 +67,6 @@ Initial conditions, specified by a hierarchy vector and orbital elements.
 
 # Fields
 - `elements::Matrix{T}` : Masses and orbital elements.
-- `H::Vector{Int64}` : Hierarchy vector.
 - `ϵ::Matrix{T}` : Matrix of Jacobi coordinates
 - `amat::Matrix{T}` : A matrix from [Hamers and Portegies Zwart 2016](https://doi.org/10.1093/mnras/stw784).
 - `nbody::Int64` : Number of bodies.
@@ -76,7 +75,6 @@ Initial conditions, specified by a hierarchy vector and orbital elements.
 """
 struct ElementsIC{T<:AbstractFloat} <: InitialConditions{T}
     elements::Matrix{T}
-    H::Vector{Int64}
     ϵ::Matrix{T}
     amat::Matrix{T}
     nbody::Int64
@@ -84,21 +82,14 @@ struct ElementsIC{T<:AbstractFloat} <: InitialConditions{T}
     t0::T
     der::Bool
 
-    function ElementsIC(t0::T,H::Union{Array{Int64,1},Int64},elems::Union{String,Array{T,2}};der::Bool=true) where T <: AbstractFloat
-        # Check if only number of bodies was passed. Assumes fully nested.
-        if typeof(H) == Int64; H::Vector{Int64} = [H,ones(H-1)...]; end
-        nbody = H[1]
-        ϵ = convert(Array{T},hierarchy(H))
-        if typeof(elems) == String
-            elements = convert(Array{T},readdlm(elems,',',comments=true)[1:nbody,:])
-        else
-            elements = elems
-        end
-        m = elements[1:nbody,1]
-        amat = amatrix(ϵ,m)
-        return new{T}(elements,H,ϵ,amat,nbody,m,t0,der);
+    function ElementsIC(t0::T, H::Matrix{T}, elements::Matrix{T}; der::Bool=true) where T<:AbstractFloat
+        nbody = size(H)[1]
+        m = elements[1:nbody, 1]
+        A = amatrix(H, m)
+        return new{T}(elements, H, A, nbody, m, t0, der)
     end
 end
+ElementsIC(t0::T, H::Matrix{<:Real}, elements::Matrix{T}) where T<:Real = ElementsIC(t0, T.(H), elements)
 
 """
     ElementsIC(t0,H,elems...)
@@ -107,7 +98,7 @@ Collects `Elements` and produces an `ElementsIC` struct.
 
 # Arguments
 - `t0::T` : Initial time [Days].
-- `H::Union{Int64,Vector{Int64}}` : Hierarchy specification. See below and [Examples](@ref)
+- `H::Union{Int64,Vector{Int64},Matrix{<:Real}` : Hierarchy specification. See below and [Examples](@ref)
 - `elems::Elements{T}...` : A sequence of `Elements{T}`. Elements should be passed in the order they appear in the hierarchy (left to right).
 ### Hierarchy
 `H::Int64`: The system will be given by a 'fully-nested' Keplerian.
@@ -131,20 +122,41 @@ Collects `Elements` and produces an `ElementsIC` struct.
 1 __|__     __|__
  |     |   |     |
  a     b   c     d
+
+`H::Matrix{<:Real}`: Provide the hierarchy matrix, directly.
+
+`H = [-1 1 0 0; 0 0 -1 1; -1 -1 1 1; -1 -1 -1 -1]`. Produces the same system as `H = [4,2,1]`.
 ```
 """
-function ElementsIC(t0::T,H::Union{Int64,Vector{Int64}},elems::Elements{T}...) where T <: AbstractFloat
-    if H isa Int64; H = [H,ones(Int64,H-1)...]; end
-    elements = zeros(T,H[1],7)
-    fields = setdiff(fieldnames(Elements),[:a,:e,:ϖ])
+function ElementsIC(t0::T, H::Matrix{<:Real}, elems::Elements{T}...) where T<:AbstractFloat
+    elements = zeros(T,size(H)[1],7)
+    fields = [:m, :P, :t0, :ecosϖ, :esinϖ, :I, :Ω]
     for i in eachindex(elems)
         elements[i,:] .= [getfield(elems[i],f) for f in fields]
     end
-    return ElementsIC(t0,H,elements)
+    return ElementsIC(t0,T.(H),elements)
 end
 
-"""Allows for array of `Elements` argument."""
-ElementsIC(t0::T,H::Union{Int64,Vector{Int64}},elems::Array{Elements{T},1}) where T<:AbstractFloat = ElementsIC(t0,H,elems...)
+"""Allows for vector of `Elements` argument."""
+ElementsIC(t0::T,H::Matrix{<:Real},elems::Vector{Elements{T}}) where T<:AbstractFloat = ElementsIC(t0,T.(H),elems...)
+
+"""Allow user to pass a file containing orbital elements."""
+function ElementsIC(t0::T,H::Matrix{<:Real},elems::String) where T<:AbstractFloat
+    elements = T.(readdlm(elems, ',', comments=true)[1:size(H)[1],:])
+    return ElementsIC(t0, T.(H), elements)
+end
+
+## Let user pass hierarchy vector; dispatch on different elements ##
+ElementsIC(t0::T,H::Vector{Int64},elems::Elements{T}...) where T <: AbstractFloat = ElementsIC(t0,hierarchy(H),elems...)
+ElementsIC(t0::T,H::Vector{Int64},elems::Vector{Elements{T}}) where T<:AbstractFloat = ElementsIC(t0,hierarchy(H),elems...)
+ElementsIC(t0::T,H::Vector{Int64},elems::Matrix{T}) where T<:AbstractFloat = ElementsIC(t0,hierarchy(H),elems)
+ElementsIC(t0::T,H::Vector{Int64},elems::String) where T<:AbstractFloat = ElementsIC(t0,hierarchy(H),elems)
+
+## Let user specify only the number of bodies; the hierarchy is filled in as fully-nested; dispatch on different elements ##
+ElementsIC(t0::T,H::Int64,elems::Elements{T}...) where T<:AbstractFloat = ElementsIC(t0,[H, ones(Int64,H-1)...],elems...)
+ElementsIC(t0::T,H::Int64,elems::Vector{Elements{T}}) where T<:AbstractFloat = ElementsIC(t0,[H, ones(Int64,H-1)...],elems...)
+ElementsIC(t0::T,H::Int64,elems::Matrix{T}) where T<:AbstractFloat = ElementsIC(t0,[H, ones(Int64,H-1)...],elems)
+ElementsIC(t0::T,H::Int64,elems::String) where T<:AbstractFloat = ElementsIC(t0,[H, ones(Int64, H-1)...],elems)
 
 """Shows the elements array."""
 Base.show(io::IO,::MIME"text/plain",ic::ElementsIC{T}) where {T} = begin

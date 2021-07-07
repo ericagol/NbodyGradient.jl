@@ -51,13 +51,13 @@ struct State{T<:AbstractFloat} <: AbstractState
     jac_step::Matrix{T}
     dqdt::Vector{T}
     jac_init::Matrix{T}
+    n::Int64
+    pair::Matrix{Bool}
+
     xerror::Matrix{T}
     verror::Matrix{T}
     dqdt_error::Vector{T}
     jac_error::Matrix{T}
-    n::Int64
-    pair::Matrix{Bool}
-
     rij::Vector{T}
     a::Matrix{T}
     aij::Vector{T}
@@ -95,10 +95,17 @@ function State(ic::InitialConditions{T}) where T<:AbstractFloat
     input = zeros(T,8)
     delxv = zeros(T,6)
     rtmp = zeros(T,3)
-    return State(x,v,[ic.t0],ic.m,jac_step,dqdt,jac_init,xerror,verror,dqdt_error,jac_error,ic.nbody,
-    pair,rij,a,aij,x0,v0,input,delxv,rtmp)
+    return State(x,v,[ic.t0],ic.m,jac_step,dqdt,jac_init,ic.nbody,
+    pair,xerror,verror,dqdt_error,jac_error,rij,a,aij,x0,v0,input,delxv,rtmp)
 end
 
+"""Initialize and return a `State` and a `Derivatives`."""
+function dState(ic::InitialConditions{T}) where T<:AbstractFloat
+    d = Derivatives(T, ic.nbody)
+    return State(ic), d
+end
+
+"""Set `State` to initial conditions without reallocating."""
 function initialize!(s::State{T}, ic::InitialConditions{T}) where T<:Real
     x,v,jac_init = init_nbody(ic)
     s.x .= x
