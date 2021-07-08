@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        julia-version: ['1.5','1.0']
+        julia-version: ['1.6','1.0']
         os: [ubuntu-latest, macOS-latest]
     
     # Steps represent a sequence of tasks that will be executed as part of the job
