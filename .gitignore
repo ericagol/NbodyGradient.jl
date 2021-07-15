@@ -5,3 +5,6 @@ Manifest.toml
 *.jld2
 extra/
 docs/build/
+drafts/
+paper/
+references/
