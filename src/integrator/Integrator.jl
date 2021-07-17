@@ -1,4 +1,4 @@
-import NbodyGradient: InitialConditions
+paperbimport NbodyGradient: InitialCondition2
 
 #========== Integrator ==========#
 abstract type AbstractIntegrator end

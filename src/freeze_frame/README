@@ -1,0 +1,12 @@
+
+
+7/16/2021
+
+Here we have an integration method which returns the:
+
+1). Times of transit (based off the code in ../transit/)
+2). State of the system at pre-specified times, tout.  These
+   are "freeze-frames" of the system at these times.
+3). If needed, the gradients of all of these.
+
+
