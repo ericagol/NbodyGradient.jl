@@ -10,7 +10,7 @@ Under development by Eric Agol, David Hernandez and Zach Langford
 
 License:  If using in publications, please cite [Agol, Hernandez & Langford (2021)](https://arxiv.org/abs/2106.02188).
 
-Paper: See orange button above.
+Paper: See orange button above or go to the [paper repository](https://github.com/langfzac/nbg-papers).
 
 Documentation: See blue button above.
 
