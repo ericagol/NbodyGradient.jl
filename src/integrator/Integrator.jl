@@ -21,11 +21,14 @@ mutable struct Integrator{T<:AbstractFloat, schemeT} <: AbstractIntegrator
     tmax::T
 end
 
-Integrator(h::T,t0::T) where T<:AbstractFloat = Integrator(ahl21!,h,t0,t0+h)
-Integrator(scheme,h::Real,t0::Real,tmax::Real) = Integrator(scheme,promote(h,t0,tmax)...)
+Integrator(scheme,h::T,tmax::T) where T<:AbstractFloat = Integrator(scheme,h,0.0,tmax)
+Integrator(h::T,tmax::T) where T<:AbstractFloat = Integrator(ahl21!,h,tmax)
 
 # Default to ahl21!
 Integrator(h::T,t0::T,tmax::T) where T<:AbstractFloat = Integrator(ahl21!,h,t0,tmax)
+
+# Deprecated
+@deprecate Integrator(h,t0,tmax) Integrator(h,tmax)
 
 #========== State ==========#
 abstract type AbstractState end

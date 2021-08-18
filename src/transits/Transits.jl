@@ -2,13 +2,21 @@
 abstract type TransitOutput{T} <: AbstractOutput{T} end
 
 """
+    TransitTiming{T<:AbstractFloat} <: TransitOutput{T}
 
-Holds the transit times and derivatives.
+Transit times and derivatives.
+
+# (User-facing) Fields
+- `tt::Matrix{T}` : The transit times of each body.
+- `dtdq0::Array{T,4}` : Derivatives of the transit times with respect to the initial Cartesian coordinates and masses.
+- `dtdelements::Array{T,4}` : Derivatives of the transit times with respect to the initial orbital elements and masses.
 """
 struct TransitTiming{T<:AbstractFloat} <: TransitOutput{T}
     tt::Matrix{T}
     dtdq0::Array{T,4}
     dtdelements::Array{T,4}
+
+    # Internal
     count::Vector{Int64}
     ntt::Int64
     ti::Int64
@@ -19,7 +27,19 @@ struct TransitTiming{T<:AbstractFloat} <: TransitOutput{T}
     s_transit::State{T}
 end
 
-function TransitTiming(tmax,ic::ElementsIC{T},ti::Int64=1) where T<:AbstractFloat
+"""
+    TransitTiming(tmax, ic; ti)
+
+Constructor for [`TransitTiming`](@ref) type.
+
+# Arguments
+- `tmax::T` : Expected total elapsed integration time. (Allocates arrays accordingly)
+- `ic::ElementsIC{T}` : Initial conditions for the system
+
+## Optional
+- `ti::Int64=1` : Index of the body with respect to which transits are measured. (Default is the central body)
+"""
+function TransitTiming(tmax::T,ic::ElementsIC{T},ti::Int64=1) where T<:AbstractFloat
     n = ic.nbody
     ind = isfinite.(tmax./ic.elements[:,2])
     ntt = maximum(ceil.(Int64,abs.(tmax./ic.elements[ind,2])).+3)
@@ -36,13 +56,21 @@ function TransitTiming(tmax,ic::ElementsIC{T},ti::Int64=1) where T<:AbstractFloa
 end
 
 """
+    TransitParameters{T<:AbstractFloat} <: TransitOutput{T}
 
-Structure for transit timing, impact parameter, and sky velocity
+Transit times, impact parameters, sky-velocities, and derivatives.
+
+# (User-facing) Fields
+- `ttbv::Matrix{T}` : The transit times, impact parameter, and sky-velocity of each body.
+- `dtbvdq0::Array{T,5}` : Derivatives of the transit times, impact parameters, and sky-velocities with respect to the initial Cartesian coordinates and masses.
+- `dtbvdelements::Array{T,5}` : Derivatives of the transit times, impact parameters, and sky-velocities with respect to the initial orbital elements and masses.
 """
 struct TransitParameters{T<:AbstractFloat} <: TransitOutput{T}
     ttbv::Array{T,3}
     dtbvdq0::Array{T,5}
     dtbvdelements::Array{T,5}
+
+    # Internal
     count::Vector{Int64}
     ntt::Int64
     ti::Int64
@@ -53,7 +81,19 @@ struct TransitParameters{T<:AbstractFloat} <: TransitOutput{T}
     s_transit::State{T}
 end
 
-function TransitParameters(tmax,ic::ElementsIC{T},ti::Int64=1) where T<:AbstractFloat
+"""
+    TransitParameters(tmax, ic; ti)
+
+Constructor for [`TransitParameters`](@ref) type.
+
+# Arguments
+- `tmax::T` : Expected total elapsed integration time. (Allocates arrays accordingly)
+- `ic::ElementsIC{T}` : Initial conditions for the system
+
+## Optional
+- `ti::Int64=1` : Index of the body with respect to which transits are measured. (Default is the central body)
+"""
+function TransitParameters(tmax::T,ic::ElementsIC{T},ti::Int64=1) where T<:AbstractFloat
     n = ic.nbody
     ind = isfinite.(tmax./ic.elements[:,2])
     ntt = maximum(ceil.(Int64,abs.(tmax./ic.elements[ind,2])).+3)
