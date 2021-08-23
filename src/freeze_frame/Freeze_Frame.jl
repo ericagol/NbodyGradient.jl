@@ -20,7 +20,7 @@ struct FreezeFrame{T<:AbstractFloat} <: FreezeFrameOutput{T}
     s_prior::State{T}
     s_transit::State{T}
     tout::Vector{T}
-    snapshots::Vector{State{T}}
+    freeze_frames::Vector{State{T}}
 end
 
 """
@@ -40,7 +40,7 @@ function FreezeFrame(tmax,ic::ElementsIC{T},ti::Int64=1,toutput::Vector{T}) wher
     s_prior = State(ic)
     s_transit = State(ic)
     tout = toutput
-    snapshots = Array{State,1}(undef,length(tout))
-    return FreezeFrame(tt,dtdq0,dtdelements,count,ntt,ti,occs,dtdq,gsave,s_prior,s_transit,tout,snapshots)
+    freeze_frames = Array{State,1}(undef,length(tout))
+    return FreezeFrame(tt,dtdq0,dtdelements,count,ntt,ti,occs,dtdq,gsave,s_prior,s_transit,tout,freeze_frames)
 end
 
