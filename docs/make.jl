@@ -13,5 +13,6 @@ makedocs(sitename="NbodyGradient",
 )
 
 deploydocs(
-    repo = "github.com/ericagol/NbodyGradient.jl.git"
+    repo = "github.com/ericagol/NbodyGradient.jl.git",
+    devbranch="master"
 )
