@@ -1,7 +1,7 @@
 name = "NbodyGradient"
 uuid = "69f646f0-5709-4f35-9e52-1656edff0883"
 authors = ["Eric Agol <agol@uw.edu>", "David Hernandez", "Zach Langford <langfzac@uw.edu>"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
