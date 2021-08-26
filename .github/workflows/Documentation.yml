@@ -2,13 +2,10 @@ name: Documentation
 
 on:
   push:
-    paths:
-      - 'src/**'
-      - 'docs/**'
-    tags: '*'
-  pull_request:
     branches:
       - master
+    tags: '*'
+  pull_request:
 
 jobs:
   build:
