@@ -73,6 +73,9 @@ intr = Integrator(ahl21!,h,tmax);
 nothing # hide
 ```
 
+!!! note "A quick aside on constructors"
+    The types in NbodyGradient.jl have a number of constructors that enable to user to write as terse or as verbose code as they would like. For example, the above `Integrator` construction could specify each field as `Integrator(scheme, h, t0, tmax)` (see [`Integrator`](@ref) for argument definitions), or only the time step and integration time as `Integrator(h,tmax)`. In the latter case, the default value for `scheme` and `t0` are `ahl21!` and `0`, respectively. If you're coming from [Agol, Hernandez, and Langford (2021)](https://ui.adsabs.harvard.edu/abs/2021arXiv210602188A/abstract) you'll notice some discrepancy in the examples due to this.
+
 Finally, run the [`Integrator`](@ref) by passing it the [`State`](@ref).
 ```@example 1
 intr(s)
