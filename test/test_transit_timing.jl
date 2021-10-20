@@ -87,4 +87,12 @@ import NbodyGradient: set_state!, zero_out!, amatrix, initialize!
         @test isapprox(asinh.(tts[1].dtdelements[mask]), asinh.(dtde_num[mask]);norm=maxabs)
         @test isapprox(asinh.(tts[1].dtdelements), asinh.(dtde_num);norm=maxabs)
     end
+
+    # Test that the transit times for the derivatives and non-derivatives match
+    tmax = 2000.0
+    s_nograd = State(ic); tt_nograd = TransitTiming(tmax, ic);
+    s_grad = State(ic); tt_grad = TransitTiming(tmax, ic);
+    Integrator(h, tmax)(s_nograd, tt_nograd, grad=false)
+    Integrator(h, tmax)(s_grad, tt_grad, grad=true)
+    @test tt_nograd.tt == tt_grad.tt
 end
