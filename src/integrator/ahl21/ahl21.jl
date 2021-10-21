@@ -619,13 +619,13 @@ function phisalpha!(s::State{T},d::AbstractDerivatives{T},h::T,alpha::T) where {
                 @inbounds for di=1:n, p=1:4, k=1:3
                     d.dotdadq[p,di] += s.rij[k]*(d.dadq[k,i,p,di]-d.dadq[k,j,p,di])
                 end
-                r2 = s.rij[1]*s.rij[1]+s.rij[2]*s.rij[2]+s.rij[3]*s.rij[3]
+                r2 = dot_fast(s.rij)
                 r1 = sqrt(r2)
-                ardot = s.aij[1]*s.rij[1]+s.aij[2]*s.rij[2]+s.aij[3]*s.rij[3]
+                ardot = dot_fast(s.aij, s.rij)
                 fac1 = coeff/(r2*r2*r1)
                 fac2 = (2*GNEWT*(s.m[i]+s.m[j])/r1 + 3*ardot)
                 for k=1:3
-                    fac = fac1*(s.rij[k]*fac2- r2*s.aij[k])
+                    fac = fac1*(s.rij[k]*fac2-r2*s.aij[k])
                     s.v[k,i],s.verror[k,i] = comp_sum(s.v[k,i],s.verror[k,i], s.m[j]*fac)
                     s.v[k,j],s.verror[k,j] = comp_sum(s.v[k,j],s.verror[k,j],-s.m[i]*fac)
                     # Compute time derivative:

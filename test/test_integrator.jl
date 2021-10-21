@@ -173,4 +173,14 @@
     # Check analytic vs finite difference derivatives
     @test isapprox(asinh.(s0.jac_step), asinh.(jac_step_num);norm=maxabs)
     @test isapprox(s_dt.dqdt, dqdt_num, norm=maxabs)
+
+    # Check that the positions and velocities for the derivatives and non-
+    # derivatives versions match
+    s_nograd = State(ic)
+    s_grad = State(ic)
+    tmax = 2000.0
+    Integrator(h, tmax)(s_nograd, grad=false)
+    Integrator(h, tmax)(s_grad, grad=true)
+    @test s_nograd.x == s_grad.x
+    @test s_nograd.v == s_grad.v
 end
