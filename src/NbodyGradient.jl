@@ -5,8 +5,8 @@ An N-body itegrator that computes derivatives with respect to initial conditions
 """
 module NbodyGradient
 
-using LinearAlgebra, DelimitedFiles
-using FileIO, JLD2
+using LinearAlgebra, DelimitedFiles, Statistics
+using FileIO, JLD2, RecipesBase
 
 # Constants used by most functions
 # Need to clean this up
@@ -34,6 +34,7 @@ include("integrator/Integrator.jl")
 include("utils.jl")
 include("outputs/Outputs.jl")
 include("transits/Transits.jl")
+include("plots.jl")
 
 # To be cleaned up
 # include("integrator/ah18/ah18_old.jl")
