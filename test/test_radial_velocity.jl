@@ -1,4 +1,4 @@
-#from (eric's link)
+#from https://github.com/jlustigy/ExoJulia/blob/master/ExoJulia/Orbit/keplerSolver.jl
 function kepler_solver(M, ecc)
     Mred = mod(M,2pi)
 
@@ -33,7 +33,7 @@ function kepler_solver(M, ecc)
     E
 end
 
-#modified version of (Eric's link)
+#modified version of https://github.com/jlustigy/ExoJulia/blob/master/spring16/hw2/Agol_Agol/rv_model_one.jl
 function analytic_rv(t, period, tp, ecc, m1, m2, a, w, inc)
 
     M = (t - tp)*2.0*pi/period
