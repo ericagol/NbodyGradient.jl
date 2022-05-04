@@ -5,7 +5,7 @@ struct RadialVelocities{T<:AbstractFloat}
 end
 
 function RadialVelocities(times::Vector{T}, ic::ElementsIC{T}) where T<:AbstractFloat
-    rvs = zeros(length(times))
+    rvs = zeros(T, length(times))
     s_copy = State(ic)
     return RadialVelocities(times, rvs, s_copy)
 end
