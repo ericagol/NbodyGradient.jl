@@ -6,31 +6,51 @@ name: NbodyGradient-CI
 # events but only for the master branch
 on:
   push:
-    paths:
-      - 'src/**'
-      - 'test/**'
-      - 'docs/**'
-      - 'Project.toml'
+    branches:
+      - master
+    tags: '*'
   pull_request:
-    branches: [ master ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   test:
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
-    #continue-on-error: ${{ matrix.julia-version == '0.7' }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        julia-version: ['1.6','1.0']
-        os: [ubuntu-latest, macOS-latest]
-    
+        version:
+          - '1.6'
+          - '1'
+        os:
+          - ubuntu-latest
+          - macOS-latest
+        arch:
+          - x64
+
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
     # from 'julia-runtest' GitHub action.
     - uses: julia-actions/setup-julia@v1
-      with: 
-        version: ${{ matrix.julia-version }}
-    - uses: julia-actions/julia-runtest@latest  
+      with:
+        version: ${{ matrix.version }}
+        arch: ${{ matrix.arch }}
+    - uses: julia-actions/cache@v1
+    - uses: julia-actions/julia-buildpkg@v1
+    - uses: julia-actions/julia-runtest@v1
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: '1'
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-docdeploy@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
