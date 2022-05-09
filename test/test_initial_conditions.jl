@@ -28,7 +28,7 @@ function get_elements_ic_elems(t0, H, N)
     elements = readdlm(fname, ',', comments=true)
     elems = Elements{Float64}[]
     for i in 1:N
-        push!(elems, Elements(elements[i,:]...))
+        push!(elems, Elements(elements[i,:]..., zeros(4)...))
     end
     ic = ElementsIC(t0, H, elems)
     return ic
