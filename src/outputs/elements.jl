@@ -76,8 +76,7 @@ function calc_ω(x,R,Rdot,I,Ω,a,e,h)
     cosf = (a*(1.0-e^2)/R - 1.0)/e
     f = atan(sinf,cosf)
 
-    # ω = Ω + ω
-    return Ω + wpf - f
+    return wpf - f
 end
 
 function convert_to_elements(x,v,M)
@@ -97,9 +96,13 @@ function convert_to_elements(x,v,M)
     I != 0.0 ? Ω = calc_Ω(hx,hy,h,I) : Ω = 0.0
 
     ω = calc_ω(x,R,Rdot,I,Ω,a,e,h)
-    P = (2.0*ω)*sqrt(a*a*a/Gmm)
+    P = (2.0*π)*sqrt(a*a*a/Gmm)
 
-    return [P,0.0,e*cos(ω),e*sin(ω),I,Ω,a,e,ω]
+    n = 2π/P
+    ecosω, esinω = e.*sincos(ω)
+    tp = (-sqrt(1.0-e*e)*ecosω/(n*(1.0-esinω)) - (2.0/n)*atan(sqrt(1.0-e)*(esinω+ecosω+e), sqrt(1.0+e)*(esinω-ecosω-e))) % P
+
+    return [P,0.0,ecosω,esinω,I,Ω,a,e,ω,tp]
 end
 
 function get_orbital_elements(s::State{T},ic::InitialConditions{T}) where T<:AbstractFloat
