@@ -2,7 +2,7 @@
 
 """
 
-A 3d point in cartesian space 
+A 3d point in cartesian space
 """
 struct Point{T<:AbstractFloat}
     x::T
@@ -26,7 +26,7 @@ function get_relative_positions(x,v,ic::InitialConditions)
     n = ic.nbody
     X = zeros(3,n)
     V = zeros(3,n)
-    
+
     X .= permutedims(ic.amat*x')
     V .= permutedims(ic.amat*v')
 
@@ -51,7 +51,7 @@ mag(x) = sqrt(dot(x))
 mag(x,v) = sqrt(dot(x,v))
 Rdotmag(R,V,h) = sqrt(V^2 - (h/R)^2)
 
-function hvec(r,rdot) 
+function hvec(r,rdot)
     hx,hy,hz = unpack(cross(r,rdot))
     hz >= 0.0 ? hy *= -1 : hx *= -1
     return Point(hx,hy,hz)
@@ -60,10 +60,10 @@ end
 function calc_Ω(hx,hy,h,I)
     sinΩ = hx/(h*sin(I))
     cosΩ = hy/(h*sin(I))
-    return atan(sinΩ,cosΩ) 
+    return atan(sinΩ,cosΩ)
 end
 
-function calc_ϖ(x,R,Rdot,I,Ω,a,e,h)
+function calc_ω(x,R,Rdot,I,Ω,a,e,h)
     # Find ω + f
     wpf = 0.0
     if I != 0.0
@@ -76,7 +76,7 @@ function calc_ϖ(x,R,Rdot,I,Ω,a,e,h)
     cosf = (a*(1.0-e^2)/R - 1.0)/e
     f = atan(sinf,cosf)
 
-    # ϖ = Ω + ω
+    # ω = Ω + ω
     return Ω + wpf - f
 end
 
@@ -86,21 +86,21 @@ function convert_to_elements(x,v,M)
     h = mag(hvec(x,v))
     hx,hy,hz = unpack(hvec(x,v))
     Rdot = sign(dot(x,v))*Rdotmag(R,V,h)
-    
-    Gmm = M 
-    
+
+    Gmm = M
+
     a = 1.0/((2.0/R) - (V*V)/(Gmm))
     e = sqrt(1.0 - (h*h/(Gmm*a)))
     I = acos(hz/h)
-    
+
     # Make sure Ω is defined
     I != 0.0 ? Ω = calc_Ω(hx,hy,h,I) : Ω = 0.0
-    
-    ϖ = calc_ϖ(x,R,Rdot,I,Ω,a,e,h)
-    P = (2.0*π)*sqrt(a*a*a/Gmm)
 
-    return [P,0.0,e*cos(ϖ),e*sin(ϖ),I,Ω,a,e,ϖ]
-end    
+    ω = calc_ω(x,R,Rdot,I,Ω,a,e,h)
+    P = (2.0*ω)*sqrt(a*a*a/Gmm)
+
+    return [P,0.0,e*cos(ω),e*sin(ω),I,Ω,a,e,ω]
+end
 
 function get_orbital_elements(s::State{T},ic::InitialConditions{T}) where T<:AbstractFloat
     elems = Elements{T}[]
@@ -120,14 +120,14 @@ function get_orbital_elements(s::State{T},ic::InitialConditions{T}) where T<:Abs
 
         new_elems = convert_to_elements(X[i+b],V[i+b],μ[i+b])
         push!(elems,Elements(ic.m[i+1],new_elems...))
-        
+
         # Compensate for new binary in step
         if b > 0
             b -= 2
         elseif b < 0
             i += 1
         end
-        
+
     i+=1
     end
     return elems

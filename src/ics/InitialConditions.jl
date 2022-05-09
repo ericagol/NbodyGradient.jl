@@ -9,36 +9,36 @@ Orbital elements of a binary, and mass of a 'outer' body. See [Tutorials](@ref) 
 - `m::T` : Mass of outer body.
 - `P::T` : Period [Days].
 - `t0::T` : Initial time of transit [Days].
-- `ecosϖ` : Eccentricity vector x-component (eccentricity times cosine of the longitude of periastron)
-- `esinϖ` : Eccentricity vector y-component (eccentricity times sine of the longitude of periastron)
+- `ecosω` : Eccentricity vector x-component (eccentricity times cosine of the argument of periastron)
+- `esinω` : Eccentricity vector y-component (eccentricity times sine of the argument of periastron)
 - `I::T` : Inclination, as measured from sky-plane [Radians].
 - `Ω::T` : Longitude of ascending node, as measured from +x-axis [Radians].
 - `a::T` : Orbital semi-major axis [AU].
 - `e::T` : Eccentricity.
-- `ϖ::T` : Longitude of periastron [Radians].
+- `ω::T` : Argument of periastron [Radians].
 """
 struct Elements{T<:AbstractFloat} <: AbstractInitialConditions
     m::T
     P::T
     t0::T
-    ecosϖ::T
-    esinϖ::T
+    ecosω::T
+    esinω::T
     I::T
     Ω::T
     a::T
     e::T
-    ϖ::T
+    ω::T
 end
 
 """
-    Elements(m,P,t0,ecosϖ,esinϖ,I,Ω)
+    Elements(m,P,t0,ecosω,esinω,I,Ω)
 
 Main [`Elements`](@ref) constructor. May use keyword arguments, see [Tutorials](@ref).
 """
-function Elements(m::T,P::T,t0::T,ecosϖ::T,esinϖ::T,I::T,Ω::T) where T<:Real
-    e = sqrt(ecosϖ^2 + esinϖ^2)
-    ϖ = atan(esinϖ,ecosϖ)
-    Elements(m,P,t0,ecosϖ,esinϖ,I,Ω,0.0,e,ϖ)
+function Elements(m::T,P::T,t0::T,ecosω::T,esinω::T,I::T,Ω::T) where T<:Real
+    e = sqrt(ecosω^2 + esinω^2)
+    ω = atan(esinω,ecosω)
+    Elements(m,P,t0,ecosω,esinω,I,Ω,0.0,e,ω)
 end
 
 function Base.show(io::IO, ::MIME"text/plain" ,elems::Elements{T}) where T <: Real
@@ -55,7 +55,7 @@ function Base.show(io::IO, ::MIME"text/plain" ,elems::Elements{T}) where T <: Re
 end
 
 """Allows keyword arguments"""
-Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,ecosϖ::T=0.0,esinϖ::T=0.0,I::T=0.0,Ω::T=0.0) where T<:Real = Elements(m,P,t0,ecosϖ,esinϖ,I,Ω)
+Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,ecosω::T=0.0,esinω::T=0.0,I::T=0.0,Ω::T=0.0) where T<:Real = Elements(m,P,t0,ecosω,esinω,I,Ω)
 
 """Abstract type for initial conditions specifications."""
 abstract type InitialConditions{T} end
@@ -146,7 +146,7 @@ Each method is simply populating the `ElementsIC.elements` field, which is a `Ma
 """
 function ElementsIC(t0::T, H::Matrix{<:Real}, elems::Elements{T}...) where T<:AbstractFloat
     elements = zeros(T,size(H)[1],7)
-    fields = [:m, :P, :t0, :ecosϖ, :esinϖ, :I, :Ω]
+    fields = [:m, :P, :t0, :ecosω, :esinω, :I, :Ω]
     for i in eachindex(elems)
         elements[i,:] .= [getfield(elems[i],f) for f in fields]
     end
