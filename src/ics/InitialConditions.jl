@@ -16,6 +16,7 @@ Orbital elements of a binary, and mass of a 'outer' body. See [Tutorials](@ref) 
 - `a::T` : Orbital semi-major axis [AU].
 - `e::T` : Eccentricity.
 - `ω::T` : Argument of periastron [Radians].
+- `tp::T` : Time of periastron passage [Days].
 """
 struct Elements{T<:AbstractFloat} <: AbstractInitialConditions
     m::T
@@ -28,6 +29,7 @@ struct Elements{T<:AbstractFloat} <: AbstractInitialConditions
     a::T
     e::T
     ω::T
+    tp::T
 end
 
 """
@@ -38,24 +40,71 @@ Main [`Elements`](@ref) constructor. May use keyword arguments, see [Tutorials](
 function Elements(m::T,P::T,t0::T,ecosω::T,esinω::T,I::T,Ω::T) where T<:Real
     e = sqrt(ecosω^2 + esinω^2)
     ω = atan(esinω,ecosω)
-    Elements(m,P,t0,ecosω,esinω,I,Ω,0.0,e,ω)
+    Elements(m,P,t0,ecosω,esinω,I,Ω,0.0,e,ω,0.0)
 end
 
-function Base.show(io::IO, ::MIME"text/plain" ,elems::Elements{T}) where T <: Real
+function Base.show(io::IO, ::MIME"text/plain", elems::Elements{T}) where T <: Real
     fields = fieldnames(typeof(elems))
-    vals = Dict([fn => getfield(elems,fn) for fn in fields])
+    vals = [fn => getfield(elems,fn) for fn in fields]
     println(io, "Elements{$T}")
-    for key in keys(vals)
-        println(io,key,": ",vals[key])
+    for pair in vals
+        println(io,first(pair),": ",last(pair))
     end
     if elems.a == 0.0
-        println(io, "Semi-major axis: undefined")
+        println(io, "Orbital semi-major axis: undefined")
     end
     return
 end
 
+iszeroall(x...) = all(iszero.(x))
+isnanall(x...) = all(isnan.(x))
+replacenan(x) = isnan(x) ? zero(x) : x
+
 """Allows keyword arguments"""
-Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,ecosω::T=0.0,esinω::T=0.0,I::T=0.0,Ω::T=0.0) where T<:Real = Elements(m,P,t0,ecosω,esinω,I,Ω)
+function Elements(;m::Real,P::Real=NaN,t0::Real=NaN,ecosω::Real=NaN,esinω::Real=NaN,I::Real=NaN,Ω::Real=NaN,a::Real=NaN,ω::Real=NaN,e::Real=NaN,tp::Real=NaN)
+    # Promote everything
+    m,P,t0,ecosω,esinω,I,Ω,a,ω,e,tp = promote(m,P,t0,ecosω,esinω,I,Ω,a,ω,e,tp)
+    T = typeof(P)
+
+    # Assume if only mass is set, we want the elements for the star (or central body in binary)
+    if isnanall(P,t0,ecosω,esinω,I,Ω,a,ω,e,tp); return Elements(m, zeros(T, length(fieldnames(Elements))-1)...); end
+    if isnanall(P,a); throw(ArgumentError("Must specify either P or a.")); end
+    if P > zero(T) && a > zero(T); throw(ArgumentError("Only one of P (period) or a (semi-major axis) can be defined")); end
+    if P < zero(T); throw(ArgumentError("Period must be positive")); end
+    if a < zero(T); throw(ArgumentError("Orbital semi-major axis must be positive")); end
+    if !(zero(T) <= e < one(T)) && !isnan(e); throw(ArgumentError("Eccentricity must be in [0,1), e=$(e)")); end
+    if !(isnan(ecosω) && isnan(esinω)) && !isnan(e); error("Must specify either e and ecosω/esinω, but not both."); end
+    if !(isnan(tp) || isnan(t0)); error("Must specify either initial transit time or time of periastron passage, but not both."); end
+
+    ω = replacenan(ω)
+    if isnanall(e,ecosω,esinω); e = ecosω = esinω = zero(T); end
+    if isnan(e)
+        ecosω = replacenan(ecosω)
+        esinω = replacenan(esinω)
+        e = sqrt(ecosω*ecosω + esinω*esinω)
+        @assert zero(T) <= e < one(T) "Eccentricity must be in [0,1)"
+        ω = atan(esinω, ecosω)
+    else
+        esinω, ecosω = e.*sincos(ω)
+        esinω = abs(esinω) < eps(T) ? zero(T) : esinω
+        ecosω = abs(ecosω) < eps(T) ? zero(T) : ecosω
+    end
+
+    t0 = replacenan(t0)
+    n = 2π/P
+    if isnan(tp) && !iszero(e)
+        tp = (t0 - sqrt(1.0-e*e)*ecosω/(n*(1.0-esinω)) - (2.0/n)*atan(sqrt(1.0-e)*(esinω+ecosω+e), sqrt(1.0+e)*(esinω-ecosω-e))) % P
+    elseif isnan(tp)
+        θ = π/2 + ω
+        tp = θ / n
+    end
+
+    a = replacenan(a)
+    I = replacenan(I)
+    Ω = replacenan(Ω)
+
+    return Elements(m,P,t0,ecosω,esinω,I,Ω,a,e,ω,tp)
+end
 
 """Abstract type for initial conditions specifications."""
 abstract type InitialConditions{T} end
