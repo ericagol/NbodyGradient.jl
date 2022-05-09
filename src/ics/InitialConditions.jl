@@ -9,8 +9,8 @@ Orbital elements of a binary, and mass of a 'outer' body. See [Tutorials](@ref) 
 - `m::T` : Mass of outer body.
 - `P::T` : Period [Days].
 - `t0::T` : Initial time of transit [Days].
-- `ecosω` : Eccentricity vector x-component (eccentricity times cosine of the argument of periastron)
-- `esinω` : Eccentricity vector y-component (eccentricity times sine of the argument of periastron)
+- `ecosω::T` : Eccentricity vector x-component (eccentricity times cosine of the argument of periastron)
+- `esinω::T` : Eccentricity vector y-component (eccentricity times sine of the argument of periastron)
 - `I::T` : Inclination, as measured from sky-plane [Radians].
 - `Ω::T` : Longitude of ascending node, as measured from +x-axis [Radians].
 - `a::T` : Orbital semi-major axis [AU].

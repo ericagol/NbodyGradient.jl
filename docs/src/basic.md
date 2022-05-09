@@ -24,21 +24,21 @@ b = Elements(
     m = 3e-6,     # Mass [Solar masses]
     t0 = 0.0,     # Initial time of transit [days]
     P = 365.256,  # Period [days]
-    ecosϖ = 0.01, # Eccentricity * cos(Argument of Periastron)
-    esinϖ = 0.0,  # Eccentricity * sin(Argument of Periastron)
+    ecosω = 0.01, # Eccentricity * cos(Argument of Periastron)
+    esinω = 0.0,  # Eccentricity * sin(Argument of Periastron)
     I = π/2,      # Inclination [Radians]
     Ω = 0.0       # Longitude of Ascending Node [Radians]
 );
 nothing # hide
 ```
-(`ecosϖ` can be typed as `ecos\varpi` and then hitting tab)
+(`ecosω` can be typed as `ecos\omega` and then hitting tab)
 
 Next we'll create a Jupiter analogue for the final body. Here the orbital elements are specified for the Keplerian ((a,b),c), or c orbiting the center of mass of a and b. (While this might not need to be stated explicitly here, this convention is useful for more complicated hierarchical systems).
 ```@example 1
 c = Elements(
     m = 9.54e-4,
     P = 4332.59,
-    ecosϖ = 0.05,
+    ecosω = 0.05,
     I = π/2
 );
 nothing # hide

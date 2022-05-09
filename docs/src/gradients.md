@@ -9,7 +9,7 @@ using NbodyGradient
 
 # Initial Conditions
 elements = [
-  # m    P       t0  ecosϖ esinϖ I   Ω
+  # m    P       t0  ecosω esinω I   Ω
     1.0  0.0     0.0 0.0   0.0   0.0 0.0; # Star
     3e-6 365.256 0.0 0.01  0.0   π/2 0.0; # Earth analogue
 ]
