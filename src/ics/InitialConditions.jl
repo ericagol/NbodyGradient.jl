@@ -216,5 +216,5 @@ function CartesianIC(t0::T, N::Int64, coordinateFile::String) where T <: Abstrac
 end
 
 # Include ics source files
-const ics = ["kepler","kepler_init","setup_hierarchy","init_nbody"]
+const ics = ["kepler","kepler_init","setup_hierarchy","init_nbody","defaults"]
 for i in ics; include("$(i).jl"); end
