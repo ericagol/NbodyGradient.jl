@@ -23,8 +23,8 @@ function detect_transits!(s::State{T},d::Derivatives{T},tt::TransitOutput{T},int
             end
         end
         tt.gsave[i] = gi
+        set_state!(s,tt.s_prior)
     end
-    set_state!(s,tt.s_prior)
     return
 end
 
@@ -35,7 +35,7 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},tt:
     # Initial guess using linear interpolation:
 
     s.dqdt .= 0.0
-    set_state!(tt.s_transit,s)
+    #set_state!(tt.s_transit,s)
 
     dt = one(T)
     iter = 0
@@ -47,10 +47,11 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},tt:
     tt1 = dt0 + 1
     tt2 = dt0 + 2
     ITMAX = 20
-    while abs(dt) > TRANSIT_TOL && iter < 20
+    #while abs(dt) > TRANSIT_TOL && iter < 20
+    while true
         tt2 = tt1
         tt1 = dt0
-        set_state!(s,tt.s_transit)
+        set_state!(s,tt.s_prior)
         # Advance planet state at start of step to estimated transit time:
         zero_out!(d)
         intr.scheme(s,d,dt0)
@@ -73,7 +74,7 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},tt:
 
     if grad
         # Compute derivatives with updated time step
-        set_state!(s,tt.s_transit)
+        set_state!(s,tt.s_prior)
         zero_out!(d)
         intr.scheme(s,d,dt0)
     end
