@@ -69,6 +69,9 @@ struct State{T<:AbstractFloat} <: AbstractState
     input::Vector{T}
     delxv::Vector{T}
     rtmp::Vector{T}
+    
+    R::Vector{T}
+    b::Matrix{T}
 end
 
 """
@@ -98,8 +101,10 @@ function State(ic::InitialConditions{T}) where T<:AbstractFloat
     input = zeros(T,8)
     delxv = zeros(T,6)
     rtmp = zeros(T,3)
+
+    b = Matrix{T}(undef,n,1)
     return State(x,v,[ic.t0],ic.m,jac_step,dqdt,jac_init,ic.nbody,
-    pair,xerror,verror,dqdt_error,jac_error,rij,a,aij,x0,v0,input,delxv,rtmp)
+    pair,xerror,verror,dqdt_error,jac_error,rij,a,aij,x0,v0,input,delxv,rtmp,ic.R,b)
 end
 
 """Initialize and return a `State` and a `Derivatives`."""
@@ -130,6 +135,7 @@ function set_state!(s_old::State{T},s_new::State{T}) where T<:AbstractFloat
     s_old.jac_error .= s_new.jac_error
     s_old.dqdt .= s_new.dqdt
     s_old.dqdt_error .= s_new.dqdt_error
+    s_old.b .= s_new.b
     return
 end
 

@@ -25,7 +25,7 @@ Runs integrator like (*insert doc reference here*) and output positions, velocit
 """
 function (intr::Integrator)(s::State{T},o::CartesianOutput{T}) where T<:AbstractFloat
     t0 = s.t[1] # Initial time
-    time = intr.tmax
+    time = intr.tmax + t0
     nsteps = o.nstep
 
     # Integrate in proper direction

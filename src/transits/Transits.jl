@@ -23,6 +23,7 @@ struct TransitTiming{T<:AbstractFloat} <: TransitOutput{T}
     occs::Vector{Int64}
     dtdq::Array{T,3}
     gsave::Vector{T}
+    bsave::Vector{T}
     s_prior::State{T}
     s_transit::State{T}
 end
@@ -50,9 +51,10 @@ function TransitTiming(tmax::T,ic::ElementsIC{T},ti::Int64=1) where T<:AbstractF
     occs = setdiff(collect(1:n),ti)
     dtdq = zeros(T,1,7,n)
     gsave = zeros(T,n)
+    bsave = zeros(T,n)
     s_prior = State(ic)
     s_transit = State(ic)
-    return TransitTiming(tt,dtdq0,dtdelements,count,ntt,ti,occs,dtdq,gsave,s_prior,s_transit)
+    return TransitTiming(tt,dtdq0,dtdelements,count,ntt,ti,occs,dtdq,gsave,bsave,s_prior,s_transit)
 end
 
 """
@@ -77,6 +79,7 @@ struct TransitParameters{T<:AbstractFloat} <: TransitOutput{T}
     occs::Vector{Int64}
     dtbvdq::Array{T,3}
     gsave::Vector{T}
+    bsave::Vector{T}
     s_prior::State{T}
     s_transit::State{T}
 end
@@ -104,9 +107,10 @@ function TransitParameters(tmax::T,ic::ElementsIC{T},ti::Int64=1) where T<:Abstr
     occs = setdiff(collect(1:n),ti)
     dtbvdq = zeros(T,3,7,n)
     gsave = zeros(T,n)
+    bsave = zeros(T,n)
     s_prior = State(ic)
     s_transit = State(ic)
-    return TransitParameters(ttbv,dtbvdq0,dtbvdelements,count,ntt,ti,occs,dtbvdq,gsave,s_prior,s_transit)
+    return TransitParameters(ttbv,dtbvdq0,dtbvdelements,count,ntt,ti,occs,dtbvdq,gsave,bsave,s_prior,s_transit)
 end
 
 struct TransitSnapshot{T<:AbstractFloat} <: TransitOutput{T}
@@ -146,6 +150,12 @@ function (intr::Integrator)(s::State{T}, tt::TransitOutput{T}, d::Derivatives{T}
     for i in tt.occs
         # Compute the relative sky velocity dotted with position:
         tt.gsave[i] = g!(i,tt.ti,s.x,s.v)
+        # And the impact parameter
+        if s.R[i] == 0 && s.R[tt.ti] ==0
+            tt.bsave[i] = calc_bsky2(s.x,i,tt.ti)
+        else
+            tt.bsave[i] = calc_bskyR(s.x,i,tt.ti,s.R)
+        end
     end
 
     istep = 0

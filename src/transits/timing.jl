@@ -12,8 +12,14 @@ function detect_transits!(s::State{T},d::Derivatives{T},tt::TransitOutput{T},int
         # Compute the relative sky velocity dotted with position:
         gi = g!(i,tt.ti,s.x,s.v)
         ri = sqrt(s.x[1,i]^2+s.x[2,i]^2+s.x[3,i]^2)  # orbital distance
+        # Compute impact parameter
+        if s.R[i] == 0 && s.R[tt.ti] ==0
+            b = calc_bsky2(s.x,i,tt.ti)
+        else
+            b = calc_bskyR(s.x,i,tt.ti,s.R)
+        end
         # See if sign of g switches, and if planet is in front of star (by a good amount):
-        if gi > 0 && tt.gsave[i] < 0 && -s.x[3,i] > 0.25*ri && ri < rstar
+        if gi > 0 && tt.gsave[i] < 0 && s.x[3,i] < s.x[3,tt.ti] && ri < rstar # b < 1.0
             # A transit has occurred between the time steps - integrate ahl21!
             tt.count[i] += 1
             if tt.count[i] <= tt.ntt
@@ -23,6 +29,7 @@ function detect_transits!(s::State{T},d::Derivatives{T},tt::TransitOutput{T},int
             end
         end
         tt.gsave[i] = gi
+        tt.bsave[i] = b
     end
     set_state!(s,tt.s_prior)
     return
@@ -84,7 +91,7 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},tt:
 
         if grad
             # Compute derivative of transit time, impact parameter, and sky velocity.
-            vsky,bsky2 = dtbvdq!(i,j,s.x,s.v,s.jac_step,s.dqdt,tt.dtbvdq)
+            vsky,bsky2 = dtbvdq!(i,j,s.x,s.v,s.jac_step,s.dqdt,tt.dtbvdq,s.R)
             tt.ttbv[2,j,tt.count[j]] = vsky
             tt.ttbv[3,j,tt.count[j]] = bsky2
             for itbv=1:3, k=1:7, p=1:s.n
@@ -93,14 +100,18 @@ function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},tt:
             return
         end
         tt.ttbv[2,j,tt.count[j]] = calc_vsky(s.v,i,j)
-        tt.ttbv[3,j,tt.count[j]] = calc_bsky2(s.x,i,j)
+        if s.R[i] == 0 && s.R[j] ==0
+            tt.ttbv[3,j,tt.count[j]] = calc_bsky2(s.x,i,j)
+        else
+            tt.ttbv[3,j,tt.count[j]] = calc_bskyR(s.x,i,j,s.R)
+        end
         return
     end
 
     tt.tt[j,tt.count[j]] = s.t[1] + dt0
     if grad
         # Compute derivative of transit time
-        dtbvdq!(i,j,s.x,s.v,s.jac_step,s.dqdt,tt.dtdq)
+        dtbvdq!(i,j,s.x,s.v,s.jac_step,s.dqdt,tt.dtdq,s.R)
         for k=1:7, p=1:s.n
             tt.dtdq0[j,tt.count[j],k,p] = tt.dtdq[1,k,p]
         end
@@ -148,10 +159,14 @@ function gd!(i::Int64,j::Int64,x::Matrix{T},v::Matrix{T},dqdt::Array{T}) where T
             +(v[1,j]-v[1,i])*(dqdt[(j-1)*7+1]-dqdt[(i-1)*7+1])+(v[2,j]-v[2,i])*(dqdt[(j-1)*7+2]-dqdt[(i-1)*7+2]))
 end
 
+function calc_bskyR(x::Matrix{T},i::Int64,j::Int64,R::Vector{T}) where T<:AbstractFloat 
+    R = R .* 6.9911e9 ./ 1.496e13 # convert from Jupiter radii to AU
+    return sqrt((x[1,j]-x[1,i])^2 + (x[2,j]-x[2,i])^2) / (R[j] + R[i])
+end
 calc_bsky2(x::Matrix{T},i::Int64,j::Int64) where T<:AbstractFloat = (x[1,j]-x[1,i])^2 + (x[2,j]-x[2,i])^2
 calc_vsky(v::Matrix{T},i::Int64,j::Int64) where T<:AbstractFloat = sqrt((v[1,j]-v[1,i])^2 + (v[2,j]-v[2,i])^2)
 
-function dtbvdq!(i::Int64,j::Int64,x::Matrix{T},v::Matrix{T},jac_step::Matrix{T},dqdt::Vector{T},dtbvdq::Array{T}) where T<:AbstractFloat
+function dtbvdq!(i::Int64,j::Int64,x::Matrix{T},v::Matrix{T},jac_step::Matrix{T},dqdt::Vector{T},dtbvdq::Array{T},R::Vector{T}) where T<:AbstractFloat
     n = size(x)[2]
     # Compute time offset:
     gsky = g!(i,j,x,v)
@@ -173,7 +188,11 @@ function dtbvdq!(i::Int64,j::Int64,x::Matrix{T},v::Matrix{T},jac_step::Matrix{T}
     if ntbv == 3
         # Compute the impact parameter and sky velocity:
         vsky = calc_vsky(v,i,j)
-        bsky2 = calc_bsky2(x,i,j)
+        if R[i] == 0 && R[j] ==0
+            bsky2 = calc_bsky2(x,i,j)
+        else
+            bsky2 = calc_bskyR(x,i,j,R)
+        end
         # partial derivative v_{sky} with respect to time:
         dvdt = ((v[1,j]-v[1,i])*(dqdt[(j-1)*7+4]-dqdt[(i-1)*7+4])+(v[2,j]-v[2,i])*(dqdt[(j-1)*7+5]-dqdt[(i-1)*7+5]))/vsky
         # (note that \partial b/\partial t = 0 at mid-transit since g_{sky} = 0 mid-transit).

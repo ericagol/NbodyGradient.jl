@@ -7,6 +7,7 @@ Orbital elements of a binary, and mass of a 'outer' body. See [Tutorials](@ref) 
 
 # Fields
 - `m::T` : Mass of outer body.
+- `R::T` : Radius [Jupiter Radii].
 - `P::T` : Period [Days].
 - `t0::T` : Initial time of transit [Days].
 - `ecosϖ` : Eccentricity vector x-component (eccentricity times cosine of the longitude of periastron)
@@ -28,17 +29,18 @@ struct Elements{T<:AbstractFloat} <: AbstractInitialConditions
     a::T
     e::T
     ϖ::T
+    R::T
 end
 
 """
-    Elements(m,P,t0,ecosϖ,esinϖ,I,Ω)
+    Elements(m,R,P,t0,ecosϖ,esinϖ,I,Ω)
 
 Main [`Elements`](@ref) constructor. May use keyword arguments, see [Tutorials](@ref).
 """
-function Elements(m::T,P::T,t0::T,ecosϖ::T,esinϖ::T,I::T,Ω::T) where T<:Real
+function Elements(m::T,P::T,t0::T,ecosϖ::T,esinϖ::T,I::T,Ω::T,R::T) where T<:Real
     e = sqrt(ecosϖ^2 + esinϖ^2)
     ϖ = atan(esinϖ,ecosϖ)
-    Elements(m,P,t0,ecosϖ,esinϖ,I,Ω,0.0,e,ϖ)
+    Elements(m,P,t0,ecosϖ,esinϖ,I,Ω,0.0,e,ϖ,R)
 end
 
 function Base.show(io::IO, ::MIME"text/plain" ,elems::Elements{T}) where T <: Real
@@ -55,7 +57,7 @@ function Base.show(io::IO, ::MIME"text/plain" ,elems::Elements{T}) where T <: Re
 end
 
 """Allows keyword arguments"""
-Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,ecosϖ::T=0.0,esinϖ::T=0.0,I::T=0.0,Ω::T=0.0) where T<:Real = Elements(m,P,t0,ecosϖ,esinϖ,I,Ω)
+Elements(;m::T=0.0,P::T=0.0,t0::T=0.0,ecosϖ::T=0.0,esinϖ::T=0.0,I::T=0.0,Ω::T=0.0,R::T=0.0) where T<:Real = Elements(m,P,t0,ecosϖ,esinϖ,I,Ω,R)
 
 """Abstract type for initial conditions specifications."""
 abstract type InitialConditions{T} end
@@ -79,14 +81,17 @@ struct ElementsIC{T<:AbstractFloat} <: InitialConditions{T}
     amat::Matrix{T}
     nbody::Int64
     m::Vector{T}
+    R::Vector{T}
     t0::T
     der::Bool
 
     function ElementsIC(t0::T, H::Matrix{T}, elements::Matrix{T}; der::Bool=true) where T<:AbstractFloat
         nbody = size(H)[1]
         m = elements[1:nbody, 1]
+        R = elements[1:nbody, 8]
         A = amatrix(H, m)
-        return new{T}(elements, H, A, nbody, m, t0, der)
+        # B = amatrix(A, R)
+        return new{T}(elements, H, A, nbody, m, R, t0, der)
     end
 end
 ElementsIC(t0::T, H::Matrix{<:Real}, elements::Matrix{T}) where T<:Real = ElementsIC(t0, T.(H), elements)
@@ -140,8 +145,8 @@ Each method is simply populating the `ElementsIC.elements` field, which is a `Ma
 `H = [-1 1 0 0; 0 0 -1 1; -1 -1 1 1; -1 -1 -1 -1]`. Produces the same system as `H = [4,2,1]`.
 """
 function ElementsIC(t0::T, H::Matrix{<:Real}, elems::Elements{T}...) where T<:AbstractFloat
-    elements = zeros(T,size(H)[1],7)
-    fields = [:m, :P, :t0, :ecosϖ, :esinϖ, :I, :Ω]
+    elements = zeros(T,size(H)[1],8)
+    fields = [:m, :P, :t0, :ecosϖ, :esinϖ, :I, :Ω, :R]
     for i in eachindex(elems)
         elements[i,:] .= [getfield(elems[i],f) for f in fields]
     end
