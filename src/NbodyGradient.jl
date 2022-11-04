@@ -12,14 +12,15 @@ using FileIO, JLD2
 # Need to clean this up
 const NDIM = 3
 const YEAR = 365.242
-const GNEWT = 39.4845/(YEAR*YEAR)
-const third = 1.0/3.0
+const GNEWT = 39.4845 / (YEAR * YEAR)
+const third = 1.0 / 3.0
 const alpha0 = 0.0
 
 # Types
 export Elements, ElementsIC, CartesianIC, InitialConditions
 export State, dState
 export Integrator
+export obtain_orbital_elements
 export Jacobian, dTime
 export CartesianOutput, ElementsOutput
 export TransitTiming, TransitParameters, TransitSnapshot
@@ -31,6 +32,7 @@ export ahl21!, dh17!
 include("PreAllocArrays.jl")
 include("ics/InitialConditions.jl")
 include("integrator/Integrator.jl")
+include("integrator/convert.jl")
 include("utils.jl")
 include("outputs/Outputs.jl")
 include("transits/Transits.jl")
