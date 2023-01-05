@@ -86,7 +86,12 @@ struct ElementsIC{T<:AbstractFloat} <: InitialConditions{T}
         nbody = size(H)[1]
         m = elements[1:nbody, 1]
         A = amatrix(H, m)
-        return new{T}(elements, H, A, nbody, m, t0, der)
+
+        # Allow user to input more orbital elements than used, but only use N
+        if size(elements) != (nbody, 7)
+            elements = copy(elements[1:nbody,:])
+        end
+        return new{T}(copy(elements), copy(H), A, nbody, m, t0, der)
     end
 end
 ElementsIC(t0::T, H::Matrix{<:Real}, elements::Matrix{T}) where T<:Real = ElementsIC(t0, T.(H), elements)
