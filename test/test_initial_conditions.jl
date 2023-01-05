@@ -105,6 +105,24 @@ end
     return Expr(:block, setup..., tests...)
 end
 
+function test_default_trappist()
+    # Check that default ics match those produced by the test file
+    fname = "elements.txt"
+    t0 = 0.0
+    for n in 2:8
+        ic_file = ElementsIC(t0, n, fname)
+        ic_default = get_default_ICs("trappist-1", t0, n)
+        @test compare_ics(ic_file, ic_default)
+    end
+
+    # Check that each input string works correctly
+    sysnames = NbodyGradient._available_systems()[1]
+    ic_true = ElementsIC(t0, 7, fname)
+    for sn in sysnames
+        @test compare_ics(ic_true, get_default_ICs(sn, t0, 7))
+    end
+end
+
 @testset "Initial Conditions" begin
     @testset "Elements" begin
         N = 8
@@ -131,5 +149,9 @@ end
         for n in 2:N
             run_cartesian_tests(t0, n)
         end
+    end
+
+    @testset "Defaults" begin
+        test_default_trappist()
     end
 end

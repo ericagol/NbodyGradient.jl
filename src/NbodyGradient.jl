@@ -27,6 +27,9 @@ export TransitTiming, TransitParameters, TransitSnapshot
 # Integrator methods
 export ahl21!, dh17!
 
+# Utility functions
+export available_systems, get_default_ICs
+
 # Source code
 include("PreAllocArrays.jl")
 include("ics/InitialConditions.jl")
