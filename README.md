@@ -15,3 +15,6 @@ Paper: See orange button above or go to the [paper repository](https://github.co
 Documentation: See blue button above.
 
 Thanks to NASA, NSF and the Guggenheim Foundation for supporting this work.
+
+Here is an introduction at the NASA Exoplanet Modeling and Analysis Center (EMAC):
+https://www.youtube.com/watch?v=VXnxDnIBHog
