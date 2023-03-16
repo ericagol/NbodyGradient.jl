@@ -17,7 +17,7 @@ function detect_transits!(s::State{T},d::Derivatives{T},tt::TransitOutput{T},int
             # A transit has occurred between the time steps - integrate ahl21!
             tt.count[i] += 1
             if tt.count[i] <= tt.ntt
-                dt0 = -tt.gsave[i]*intr.h/(gi-tt.gsave[i]) # Starting estimate
+                dt0 = -gi*intr.h/(gi-tt.gsave[i]) # Starting estimate
                 set_state!(s,tt.s_prior)
                 findtransit!(tt.ti,i,dt0,s,d,tt,intr;grad=grad) # Search for transit time (integrating 'backward')
             end
