@@ -106,6 +106,23 @@ function Elements(;m::Real,P::Real=NaN,t0::Real=NaN,ecosω::Real=NaN,esinω::Rea
     return Elements(m,P,t0,ecosω,esinω,I,Ω,a,e,ω,tp)
 end
 
+# Handle the deprecated fields
+function Base.getproperty(obj::Elements, sym::Symbol)
+    if (sym === :ecosϖ)
+        Base.depwarn("ecosϖ (\\varpi) will be removed, use ecosω (\\omega).", :getproperty, force=true)
+        return obj.ecosω
+    end
+    if (sym === :esinϖ)
+        Base.depwarn("esinϖ (\\varpi) will be removed, use esinω (\\omega).", :getproperty, force=true)
+        return obj.esinω
+    end
+    if (sym === :ϖ)
+        Base.depwarn("ϖ (\\varpi) will be removed, use ω (\\omega).", :getproperty, force=true)
+        return obj.ω
+    end
+    return getfield(obj, sym)
+end
+
 """Abstract type for initial conditions specifications."""
 abstract type InitialConditions{T} end
 

@@ -154,4 +154,11 @@ end
     @testset "Defaults" begin
         test_default_trappist()
     end
+
+    @testset "Deprecated" begin
+        el = Elements(m=1.0, P=1.0)
+        @test_logs (:warn, "ecosϖ (\\varpi) will be removed, use ecosω (\\omega).") Base.getproperty(el, :ecosϖ)
+        @test_logs (:warn, "esinϖ (\\varpi) will be removed, use esinω (\\omega).") Base.getproperty(el, :esinϖ)
+        @test_logs (:warn, "ϖ (\\varpi) will be removed, use ω (\\omega).") Base.getproperty(el, :ϖ)
+    end
 end
