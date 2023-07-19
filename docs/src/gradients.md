@@ -3,6 +3,9 @@ The main purpose of developing NbodyGradient.jl is to provide a differentiable N
 
 We assume you've taken a look at the [Basic Usage](@ref) tutorial, and are familiar with the orbital elements and units used in NbodyGradient.jl.
 
+!!! note "No gradient support for exactly circular orbits"
+    This package supports specifying initial conditions for circular orbits (ie. eccentricity=0). However, the derivative computations contain 1/e terms -- requiring a non-zero eccentricity to be computed correctly. We expect the need for derivatives for exactly circular initial orbits to be minimal, and intend to implement them in the future.
+
 Here, we will specify the orbital elements using the 'elements matrix' option (See [`ElementsIC`](@ref)).
 ```@example 2
 using NbodyGradient
