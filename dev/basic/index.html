@@ -5,14 +5,14 @@ a = Elements(m = 1.0);</code></pre><p>We then define the orbital elements for se
     m = 3e-6,     # Mass [Solar masses]
     t0 = 0.0,     # Initial time of transit [days]
     P = 365.256,  # Period [days]
-    ecosϖ = 0.01, # Eccentricity * cos(Argument of Periastron)
-    esinϖ = 0.0,  # Eccentricity * sin(Argument of Periastron)
+    ecosω = 0.01, # Eccentricity * cos(Argument of Periastron)
+    esinω = 0.0,  # Eccentricity * sin(Argument of Periastron)
     I = π/2,      # Inclination [Radians]
     Ω = 0.0       # Longitude of Ascending Node [Radians]
-);</code></pre><p>(<code>ecosϖ</code> can be typed as <code>ecos\varpi</code> and then hitting tab)</p><p>Next we&#39;ll create a Jupiter analogue for the final body. Here the orbital elements are specified for the Keplerian ((a,b),c), or c orbiting the center of mass of a and b. (While this might not need to be stated explicitly here, this convention is useful for more complicated hierarchical systems).</p><pre><code class="language-julia hljs">c = Elements(
+);</code></pre><p>(<code>ecosω</code> can be typed as <code>ecos\omega</code> and then hitting tab)</p><p>Next we&#39;ll create a Jupiter analogue for the final body. Here the orbital elements are specified for the Keplerian ((a,b),c), or c orbiting the center of mass of a and b. (While this might not need to be stated explicitly here, this convention is useful for more complicated hierarchical systems).</p><pre><code class="language-julia hljs">c = Elements(
     m = 9.54e-4,
     P = 4332.59,
-    ecosϖ = 0.05,
+    ecosω = 0.05,
     I = π/2
 );</code></pre><p>Here, we can simply omit any orbital elements which are zero. Unspecified elements are set to zero by default.</p><p>Now we need to pass our <a href="../api/#NbodyGradient.Elements"><code>Elements</code></a> to <a href="../api/#NbodyGradient.ElementsIC"><code>ElementsIC</code></a>.</p><pre><code class="language-julia hljs">t0 = 0.0 # Initial time
 N = 3    # Number of bodies
@@ -38,4 +38,4 @@ intr(s,tt)</code></pre><p>To see the first 5 transit times of our second body ab
   730.5007334346752
  1095.7505677053489
  1461.001226871598
- 1826.2531823012507</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Index</a><a class="docs-footer-nextpage" href="../gradients/">Gradients »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Thursday 16 March 2023 18:26">Thursday 16 March 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ 1826.2531823012507</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Index</a><a class="docs-footer-nextpage" href="../gradients/">Gradients »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Thursday 20 July 2023 18:46">Thursday 20 July 2023</span>. Using Julia version 1.9.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
