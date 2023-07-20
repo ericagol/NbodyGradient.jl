@@ -81,8 +81,8 @@ function kepler_init(time::T,mass::T,elements::Array{T,1},jac_init::Array{T,2}) 
     ecosomega = elements[3]
     esinomega = elements[4]
     ecc=sqrt(esinomega^2+ecosomega^2)
-    deccdecos = ecosomega/ecc
-    deccdesin = esinomega/ecc
+    deccdecos = ecc != 0.0 ? ecosomega/ecc : zero(T)
+    deccdesin = ecc != 0.0 ? esinomega/ecc : zero(T)
     #omega = atan2(esinomega,ecosomega)
     # The true anomaly at the time of transit:
     #f1 = 1.5*pi-omega
@@ -91,9 +91,12 @@ function kepler_init(time::T,mass::T,elements::Array{T,1},jac_init::Array{T,2}) 
     #tp=(t0+period*sqrt1mecc2/2.0/pi*(ecc*sin(f1)/(1.0+ecc*cos(f1))
     #    -2.0/sqrt1mecc2*atan2(sqrt1mecc2*tan(0.5*f1),1.0+ecc)))
     den1 = esinomega-ecosomega-ecc
-    tp = (t0 - sqrt1mecc2/n*ecosomega/(1.0-esinomega)-2/n*
-          #     atan2(sqrt(1.0-ecc)*(esinomega+ecosomega+ecc),sqrt(1.0+ecc)*den1))
-    atan(sqrt(1.0-ecc)*(esinomega+ecosomega+ecc),sqrt(1.0+ecc)*den1))
+    tp = if ecc == 0.0
+        # If circular orbit, take periastron to be along +x-axis
+        t0 - 3*period/4
+    else
+        (t0 - sqrt1mecc2/n*ecosomega/(1.0-esinomega)-2/n*atan(sqrt(1.0-ecc)*(esinomega+ecosomega+ecc),sqrt(1.0+ecc)*den1))
+    end
     dtpdp = (tp-t0)/period
     fac = sqrt((1.0-ecc)/(1.0+ecc))
     den2 = 1.0/den1^2
@@ -125,7 +128,8 @@ function kepler_init(time::T,mass::T,elements::Array{T,1},jac_init::Array{T,2}) 
     capomega = elements[6]
     # Now, compute the positions
     coscapomega = cos(capomega) ; sincapomega = sin(capomega)
-    cosomega = ecosomega/ecc; sinomega = esinomega/ecc
+    cosomega = ecc != 0.0 ? ecosomega/ecc : one(T)
+    sinomega = ecc != 0.0 ? esinomega/ecc : zero(T)
     cosinc = cos(inc) ; sininc = sin(inc)
     # Define rotation matrices (M&D 2.119-2.120):
     P1 = [cosomega -sinomega 0.0; sinomega cosomega 0.0; 0.0 0.0 1.0]
@@ -172,11 +176,11 @@ function kepler_init(time::T,mass::T,elements::Array{T,1},jac_init::Array{T,2}) 
     #  println("position vs. period: term 1 ",dxda*dsemidp," term 2: ",dxdekep*dekepdm*dmdp," term 3: ",dxdekep*dekepdm*dmdtp*dtpdp," sum: ",jac_init[1:3,1])
     #end
     jac_init[1:3,2] = dxdekep*dekepdm*dmdtp*dtpdt0
-    jac_init[1:3,3] = dxdecos + dxdekep*(dekepdm*dmdtp*dtpdecos + dekepdecos)
+    jac_init[1:3,3] .= ecc != 0.0 ? dxdecos + dxdekep*(dekepdm*dmdtp*dtpdecos + dekepdecos) : zero(T)
     #if  T != BigFloat
     #  println("position vs. ecosom : term 1 ",dxdecos," term 2: ",dxdekep*dekepdm*dmdtp*dtpdecos," term 3: ",dxdekep*dekepdm*dekepdecos," sum: ",jac_init[1:3,3])
     #end
-    jac_init[1:3,4] = dxdesin + dxdekep*(dekepdm*dmdtp*dtpdesin + dekepdesin)
+    jac_init[1:3,4] .= ecc != 0.0 ? dxdesin + dxdekep*(dekepdm*dmdtp*dtpdesin + dekepdesin) : zero(T)
     #if  T != BigFloat
     #  println("position vs. esinom : term 1 ",dxdesin," term 2: ",dxdekep*dekepdm*dmdtp*dtpdesin," term 3: ",dxdekep*dekepdm*dekepdesin," sum: ",jac_init[1:3,4])
     #end
@@ -188,11 +192,11 @@ function kepler_init(time::T,mass::T,elements::Array{T,1},jac_init::Array{T,2}) 
     #  println("velocity vs. period: term 1 ",dvdp," term 2: ",dvda*dsemidp," term 3: ",dvdekep*dekepdm*dmdp," term 4: ",dvdekep*dekepdm*dmdtp*dtpdp," sum: ",jac_init[4:6,1])
     #end
     jac_init[4:6,2] = dvdekep*dekepdm*dmdtp*dtpdt0
-    jac_init[4:6,3] = dvdecos + dvdekep*(dekepdm*dmdtp*dtpdecos + dekepdecos)
+    jac_init[4:6,3] .= ecc != 0.0 ? dvdecos + dvdekep*(dekepdm*dmdtp*dtpdecos + dekepdecos) : zero(T)
     #if  T != BigFloat
     #  println("velocity vs. ecosom : term 1 ",dvdecos," term 2: ",dvdekep*dekepdm*dmdtp*dtpdecos," term 3: ",dvdekep*dekepdm*dekepdecos," sum: ",jac_init[4:6,3])
     #end
-    jac_init[4:6,4] = dvdesin + dvdekep*(dekepdm*dmdtp*dtpdesin + dekepdesin)
+    jac_init[4:6,4] .= ecc != 0.0 ? dvdesin + dvdekep*(dekepdm*dmdtp*dtpdesin + dekepdesin) : zero(T)
     #if  T != BigFloat
     #  println("velocity vs. esinom : term 1 ",dvdesin," term 2: ",dvdekep*dekepdm*dmdtp*dtpdesin," term 3: ",dvdekep*dekepdm*dekepdesin," sum: ",jac_init[4:6,4])
     #end
