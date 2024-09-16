@@ -1,9 +1,6 @@
 module Orbits
-using NbodyGradient,PyPlot,PyCall 
-@pyimport matplotlib.animation as anim
-
 """
-The Orbits module allows user to create figures from NbodyGradient InitialConditions.
+The Orbits module allows user to create figures a la rebound.
 Photodynamics.jl uses masses in solar masses 𝑀⊙, time in days, distance in AU, and angles in radians.
 The right-handed coordinate system is set up so that the positive z-axis is pointing away from the observer, 
 and the positive x-axis points to the right along the horizontal. 
@@ -12,9 +9,10 @@ In NbodyGradient the orientation is such that the x-y plane is the sky plane.
 For inclinations close to 90 degrees this means that the x-z plane represents the top-down view.
 Therefore we choose to take the z coordinates for plotting.
 """
-
+using NbodyGradient,PyPlot,PyCall 
+@pyimport matplotlib.animation as anim
 """
-#Kepler-16 example
+#Example for Kepler-16:
 stara=Elements(m=0.6897, P=0.0  ,    
     t0=0.0   ,
     ecosω=0.0  ,  
@@ -34,26 +32,30 @@ Orbits.animate_plot(r,save=true,filename="Kepler-16.mp4")
 """
 abstract type AbstractOrbit end
 struct KeplerOrbits{T <: AbstractFloat} <: AbstractOrbit
-    xs::Array{T,3}
-    vs::Array{T,3}
-    m::Vector{T}
-    P::Vector{T}
-    intr::Integrator
-    nsteps::Int64
-    save_interval::Real
-    s::State{T}
-    ic::InitialConditions{T}  
+    # Cartesian coordinate positions and velocities of each body [dimension, body, step]
+    xs::Array{T,3} # in AU
+    vs::Array{T,3} # in AU/
+    
+    m::Vector{T} # Masses of all bodies in solar masses
+    P::Vector{T} # Periods of secondary bodies (i.e. everything but primary) in days
+    intr::Integrator # Integration scheme (with t0, tmax, and h defined)
+    nsteps::Int64  # The number of steps to integrate
+    save_interval::Real     # Number of steps to bin (i.e. binsize)
+    s::State{T}  # Current state of simulation
+    ic::InitialConditions{T}  # InitialConditions for system
 end
 """
-KeplerOrbits structure takes integration scheme (with t0, tmax, and h defined) and InitialConditions.  
-Allows keyword arguments.
-# Arguments
+    KeplerOrbits{T <: AbstractFloat} <: AbstractOrbit
 
-nsteps: the number of points to save for plotting purposes, tmax = t0 + (h * nsteps).
+Main KeplerOrbits structure takes integration scheme and InitialConditions.
+# Arguments
+- nsteps::Int64 : the number of points to save for plotting purposes, tmax = t0 + (h * nsteps).
         If nsteps is not provided, we set the value to the period of outer planet/h
-save_interval: optional argument, which would give step size to bin (i.e. save every Nth step)
+
+### Optional
+- save_interval::Integer    : optional argument for binsize (i.e. save every Nth step)
         Can use save_interval for large N, where you want to plot really long orbits.
-        If using increase h to do less steps orbits more smooth for plotting.
+        If using save_intergral, increase h to do less steps and make orbits more smooth.
 """
 function KeplerOrbits(intr::Integrator,ic::InitialConditions{T})  where (T <: AbstractFloat)
     s=State(ic)
@@ -90,7 +92,15 @@ function KeplerOrbits(intr::Integrator,ic::InitialConditions{T},nsteps::Int64,sa
         KeplerOrbits(xs,vs,m,P,intr,nsteps,save_interval,s,ic)
     end
 # KeplerOrbits(intr,ic;nsteps::Int64,save_interval::Int64)=KeplerOrbits(intr,ic,nsteps,save_interval)
+""" Allow keywords for nsteps."""
 KeplerOrbits(intr,ic;nsteps::Int64)=KeplerOrbits(intr,ic,nsteps)
+"""
+    SimOrbits!(o::KeplerOrbits{T};grad=false)
+
+Does integration for nsteps.
+### Optional
+- grad::Bool : Choose whether to calculate gradients. (Default = false)
+"""
 function SimOrbits!(o;grad::Bool=false) where T <: AbstractFloat
     xs=o.xs
     vs=o.vs
@@ -154,7 +164,17 @@ function setup()#,fig=Figure,figsize=(4,4),projection="xz",show_primary=true)
     ax=gca();fig=gcf()
     return ax,fig
 end
-julia_colors=["#000000","#389826","#CB3C33","#9558B2","#406308"]
+julia_colors=["#000000","#389826","#CB3C33","#9558B2","#4063D8"]
+"""
+    make_plot(o::KeplerOrbits{T}) 
+
+Plot static orbits, with orbital path as faded line and location of bodies at the initial state.
+# Optional Arguments
+- show_primary::Bool    : plots initial position of the primary star. Never plots the path. 
+- legend::Bool : Choose whether to show legend. (Default = false)
+- lw::Real : Linewidth
+- colors::Vector{String} : user provided list of colors to use for orbits.
+"""
 function make_plot(o,save=false,filename::String="../test/test_orbits.png",
 show_primary=true,legend=false,lw=1.5;colors::Vector{String}=julia_colors) where T<:AbstractFloat
     nbody=o.ic.nbody ; nsteps=o.nsteps ;
@@ -163,9 +183,6 @@ show_primary=true,legend=false,lw=1.5;colors::Vector{String}=julia_colors) where
     fig.set_figheight(4);fig.set_figwidth(4)
     if show_primary
         ax.scatter(o.s.x0[1,1],o.s.x0[3,1],marker="*",color="black",s=35*lw)
-    """
-    Plots initial position of the primary star, not the path. 
-    """
     end
     for body in 2:nbody
         ax.scatter(o.s.x[1,body],o.s.x[3,body],s=25*lw,color=colors[body],zorder=3)
@@ -180,13 +197,20 @@ show_primary=true,legend=false,lw=1.5;colors::Vector{String}=julia_colors) where
     end
     return  fig
 end
+"""
+    animate_plot(o::KeplerOrbits{T}) 
+
+Animates orbits, with orbital path as transparent line that is same color as the body.
+# Optional Arguments
+- colors::Vector{String} : user provided list of colors to use for orbits.
+"""
 function animate_plot(o,save=false,file_name::String="../test/test2.mp4";colors::Vector{String}=julia_colors) where T<:AbstractFloat
     nbody=o.ic.nbody;nsteps=o.nsteps;h=o.intr.h;save_interval=o.save_interval
-    if h < 1.0
+    if h < 1.0 && nsteps < 100
     """
      This will create an animation which may not cover a full orbit for long orbits.
     """
-        println("Your intergration timestep (h) is low, and the animation may not cover a full orbit.")
+        println("Your intergration timestep ($h) is low, and the animation may not cover a full orbit.")
     end
     fig=make_plot(o)
     ax=fig.gca()
@@ -197,7 +221,7 @@ function animate_plot(o,save=false,file_name::String="../test/test2.mp4";colors:
         ax.plot(o.xs[1,body,:],o.xs[3,body,:],alpha=0.5,color=colors[body])
     end
     function update_plot(i)
-        frame_mult=1 # when h is low, want faster animation
+        frame_mult=1 # can change to make faster animation. may have unexpected results
         if i*frame_mult < nsteps
         ax.clear();ax.set_ylim(-limits_y,limits_y);ax.set_xlim(-limits_x,limits_x)
         ax.set_ylabel(ylabel);ax.set_xlabel(xlabel);fig.tight_layout()
@@ -212,6 +236,9 @@ function animate_plot(o,save=false,file_name::String="../test/test2.mp4";colors:
     return ax.get_lines()
     end
     if isinf(nsteps/save_interval)
+        """
+        If save_interval or nsteps is not defined, save 200 steps. 
+        """
         nsaves=200
     else
         nsaves=nsteps
@@ -242,9 +269,16 @@ function new_pos(o,primary_indx,secondary_indx)
     end
     return pos_about_parent
 end
-# want to plot objects wrt their parent (i.e. satellite around planet)
-# needs work. how to define parent.
-function simple_plot(o,parent::Vector{Int64};colors::Bool=true,
+"""
+    simple_plot(o::KeplerOrbits{T},parent::Vector{T}) where T <: Real
+
+Plotting objects with respect to their parent (e.g. satellite around planet)
+# Argument 
+- parent::Vector{T} : indeces of parent of each body, where the main central star has parent=0
+Example: if one planet orbiting a star has a satellite, the parent vector would be =[0, 1, 2]
+"""
+# needs work because broken 
+function simple_plot(o,parent::Vector{Real};colors::Bool=true,
         xlim::Tuple{Real,Real}=(NaN,NaN),zlim::Tuple{Real,Real}=(NaN,NaN),lw::Real=NaN) where T<:AbstractFloat
     if isnan(lw);  lw=1.5    end
     nbody=o.ic.nbody;     nsteps= o.nsteps ;    
@@ -288,6 +322,6 @@ end
 # VisualOrbit(o,parent;colors::Bool,xlim::Tuple{T,T},zlim::Tuple{T,T},lw::T) where T<:Real =VisualOrbit(o,parent,colors,xlim,zlim,lw)
 # TO DO: display output of animation as html in jupyter notebook cell or .gif
 # TO DO: make trail for orbit path with line collections
-# TO DO: 3D cartesian coord transformation    
+# TO DO: 3D cartesian coord transformation for satellite   
 end # module
 #using .Orbits
