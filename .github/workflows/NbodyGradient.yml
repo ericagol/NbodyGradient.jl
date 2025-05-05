@@ -34,7 +34,7 @@ jobs:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
     # from 'julia-runtest' GitHub action.
-    - uses: julia-actions/setup-julia@v1
+    - uses: julia-actions/setup-julia@v2
       with:
         version: ${{ matrix.version }}
         arch: ${{ matrix.arch }}
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@v1
+      - uses: julia-actions/setup-julia@v2
         with:
           version: '1'
       - uses: julia-actions/julia-buildpkg@v1
