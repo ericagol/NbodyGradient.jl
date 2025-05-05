@@ -15,14 +15,12 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    name: Julia ${{ matrix.julia-version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        version:
-          - '1.6'
-          - '1'
+        julia-version: ['1', 'lts']
         os:
           - ubuntu-latest
           - macOS-latest
@@ -36,7 +34,7 @@ jobs:
     # from 'julia-runtest' GitHub action.
     - uses: julia-actions/setup-julia@v2
       with:
-        version: ${{ matrix.version }}
+        version: ${{ matrix.julia-version }}
         arch: ${{ matrix.arch }}
     - uses: julia-actions/cache@v1
     - uses: julia-actions/julia-buildpkg@v1
