@@ -9,7 +9,8 @@ makedocs(sitename="NbodyGradient",
         "Index" => "index.md",
         "Tutorials" => ["basic.md", "gradients.md"],
         "API" => "api.md"
-    ]
+    ],
+    warnonly=[:missing_docs]
 )
 
 deploydocs(
