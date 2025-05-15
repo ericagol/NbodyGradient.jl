@@ -9,7 +9,15 @@ on:
     branches:
       - master
     tags: '*'
+    paths-ignore:
+      - 'README.md'
+      - 'CITATION.md'
+      - 'examples/**'
   pull_request:
+    paths-ignore:
+      - 'README.md'
+      - 'CITATION.md'
+      - 'examples/**'
   workflow_dispatch:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
