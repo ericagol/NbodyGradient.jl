@@ -23,6 +23,7 @@ export Integrator
 export Jacobian, dTime
 export CartesianOutput, ElementsOutput
 export TransitTiming, TransitParameters, TransitSnapshot
+export RadialVelocities
 
 # Integrator methods
 export ahl21!, dh17!
@@ -37,6 +38,7 @@ include("integrator/Integrator.jl")
 include("utils.jl")
 include("outputs/Outputs.jl")
 include("transits/Transits.jl")
+include("rvs/RadialVelocities.jl")
 
 # To be cleaned up
 # include("integrator/ah18/ah18_old.jl")
