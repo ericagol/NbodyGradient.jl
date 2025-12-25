@@ -46,4 +46,10 @@ end
         include("test_transit_parameters.jl")
     end;
     println("Finished.")
+
+    print("RVs... ")
+    @testset "RVs" begin
+        include("test_radial_velocity.jl")
+    end;
+    println("Finished.")
 end
