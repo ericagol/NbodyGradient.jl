@@ -1,6 +1,6 @@
 # Collection of functions to compute transit times, impact parameters, sky-velocity, and derivatives.
 
-function detect_transits!(s::State{T},d::Derivatives{T},tt::TransitOutput{T},intr::Integrator{T}; grad::Bool=true) where T<:AbstractFloat
+function detect_transits!(s::State{T},d::Derivatives{T},tt::TransitOutput{T},intr::Integrator{T}, obs_ind; grad::Bool=true) where T<:AbstractFloat
     rstar::T = 1e12 # Could this be removed?
     # Save current state as prior state
     set_state!(tt.s_prior, s)
@@ -9,6 +9,7 @@ function detect_transits!(s::State{T},d::Derivatives{T},tt::TransitOutput{T},int
     # Sky is x-y plane; line of sight is z.
     # Body being transited is tt.ti, tt.occs is list of occultors:
     for i in tt.occs
+        # Check computing observed times, and if we have the right body
         # Compute the relative sky velocity dotted with position:
         gi = g!(i,tt.ti,s.x,s.v)
         ri = sqrt(s.x[1,i]^2+s.x[2,i]^2+s.x[3,i]^2)  # orbital distance
@@ -16,7 +17,27 @@ function detect_transits!(s::State{T},d::Derivatives{T},tt::TransitOutput{T},int
         if gi > 0 && tt.gsave[i] < 0 && -s.x[3,i] > 0.25*ri && ri < rstar
             # A transit has occurred between the time steps - integrate ahl21!
             tt.count[i] += 1
-            if tt.count[i] <= tt.ntt
+
+            # See if we want to compute the transit time or not
+            compute_transit = true
+            if tt.do_obs 
+                # Checking if the observed time is within 3 time steps
+                # if s.t[1] < 50.0
+                #     @info "h-2h: $(s.t[1] - 2*intr.h)"
+                #     @info "tt: $(tt.obs_tt[obs_ind])"
+                #     @info "h+h: $(s.t[1] + intr.h)"
+                # end
+                if ((s.t[1] - 2*intr.h) < tt.obs_tt[obs_ind] < (s.t[1] + intr.h)) 
+                    obs_ind += 1
+                    if obs_ind > length(tt.obs_tt)
+                        break
+                    end
+                else
+                    compute_transit = false
+                end
+            end
+
+            if (tt.count[i] <= tt.ntt) && compute_transit
                 dt0 = -gi*intr.h/(gi-tt.gsave[i]) # Starting estimate
                 set_state!(s,tt.s_prior)
                 findtransit!(tt.ti,i,dt0,s,d,tt,intr;grad=grad) # Search for transit time (integrating 'backward')
@@ -25,7 +46,7 @@ function detect_transits!(s::State{T},d::Derivatives{T},tt::TransitOutput{T},int
         tt.gsave[i] = gi
         set_state!(s,tt.s_prior)
     end
-    return
+    return obs_ind
 end
 
 function findtransit!(i::Int64,j::Int64,dt0::T,s::State{T},d::Derivatives{T},tt::TransitOutput{T},intr::Integrator;grad::Bool=true) where T<:AbstractFloat

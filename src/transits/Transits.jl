@@ -18,6 +18,9 @@ struct TransitTiming{T<:AbstractFloat} <: TransitOutput{T}
 
     # Internal
     count::Vector{Int64}
+    obs_tt::Vector{T}
+    obs_body::Vector{Int64}
+    do_obs::Bool
     ntt::Int64
     ti::Int64
     occs::Vector{Int64}
@@ -39,7 +42,7 @@ Constructor for [`TransitTiming`](@ref) type.
 ## Optional
 - `ti::Int64=1` : Index of the body with respect to which transits are measured. (Default is the central body)
 """
-function TransitTiming(tmax::T,ic::ElementsIC{T},ti::Int64=1) where T<:AbstractFloat
+function TransitTiming(tmax::T,ic::ElementsIC{T},obs_tt,obs_body,ti::Int64=1) where T<:AbstractFloat
     n = ic.nbody
     ind = isfinite.(tmax./ic.elements[:,2])
     ntt = maximum(ceil.(Int64,abs.(tmax./ic.elements[ind,2])).+3)
@@ -52,8 +55,16 @@ function TransitTiming(tmax::T,ic::ElementsIC{T},ti::Int64=1) where T<:AbstractF
     gsave = zeros(T,n)
     s_prior = State(ic)
     s_transit = State(ic)
-    return TransitTiming(tt,dtdq0,dtdelements,count,ntt,ti,occs,dtdq,gsave,s_prior,s_transit)
+    @assert length(obs_tt) == length(obs_body) "Transit times need a corresponding planet index."
+    if length(obs_tt) == 1
+        do_obs = false
+    else
+        do_obs = true
+    end
+    return TransitTiming(tt,dtdq0,dtdelements,count,obs_tt,obs_body,do_obs,ntt,ti,occs,dtdq,gsave,s_prior,s_transit)
 end
+
+TransitTiming(tmax::T,ic::ElementsIC{T},ti::Int64=1) where T<:AbstractFloat = TransitTiming(tmax, ic, zeros(1), zeros(Int64,1), ti)
 
 """
     TransitParameters{T<:AbstractFloat} <: TransitOutput{T}
@@ -148,6 +159,9 @@ function (intr::Integrator)(s::State{T}, tt::TransitOutput{T}, d::Derivatives{T}
         tt.gsave[i] = g!(i,tt.ti,s.x,s.v)
     end
 
+    # Index of the observed transit time
+    obs_ind = 1
+
     istep = 0
     for _ in 1:nsteps
 
@@ -161,8 +175,12 @@ function (intr::Integrator)(s::State{T}, tt::TransitOutput{T}, d::Derivatives{T}
         s.t[1] = t0 + (istep * h)
 
         # Check if a transit occured; record time.
-        detect_transits!(s,d,tt,intr,grad=grad)
+        if obs_ind > length(tt.obs_tt)
+            continue
+        end
+        obs_ind = detect_transits!(s,d,tt,intr,obs_ind,grad=grad)
     end
+
     # Calculate derivatives
     if grad
         calc_dtdelements!(s,tt)
