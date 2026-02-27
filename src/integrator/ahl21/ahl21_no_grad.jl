@@ -33,7 +33,7 @@ end
 Computes "fast" kicks for pairs of bodies in lieu of -drift+Kepler with compensated summation
 """
 function kickfast!(s::State{T},h::T) where {T <: Real}
-    s.rij .= zero(T)
+    #s.rij .= zero(T)
     @inbounds for i=1:s.n-1
         for j = i+1:s.n
             if s.pair[i,j]
@@ -61,8 +61,8 @@ Computes correction for pairs which are kicked.
 """
 function phic!(s::State{T},h::T) where {T <: Real}
     s.a .= zero(T)
-    s.rij .= zero(T)
-    s.aij .= zero(T)
+    #s.rij .= zero(T)
+    #s.aij .= zero(T)
     @inbounds for i=1:s.n-1, j = i+1:s.n
         if s.pair[i,j] # kick group
             for k=1:3
@@ -109,8 +109,8 @@ Computes the 4th-order correction with compensated summation.
 """
 function phisalpha!(s::State{T},h::T,alpha::T) where {T <: Real}
     s.a .= zero(T)
-    s.rij .= zero(T)
-    s.aij .= zero(T)
+    #s.rij .= zero(T)
+    #s.aij .= zero(T)
     coeff = alpha*h^3/96*2*GNEWT
 
     fac = zero(T); fac1 = zero(T); fac2 = zero(T); r1 = zero(T); r2 = zero(T); r3 = zero(T)

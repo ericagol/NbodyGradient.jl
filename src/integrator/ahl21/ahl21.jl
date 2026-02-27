@@ -336,7 +336,7 @@ AHL21 kick step. Computes "fast" kicks for pairs of bodies (in lieu of -drift+Ke
 """
 function kickfast!(s::State{T},d::AbstractDerivatives{T},h::T) where {T <: Real}
     n::Int64 = s.n
-    s.rij .= 0.0
+    #s.rij .= 0.0
     # Getting rid of identity since we will add that back in in calling routines:
     d.jac_kick .= 0.0
     @inbounds for i=1:n-1
@@ -391,10 +391,10 @@ Computes correction for pairs which are kicked, with Jacobian, dq/dt, and compen
 """
 function phic!(s::State{T},d::AbstractDerivatives{T},h::T) where {T <: Real}
     s.a .= 0.0
-    s.rij .= 0.0
-    s.aij .= 0.0
+    #s.rij .= 0.0
+    #s.aij .= 0.0
     d.dadq .= 0.0  # There is no velocity dependence
-    d.dotdadq .= 0.0 # There is no velocity dependence
+    #d.dotdadq .= 0.0 # There is no velocity dependence
     # Set jac_step to zeros:
     fill!(d.jac_phi,zero(T))
     fac::T = 0.0; fac1::T = 0.0; fac2::T = 0.0; fac3::T = 0.0; r1::T = 0.0; r2::T = 0.0; r3::T = 0.0
@@ -558,9 +558,9 @@ Computes the 4th-order correction, with Jacobian, dq/dt, and compensated summati
 function phisalpha!(s::State{T},d::AbstractDerivatives{T},h::T,alpha::T) where {T <: Real}
     s.a .= 0.0
     d.dadq .= 0.0  # There is no velocity dependence
-    d.dotdadq .= 0.0  # There is no velocity dependence
-    s.rij .= 0.0
-    s.aij .= 0.0
+    #d.dotdadq .= 0.0  # There is no velocity dependence
+    #s.rij .= 0.0
+    #s.aij .= 0.0
     coeff::T = alpha*h^3/96*2*GNEWT
     fac::T = 0.0; fac1::T = 0.0; fac2::T = 0.0; fac3::T = 0.0; r1::T = 0.0; r2::T = 0.0; r3::T = 0.0
     n::Int64 = s.n
@@ -714,7 +714,7 @@ function kepler_driftij_gamma!(s::State{T},d::AbstractDerivatives{T},i::Int64,j:
     # jac_ij should be the Jacobian for going from (x_{0,i},v_{0,i},m_i) &  (x_{0,j},v_{0,j},m_j)
     # to  (x_i,v_i,m_i) &  (x_j,v_j,m_j), a 14x14 matrix for the 3-dimensional case.:
     fill!(d.jac_ij,zero(T))
-    s.delxv .= 0.0
+    #s.delxv .= 0.0
     d.jac_kepler .= 0.0
     d.jac_mass .= 0.0
     params::NTuple{22,T} = jac_delxv_gamma!(s,gm,h,drift_first)
@@ -829,7 +829,7 @@ function jac_delxv_gamma!(s::State{T},k::T,h::T,drift_first::Bool;debug::Bool=fa
     if debug
         s.delxv = zeros(T,12)
     else
-        s.delxv .= zero(T)
+        #s.delxv .= zero(T)
     end
     # Since we updated gamma, need to recompute:
     xx = 0.5*gamma

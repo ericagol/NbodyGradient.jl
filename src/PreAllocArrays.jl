@@ -115,7 +115,7 @@ end
 """Zero out each array in Derivatives."""
 @generated function zero_out!(d::Derivatives{T}) where T<:AbstractFloat
     exprs = Vector{Expr}()
-    for f in fieldnames(Derivatives)
+    for f in setdiff(fieldnames(NbodyGradient.Derivatives), (:jac_copy, :jac_tmp1, :jac_tmp2, :dotdadq, :tmp7n, :tmp14))
         expr = :(d.$f .= 0.0)
         push!(exprs,expr)
     end
