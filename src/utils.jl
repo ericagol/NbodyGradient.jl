@@ -48,56 +48,56 @@ end
 """
   Copies portion of Jacobian for multiplication
 """
-     function copy_submatrix!(s::State{T},d::Derivatives{T},indi::Int64,indj::Int64,sevn::Int64)  where T <: AbstractFloat
-       # Pick out indices for bodies i & j:
-       @inbounds for k2=1:sevn, k1=1:7
-           d.jac_tmp1[k1,k2] = s.jac_step[ indi+k1,k2]
-       end
-       @inbounds for k2=1:sevn, k1=1:7
-           d.jac_err1[k1,k2] = s.jac_error[indi+k1,k2]
-       end
-       @inbounds for k2=1:sevn, k1=1:7
-           d.jac_tmp1[7+k1,k2] = s.jac_step[ indj+k1,k2]
-       end
-       @inbounds for k2=1:sevn, k1=1:7
-           d.jac_err1[7+k1,k2] = s.jac_error[indj+k1,k2]
-       end
-       # Copy current time derivatives for multiplication purposes:
-       @inbounds for k1=1:7
-           d.dqdt_tmp1[  k1] = s.dqdt[indi+k1]
-       end
-       @inbounds for k1=1:7
-           d.dqdt_tmp1[7+k1] = s.dqdt[indj+k1]
-       end
-     return
-     end
+function copy_submatrix!(s::State{T},d::Derivatives{T},indi::Int64,indj::Int64,sevn::Int64)  where T <: AbstractFloat
+    # Pick out indices for bodies i & j:
+    @inbounds for k2=1:sevn, k1=1:7
+        d.jac_tmp1[k1,k2] = s.jac_step[ indi+k1,k2]
+    end
+    @inbounds for k2=1:sevn, k1=1:7
+        d.jac_err1[k1,k2] = s.jac_error[indi+k1,k2]
+    end
+    @inbounds for k2=1:sevn, k1=1:7
+        d.jac_tmp1[7+k1,k2] = s.jac_step[ indj+k1,k2]
+    end
+    @inbounds for k2=1:sevn, k1=1:7
+        d.jac_err1[7+k1,k2] = s.jac_error[indj+k1,k2]
+    end
+    # Copy current time derivatives for multiplication purposes:
+    @inbounds for k1=1:7
+        d.dqdt_tmp1[  k1] = s.dqdt[indi+k1]
+    end
+    @inbounds for k1=1:7
+        d.dqdt_tmp1[7+k1] = s.dqdt[indj+k1]
+    end
+    return
+end
 
 """
   Copies back:
 """
-     function ypoc_submatrix!(s::State{T},d::Derivatives{T},indi::Int64,indj::Int64,sevn::Int64)  where T <: AbstractFloat
-       # Copy back to the Jacobian:
-       @inbounds for k2=1:sevn, k1=1:7
-           s.jac_step[ indi+k1,k2]=d.jac_tmp1[k1,k2]
-       end
-       @inbounds for k2=1:sevn, k1=1:7
-           s.jac_error[indi+k1,k2]=d.jac_err1[k1,k2]
-       end
-       @inbounds for k2=1:sevn, k1=1:7
-           s.jac_step[ indj+k1,k2]=d.jac_tmp1[7+k1,k2]
-       end
-       @inbounds for k2=1:sevn, k1=1:7
-           s.jac_error[indj+k1,k2]=d.jac_err1[7+k1,k2]
-       end
-       # Copy back time derivatives:
-       @inbounds for k1=1:7
-           s.dqdt[indi+k1] = d.dqdt_ij[  k1]
-       end
-       @inbounds for k1=1:7
-           s.dqdt[indj+k1] = d.dqdt_ij[7+k1]
-       end
-    return
+function ypoc_submatrix!(s::State{T},d::Derivatives{T},indi::Int64,indj::Int64,sevn::Int64)  where T <: AbstractFloat
+    # Copy back to the Jacobian:
+    @inbounds for k2=1:sevn, k1=1:7
+        s.jac_step[ indi+k1,k2]=d.jac_tmp1[k1,k2]
     end
+    @inbounds for k2=1:sevn, k1=1:7
+        s.jac_error[indi+k1,k2]=d.jac_err1[k1,k2]
+    end
+    @inbounds for k2=1:sevn, k1=1:7
+        s.jac_step[ indj+k1,k2]=d.jac_tmp1[7+k1,k2]
+    end
+    @inbounds for k2=1:sevn, k1=1:7
+        s.jac_error[indj+k1,k2]=d.jac_err1[7+k1,k2]
+    end
+    # Copy back time derivatives:
+    @inbounds for k1=1:7
+        s.dqdt[indi+k1] = d.dqdt_ij[  k1]
+    end
+    @inbounds for k1=1:7
+        s.dqdt[indj+k1] = d.dqdt_ij[7+k1]
+    end
+    return
+end
 #================================ Integrator Utilities ==================================#
 
 function cubic1(a::T, b::T, c::T) where {T <: Real}
