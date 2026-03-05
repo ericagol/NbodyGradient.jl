@@ -1,15 +1,17 @@
 name = "NbodyGradient"
 uuid = "69f646f0-5709-4f35-9e52-1656edff0883"
-authors = ["Eric Agol <agol@uw.edu>", "David Hernandez", "Zach Langford <langfzac@uw.edu>"]
 version = "0.2.2"
+authors = ["Eric Agol <agol@uw.edu>", "David Hernandez", "Zach Langford <langfzac@uw.edu>"]
 
 [deps]
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+EnzymeCore = "f151be2c-9106-41f4-ab19-57ee4f262869"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [compat]
+EnzymeCore = "0.8.18"
 FileIO = "1.8"
 JLD2 = "0.4"
 julia = "1"
