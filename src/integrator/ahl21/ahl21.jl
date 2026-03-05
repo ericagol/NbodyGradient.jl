@@ -895,7 +895,7 @@ Computes the gradient analytically.
 """
 function compute_jacobian_gamma!(gamma::T,g0::T,g1::T,g2::T,g3::T,h1::T,h2::T,dfdt::T,fm1::T,gmh::T,dgdtm1::T,
     r0::T,r::T,r0inv::T,rinv::T,k::T,h::T,beta::T,betainv::T,eta::T,sqb::T,zeta::T,x0::Array{T,1},v0::Array{T,1},
-    delxv_jac::Array{T,2},jac_mass::Array{T,1},drift_first::Bool,debug::Bool) where {T <: Real}
+    delxv_jac::AbstractMatrix{T},jac_mass::AbstractVector{T},drift_first::Bool,debug::Bool) where {T <: Real}
     # Computes Jacobian:
     r0inv2 = r0inv^2
     r0inv3 = r0inv2*r0inv

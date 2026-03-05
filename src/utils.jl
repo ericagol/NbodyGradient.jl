@@ -497,10 +497,10 @@ function H8_series(gamma::T,beta::T,sqb::T) where {T <: Real}
 end
 
 # Faster dot product; assumes 3D vector
-@inline function dot_fast(a::Vector{T}, b::Vector{T}) where T<:Real
+@inline function dot_fast(a::AbstractVector{T}, b::AbstractVector{T}) where T<:Real
     a[1]*b[1] + a[2]*b[2] + a[3]*b[3]
 end
 
-@inline function dot_fast(a::Vector{T}) where T<:Real
+@inline function dot_fast(a::AbstractVector{T}) where T<:Real
     a[1]*a[1] + a[2]*a[2] + a[3]*a[3]
 end

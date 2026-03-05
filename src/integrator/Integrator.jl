@@ -46,7 +46,7 @@ Current state of simulation.
 - `jac_step::Matrix{T}` : Current Jacobian.
 - `dqdt::Vector{T}` : Derivative with respect to time.
 """
-struct State{T<:AbstractFloat} <: AbstractState
+struct State{T<:AbstractFloat, WS} <: AbstractState
     x::Matrix{T}
     v::Matrix{T}
     t::Vector{T}
@@ -69,6 +69,9 @@ struct State{T<:AbstractFloat} <: AbstractState
     input::Vector{T}
     delxv::Vector{T}
     rtmp::Vector{T}
+
+    # Enzyme workspace (Nothing for normal use, EnzymeWorkspace for Enzyme shadows)
+    enzyme_workspace::WS
 end
 
 """
@@ -99,7 +102,95 @@ function State(ic::InitialConditions{T}) where T<:AbstractFloat
     delxv = zeros(T,6)
     rtmp = zeros(T,3)
     return State(x,v,[ic.t0],ic.m,jac_step,dqdt,jac_init,ic.nbody,
-    pair,xerror,verror,dqdt_error,jac_error,rij,a,aij,x0,v0,input,delxv,rtmp)
+    pair,xerror,verror,dqdt_error,jac_error,rij,a,aij,x0,v0,input,delxv,rtmp,nothing)
+end
+
+"""
+    StateEnzyme(ic)
+
+Constructor for [`State`](@ref) with pre-allocated Enzyme workspace.
+Returns a tuple (primal, shadow) with matching types for use with `Duplicated`.
+
+# Usage
+```julia
+s, ds = StateEnzyme(ic)
+# Reset gradients before each autodiff call
+ds.x .= 0; ds.v .= 0; ds.m .= 0
+autodiff(ReverseWithPrimal, ahl21!, Duplicated(s, ds), ...)
+```
+"""
+function StateEnzyme(ic::InitialConditions{T}) where T<:AbstractFloat
+    x,v,jac_init = init_nbody(ic)
+    n = ic.nbody
+    sevn = 7*n
+
+    # Create workspace (shared structure, separate instances for primal and shadow)
+    function make_workspace()
+        EnzymeWorkspace{T}(
+            zeros(T, sevn, sevn),  # jac_phi
+            zeros(T, 3, n, 4, n),  # dadq
+            zeros(T, 3, n),        # a
+            zeros(T, 3),           # rij
+            zeros(T, 3),           # aij
+            zeros(T, 4, n),        # dotdadq
+            zeros(T, sevn),        # grad_out
+            zeros(T, sevn),        # grad_in
+            zeros(T, 6, 8),        # jac_kepler
+            zeros(T, 6),           # jac_mass
+            zeros(T, 14, 14),      # jac_ij
+            zeros(T, 14),          # grad_out_ij
+            zeros(T, 14),          # grad_in_ij
+        )
+    end
+
+    # Primal state
+    xerror = zeros(T,size(x))
+    verror = zeros(T,size(v))
+    jac_step = Matrix{T}(I,7*n,7*n)
+    dqdt = zeros(T,7*n)
+    dqdt_error = zeros(T,size(dqdt))
+    jac_error = zeros(T,size(jac_step))
+    pair = zeros(Bool,n,n)
+    rij = zeros(T,3)
+    a = zeros(T,3,n)
+    aij = zeros(T,3)
+    x0 = zeros(T,3)
+    v0 = zeros(T,3)
+    input = zeros(T,8)
+    delxv = zeros(T,6)
+    rtmp = zeros(T,3)
+
+    primal = State(x,v,[ic.t0],copy(ic.m),jac_step,dqdt,jac_init,n,
+        pair,xerror,verror,dqdt_error,jac_error,rij,a,aij,x0,v0,input,delxv,rtmp,
+        make_workspace())
+
+    # Shadow state (zeroed for gradient accumulation)
+    shadow = State(
+        zeros(T, size(x)),
+        zeros(T, size(v)),
+        zeros(T, 1),
+        zeros(T, n),
+        zeros(T, size(jac_step)),
+        zeros(T, size(dqdt)),
+        zeros(T, size(jac_init)),
+        n,
+        copy(pair),
+        zeros(T, size(xerror)),
+        zeros(T, size(verror)),
+        zeros(T, size(dqdt_error)),
+        zeros(T, size(jac_error)),
+        zeros(T, 3),
+        zeros(T, 3, n),
+        zeros(T, 3),
+        zeros(T, 3),
+        zeros(T, 3),
+        zeros(T, 8),
+        zeros(T, 6),
+        zeros(T, 3),
+        make_workspace()
+    )
+
+    return primal, shadow
 end
 
 """Initialize and return a `State` and a `Derivatives`."""
@@ -264,3 +355,5 @@ for i in ints; include(joinpath(i,"$i.jl")); end
 
 const ints_no_grad = ["ahl21","dh17"]
 for i in ints_no_grad; include(joinpath(i,"$(i)_no_grad.jl")); end
+
+include("ahl21/ahl21_enzyme.jl")
