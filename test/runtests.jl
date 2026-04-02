@@ -30,6 +30,7 @@ end
         include("test_kepler_driftij_gamma.jl")
         include("test_phisalpha.jl")
         include("test_integrator.jl")
+        include("test_integrator_fastkick.jl")
     end;
     println("Finished.")
 
@@ -43,6 +44,7 @@ end
     @testset "TTVs" begin
         include("test_findtransit.jl")
         include("test_transit_timing.jl")
+        include("test_transit_timing_fastkick.jl")
         include("test_transit_parameters.jl")
     end;
     println("Finished.")
