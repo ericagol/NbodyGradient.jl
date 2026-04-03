@@ -14,13 +14,13 @@ function ahl21!(s::State{T},d::Derivatives{T},h::T) where T<:AbstractFloat
     s.dqdt .+= d.dqdt_kick .+ d.tmp7n #*(d.jac_kick,s.dqdt)
     # Multiply Jacobian from kick step:
     mul!(d.jac_copy, d.jac_kick, s.jac_step)
+    # Add back in the identity portion of the Jacobian with compensated summation:
+    comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
     drift_grad!(s,h2)
     # Compute time derivative of drift step:
     @inbounds for i=1:n, k=1:3
         s.dqdt[(i-1)*7+k] = half*s.v[k,i] + h2*s.dqdt[(i-1)*7+3+k]
     end
-    # Add back in the identity portion of the Jacobian with compensated summation:
-    comp_sum_matrix!(s.jac_step,s.jac_error,d.jac_copy)
     indi = 0; indj = 0
     @inbounds for i=1:s.n-1
         indi = (i-1)*7
