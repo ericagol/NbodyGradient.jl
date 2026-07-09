@@ -46,7 +46,7 @@ import NbodyGradient: kepler_driftij_gamma!, Derivatives, init_nbody
             i = 1 ; j = 2
             x = copy(x0) ; v = copy(v0)
             s = deepcopy(State(init))
-            s.x .= x; s.v .= v
+            s.x .= x; s.v .= v; s.m .= m
             d = Derivatives(Float64, s.n)
             kepler_driftij_gamma!(s,d,i,j,h,drift_first)
 

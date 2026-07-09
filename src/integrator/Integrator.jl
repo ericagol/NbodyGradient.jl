@@ -81,6 +81,7 @@ Constructor for [`State`](@ref) type.
 """
 function State(ic::InitialConditions{T}) where T<:AbstractFloat
     x,v,jac_init = init_nbody(ic)
+    m = ic.elements[:, 1]
     n = ic.nbody
     xerror = zeros(T,size(x))
     verror = zeros(T,size(v))
@@ -98,7 +99,7 @@ function State(ic::InitialConditions{T}) where T<:AbstractFloat
     input = zeros(T,8)
     delxv = zeros(T,6)
     rtmp = zeros(T,3)
-    return State(x,v,[ic.t0],ic.m,jac_step,dqdt,jac_init,ic.nbody,
+    return State(x,v,[ic.t0],m,jac_step,dqdt,jac_init,ic.nbody,
     pair,xerror,verror,dqdt_error,jac_error,rij,a,aij,x0,v0,input,delxv,rtmp)
 end
 
@@ -110,9 +111,12 @@ end
 
 """Set `State` to initial conditions without reallocating."""
 function initialize!(s::State{T}, ic::InitialConditions{T}) where T<:Real
-    x,v,jac_init = init_nbody(ic)
+    amatrix(ic) # Reset the mass matrix in the event that the mass changed
+    x,v,jac_init = init_nbody(ic) # Re-compute the initial pos/vels
+    s.t[1] = ic.t0
     s.x .= x
     s.v .= v
+    s.m .= ic.m # Incase the mass changed
     s.jac_init .= jac_init
 
     s.xerror .= 0.0
@@ -124,6 +128,7 @@ function set_state!(s_old::State{T},s_new::State{T}) where T<:AbstractFloat
     s_old.t .= s_new.t
     s_old.x .= s_new.x
     s_old.v .= s_new.v
+    s_old.m .= s_new.m
     s_old.jac_step .= s_new.jac_step
     s_old.xerror .= s_new.xerror
     s_old.verror .= s_new.verror
