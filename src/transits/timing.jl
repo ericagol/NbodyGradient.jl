@@ -11,9 +11,11 @@ function detect_transits!(s::State{T},d::Derivatives{T},tt::TransitOutput{T},int
     for i in tt.occs
         # Compute the relative sky velocity dotted with position:
         gi = g!(i,tt.ti,s.x,s.v)
-        ri = sqrt(s.x[1,i]^2+s.x[2,i]^2+s.x[3,i]^2)  # orbital distance
+        # ri = sqrt(s.x[1,i]^2+s.x[2,i]^2+s.x[3,i]^2)  # orbital distance
+        ri = sqrt((s.x[1,i]-s.x[1,tt.ti])^2+(s.x[2,i]-s.x[2,tt.ti])^2+(s.x[3,i]-s.x[3,tt.ti])^2)  # orbital distance
         # See if sign of g switches, and if planet is in front of star (by a good amount):
-        if gi > 0 && tt.gsave[i] < 0 && -s.x[3,i] > 0.25*ri && ri < rstar
+        #if gi > 0 && tt.gsave[i] < 0 && -s.x[3,i] > 0.25*ri && ri < rstar
+        if gi > 0 && tt.gsave[i] < 0 && -(s.x[3,i]-s.x[3,tt.ti]) > 0.25*ri && ri < rstar
             # A transit has occurred between the time steps - integrate ahl21!
             tt.count[i] += 1
             if tt.count[i] <= tt.ntt
